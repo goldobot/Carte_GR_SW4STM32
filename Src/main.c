@@ -51,7 +51,11 @@
 #include "cmsis_os.h"
 
 /* USER CODE BEGIN Includes */
-
+#define FreeRTOS_Example
+#ifdef FreeRTOS_Example
+#include "../FreeRTOS_Example/Button.h"
+#include "../FreeRTOS_Example/LED.h"
+#endif
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -78,7 +82,12 @@ osThreadId defaultTaskHandle;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-
+#ifdef BUTTON_H_
+osThreadId ButtonTaskHandle;
+#endif
+#ifdef LED_H_
+osThreadId LEDTaskHandle;
+#endif
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -174,6 +183,14 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
+#ifdef BUTTON_H_
+  osThreadDef(ButtonTask, StartButtonTask, osPriorityNormal, 0, 128);
+  ButtonTaskHandle = osThreadCreate(osThread(ButtonTask), NULL);
+#endif
+#ifdef LED_H_
+  osThreadDef(LEDTask, StartLEDTask, osPriorityNormal, 0, 128);
+  LEDTaskHandle = osThreadCreate(osThread(LEDTask), NULL);
+#endif
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
