@@ -83,12 +83,19 @@
 							<option id="fr.ac6.managedbuild.option.gnu.cross.instructionSet.1965883421.1935957756" name="Instruction Set" superClass="fr.ac6.managedbuild.option.gnu.cross.instructionSet.1965883421"/>
 							<option id="fr.ac6.managedbuild.option.gnu.cross.fpu.432039851.1546945992" name="Floating point hardware" superClass="fr.ac6.managedbuild.option.gnu.cross.fpu.432039851"/>
 							<option id="fr.ac6.managedbuild.option.gnu.cross.floatabi.728820133.1077591490" name="Floating-point ABI" superClass="fr.ac6.managedbuild.option.gnu.cross.floatabi.728820133"/>
-							<tool id="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.276546156" name="MCU GCC Compiler" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.1529711562"/>
+							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="fr.ac6.managedbuild.targetPlatform.gnu.cross" isAbstract="false" osList="all" superClass="fr.ac6.managedbuild.targetPlatform.gnu.cross"/>
+							<tool id="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.276546156" name="MCU GCC Compiler" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.1529711562">
+								<inputType id="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.c.144009254" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.c"/>
+								<inputType id="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.s.587356368" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.s"/>
+							</tool>
 							<tool id="fr.ac6.managedbuild.tool.gnu.cross.cpp.compiler.1755111892" name="MCU G++ Compiler" superClass="fr.ac6.managedbuild.tool.gnu.cross.cpp.compiler.1244517634"/>
 							<tool id="fr.ac6.managedbuild.tool.gnu.cross.c.linker.1648658675" name="MCU GCC Linker" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.linker.374608099"/>
 							<tool id="fr.ac6.managedbuild.tool.gnu.cross.cpp.linker.1290744239" name="MCU G++ Linker" superClass="fr.ac6.managedbuild.tool.gnu.cross.cpp.linker.416977532"/>
 							<tool id="fr.ac6.managedbuild.tool.gnu.archiver.363435935" name="MCU GCC Archiver" superClass="fr.ac6.managedbuild.tool.gnu.archiver.1759856816"/>
-							<tool id="fr.ac6.managedbuild.tool.gnu.cross.assembler.553172751" name="MCU GCC Assembler" superClass="fr.ac6.managedbuild.tool.gnu.cross.assembler.771625863"/>
+							<tool id="fr.ac6.managedbuild.tool.gnu.cross.assembler.553172751" name="MCU GCC Assembler" superClass="fr.ac6.managedbuild.tool.gnu.cross.assembler.771625863">
+								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.208641682" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
+								<inputType id="fr.ac6.managedbuild.tool.gnu.cross.assembler.input.419551275" superClass="fr.ac6.managedbuild.tool.gnu.cross.assembler.input"/>
+							</tool>
 						</toolChain>
 					</folderInfo>
 					<folderInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.1244501266.167988503" name="/" resourcePath="FreeRTOS_Example">
@@ -116,7 +123,6 @@
 					</folderInfo>
 					<sourceEntries>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
-						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="FreeRTOS_Example"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="FreeRTOS_RPLIDAR"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Inc"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Middlewares"/>
@@ -199,6 +205,10 @@
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.1882490640" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 								<inputType id="fr.ac6.managedbuild.tool.gnu.cross.assembler.input.1109841126" superClass="fr.ac6.managedbuild.tool.gnu.cross.assembler.input"/>
 							</tool>
+							<tool id="fr.ac6.managedbuild.tool.gnu.cross.assembler.exe.release.871543183" name="MCU GCC Assembler" superClass="fr.ac6.managedbuild.tool.gnu.cross.assembler.exe.release">
+								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.248182502" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
+								<inputType id="fr.ac6.managedbuild.tool.gnu.cross.assembler.input.1565276343" superClass="fr.ac6.managedbuild.tool.gnu.cross.assembler.input"/>
+							</tool>
 						</toolChain>
 					</folderInfo>
 					<folderInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.release.623285175.1105910622" name="/" resourcePath="FreeRTOS_RPLIDAR">
@@ -209,12 +219,23 @@
 							<option id="fr.ac6.managedbuild.option.gnu.cross.instructionSet.1965883421.2049793658" name="Instruction Set" superClass="fr.ac6.managedbuild.option.gnu.cross.instructionSet.1965883421"/>
 							<option id="fr.ac6.managedbuild.option.gnu.cross.fpu.432039851.1734119893" name="Floating point hardware" superClass="fr.ac6.managedbuild.option.gnu.cross.fpu.432039851"/>
 							<option id="fr.ac6.managedbuild.option.gnu.cross.floatabi.728820133.2106055214" name="Floating-point ABI" superClass="fr.ac6.managedbuild.option.gnu.cross.floatabi.728820133"/>
-							<tool id="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.1769980192" name="MCU GCC Compiler" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.1529711562"/>
+							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="fr.ac6.managedbuild.targetPlatform.gnu.cross" isAbstract="false" osList="all" superClass="fr.ac6.managedbuild.targetPlatform.gnu.cross"/>
+							<tool id="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.1769980192" name="MCU GCC Compiler" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.1529711562">
+								<inputType id="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.c.766977293" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.c"/>
+								<inputType id="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.s.918737485" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.s"/>
+							</tool>
 							<tool id="fr.ac6.managedbuild.tool.gnu.cross.cpp.compiler.543884692" name="MCU G++ Compiler" superClass="fr.ac6.managedbuild.tool.gnu.cross.cpp.compiler.1244517634"/>
 							<tool id="fr.ac6.managedbuild.tool.gnu.cross.c.linker.1028039944" name="MCU GCC Linker" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.linker.374608099"/>
 							<tool id="fr.ac6.managedbuild.tool.gnu.cross.cpp.linker.1993945341" name="MCU G++ Linker" superClass="fr.ac6.managedbuild.tool.gnu.cross.cpp.linker.416977532"/>
 							<tool id="fr.ac6.managedbuild.tool.gnu.archiver.1048117798" name="MCU GCC Archiver" superClass="fr.ac6.managedbuild.tool.gnu.archiver.1759856816"/>
-							<tool id="fr.ac6.managedbuild.tool.gnu.cross.assembler.105409858" name="MCU GCC Assembler" superClass="fr.ac6.managedbuild.tool.gnu.cross.assembler.771625863"/>
+							<tool id="fr.ac6.managedbuild.tool.gnu.cross.assembler.105409858" name="MCU GCC Assembler" superClass="fr.ac6.managedbuild.tool.gnu.cross.assembler.771625863">
+								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.791048729" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
+								<inputType id="fr.ac6.managedbuild.tool.gnu.cross.assembler.input.354393444" superClass="fr.ac6.managedbuild.tool.gnu.cross.assembler.input"/>
+							</tool>
+							<tool id="fr.ac6.managedbuild.tool.gnu.cross.assembler.exe.release.1027196129" name="MCU GCC Assembler" superClass="fr.ac6.managedbuild.tool.gnu.cross.assembler.exe.release">
+								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.793311274" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
+								<inputType id="fr.ac6.managedbuild.tool.gnu.cross.assembler.input.679804848" superClass="fr.ac6.managedbuild.tool.gnu.cross.assembler.input"/>
+							</tool>
 						</toolChain>
 					</folderInfo>
 					<folderInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.release.623285175.262075642" name="/" resourcePath="FreeRTOS_Example">
@@ -238,11 +259,14 @@
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.904771821" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 								<inputType id="fr.ac6.managedbuild.tool.gnu.cross.assembler.input.260320158" superClass="fr.ac6.managedbuild.tool.gnu.cross.assembler.input"/>
 							</tool>
+							<tool id="fr.ac6.managedbuild.tool.gnu.cross.assembler.exe.release.1045447287" name="MCU GCC Assembler" superClass="fr.ac6.managedbuild.tool.gnu.cross.assembler.exe.release">
+								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.1658319694" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
+								<inputType id="fr.ac6.managedbuild.tool.gnu.cross.assembler.input.693944192" superClass="fr.ac6.managedbuild.tool.gnu.cross.assembler.input"/>
+							</tool>
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
-						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="FreeRTOS_Example"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="FreeRTOS_RPLIDAR"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Inc"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Middlewares"/>
