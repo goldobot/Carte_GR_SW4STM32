@@ -52,11 +52,6 @@
 
 /* USER CODE BEGIN Includes */
 #include "../FreeRTOS_RPLIDAR/RPLIDAR.h"
-#define FreeRTOS_Example
-#ifdef FreeRTOS_Example
-#include "../FreeRTOS_Example/Button.h"
-#include "../FreeRTOS_Example/LED.h"
-#endif
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -94,14 +89,6 @@ osThreadId defaultTaskHandle;
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 osThreadId RPLIDARTaskHandle;
-#ifdef BUTTON_H_
-osThreadId ButtonTaskHandle;
-const uint32_t ButtonTaskParameters[2] = {(uint32_t) NUCLEO_GPIO_PC13_GPIO_Port, (uint32_t) NUCLEO_GPIO_PC13_Pin};
-#endif
-#ifdef LED_H_
-osThreadId LEDTaskHandle;
-const uint32_t LEDTaskParameters[2] = {(uint32_t) STM32_PA5_GPIO_Port, (uint32_t) STM32_PA5_Pin};
-#endif
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -199,17 +186,9 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
-  // RPLIDAR
+  // RPLIDAR launch
   osThreadDef(RPLIDAR, StartLIDARTask, osPriorityNormal, 0, 128);
   RPLIDARTaskHandle = osThreadCreate(osThread(RPLIDAR), NULL);
-#ifdef BUTTON_H_
-  osThreadDef(ButtonTask, StartButtonTask, osPriorityNormal, 0, 128);
-  ButtonTaskHandle = osThreadCreate(osThread(ButtonTask), (void*) ButtonTaskParameters);
-#endif
-#ifdef LED_H_
-  osThreadDef(LEDTask, StartLEDTask, osPriorityNormal, 0, 128);
-  LEDTaskHandle = osThreadCreate(osThread(LEDTask), (void*) LEDTaskParameters);
-#endif
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
