@@ -1,6 +1,3 @@
-[submodule "FreeRTOS_Example"]
-	path = FreeRTOS_Example
-	url = https://github.com/goldobot/FreeRTOS_Example
 [submodule "FreeRTOS_RPLIDAR"]
 	path = FreeRTOS_RPLIDAR
 	url = https://github.com/goldobot/FreeRTOS_RPLIDAR
