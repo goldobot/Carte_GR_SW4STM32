@@ -85,10 +85,11 @@ DMA_HandleTypeDef hdma_usart3_rx;
 
 DMA_HandleTypeDef hdma_memtomem_dma2_channel3;
 osThreadId defaultTaskHandle;
+osThreadId RPLIDARHandle;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-osThreadId RPLIDARTaskHandle;
+//osThreadId RPLIDARTaskHandle;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -109,6 +110,7 @@ static void MX_CAN_Init(void);
 static void MX_SPI3_Init(void);
 static void MX_UART5_Init(void);
 void StartDefaultTask(void const * argument);
+extern void StartRPLIDARTask(void const * argument);
 
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
                                 
@@ -184,11 +186,15 @@ int main(void)
   osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
   defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
+  /* definition and creation of RPLIDAR */
+  osThreadDef(RPLIDAR, StartRPLIDARTask, osPriorityNormal, 0, 128);
+  RPLIDARHandle = osThreadCreate(osThread(RPLIDAR), NULL);
+
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   // RPLIDAR launch
-  osThreadDef(RPLIDAR, StartLIDARTask, osPriorityNormal, 0, 128);
-  RPLIDARTaskHandle = osThreadCreate(osThread(RPLIDAR), NULL);
+  //osThreadDef(RPLIDAR, StartLIDARTask, osPriorityNormal, 0, 128);
+  //RPLIDARTaskHandle = osThreadCreate(osThread(RPLIDAR), NULL);
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
@@ -691,8 +697,8 @@ static void MX_USART3_UART_Init(void)
 {
 
   huart3.Instance = USART3;
-  huart3.Init.BaudRate = 38400;
-  huart3.Init.WordLength = UART_WORDLENGTH_7B;
+  huart3.Init.BaudRate = 115200;
+  huart3.Init.WordLength = UART_WORDLENGTH_8B;
   huart3.Init.StopBits = UART_STOPBITS_1;
   huart3.Init.Parity = UART_PARITY_NONE;
   huart3.Init.Mode = UART_MODE_TX_RX;
