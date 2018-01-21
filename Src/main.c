@@ -45,6 +45,7 @@
   *
   ******************************************************************************
   */
+
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32f3xx_hal.h"
@@ -75,6 +76,7 @@ TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
+TIM_HandleTypeDef htim8;
 
 UART_HandleTypeDef huart5;
 UART_HandleTypeDef huart1;
@@ -109,6 +111,7 @@ static void MX_USART1_UART_Init(void);
 static void MX_CAN_Init(void);
 static void MX_SPI3_Init(void);
 static void MX_UART5_Init(void);
+static void MX_TIM8_Init(void);
 void StartDefaultTask(void const * argument);
 extern void StartRPLIDARTask(void const * argument);
 
@@ -164,6 +167,7 @@ int main(void)
   MX_CAN_Init();
   MX_SPI3_Init();
   MX_UART5_Init();
+  MX_TIM8_Init();
 
   /* USER CODE BEGIN 2 */
 
@@ -260,8 +264,8 @@ void SystemClock_Config(void)
   PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1|RCC_PERIPHCLK_USART2
                               |RCC_PERIPHCLK_USART3|RCC_PERIPHCLK_UART5
                               |RCC_PERIPHCLK_I2C1|RCC_PERIPHCLK_TIM1
-                              |RCC_PERIPHCLK_ADC12|RCC_PERIPHCLK_TIM2
-                              |RCC_PERIPHCLK_TIM34;
+                              |RCC_PERIPHCLK_TIM8|RCC_PERIPHCLK_ADC12
+                              |RCC_PERIPHCLK_TIM2|RCC_PERIPHCLK_TIM34;
   PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK2;
   PeriphClkInit.Usart2ClockSelection = RCC_USART2CLKSOURCE_SYSCLK;
   PeriphClkInit.Usart3ClockSelection = RCC_USART3CLKSOURCE_SYSCLK;
@@ -269,6 +273,7 @@ void SystemClock_Config(void)
   PeriphClkInit.Adc12ClockSelection = RCC_ADC12PLLCLK_DIV1;
   PeriphClkInit.I2c1ClockSelection = RCC_I2C1CLKSOURCE_SYSCLK;
   PeriphClkInit.Tim1ClockSelection = RCC_TIM1CLK_HCLK;
+  PeriphClkInit.Tim8ClockSelection = RCC_TIM8CLK_HCLK;
   PeriphClkInit.Tim2ClockSelection = RCC_TIM2CLK_HCLK;
   PeriphClkInit.Tim34ClockSelection = RCC_TIM34CLK_HCLK;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
@@ -404,6 +409,7 @@ static void MX_I2C1_Init(void)
 static void MX_SPI2_Init(void)
 {
 
+  /* SPI2 parameter configuration*/
   hspi2.Instance = SPI2;
   hspi2.Init.Mode = SPI_MODE_MASTER;
   hspi2.Init.Direction = SPI_DIRECTION_2LINES;
@@ -429,6 +435,7 @@ static void MX_SPI2_Init(void)
 static void MX_SPI3_Init(void)
 {
 
+  /* SPI3 parameter configuration*/
   hspi3.Instance = SPI3;
   hspi3.Init.Mode = SPI_MODE_MASTER;
   hspi3.Init.Direction = SPI_DIRECTION_2LINES;
@@ -629,6 +636,66 @@ static void MX_TIM4_Init(void)
 
 }
 
+/* TIM8 init function */
+static void MX_TIM8_Init(void)
+{
+
+  TIM_MasterConfigTypeDef sMasterConfig;
+  TIM_OC_InitTypeDef sConfigOC;
+  TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig;
+
+  htim8.Instance = TIM8;
+  htim8.Init.Prescaler = 0;
+  htim8.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim8.Init.Period = 2880;
+  htim8.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim8.Init.RepetitionCounter = 0;
+  htim8.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_PWM_Init(&htim8) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterOutputTrigger2 = TIM_TRGO2_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim8, &sMasterConfig) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 2050; // 1728;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
+  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+  if (HAL_TIM_PWM_ConfigChannel(&htim8, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
+  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
+  sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
+  sBreakDeadTimeConfig.DeadTime = 0;
+  sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
+  sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
+  sBreakDeadTimeConfig.BreakFilter = 0;
+  sBreakDeadTimeConfig.Break2State = TIM_BREAK2_DISABLE;
+  sBreakDeadTimeConfig.Break2Polarity = TIM_BREAK2POLARITY_HIGH;
+  sBreakDeadTimeConfig.Break2Filter = 0;
+  sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
+  if (HAL_TIMEx_ConfigBreakDeadTime(&htim8, &sBreakDeadTimeConfig) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  HAL_TIM_MspPostInit(&htim8);
+
+}
+
 /* UART5 init function */
 static void MX_UART5_Init(void)
 {
@@ -737,8 +804,6 @@ static void MX_DMA_Init(void)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
-        
-  
 
   /* DMA interrupt init */
   /* DMA1_Channel1_IRQn interrupt configuration */
@@ -806,9 +871,9 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(NUCLEO_GPIO_PC13_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : NUCLEO_GPIO_PC14_Pin NUCLEO_ADC1_9_GPIO_Pin NUCLEO_ADC1_8_GPIO_Pin NUCLEO_GPIO_PC6_Pin 
-                           NUCLEO_GPIO_PC8_Pin NUCLEO_GPIO_PC9_Pin OLD_UART4_RX_Pin */
+                           NUCLEO_GPIO_PC9_Pin OLD_UART4_RX_Pin */
   GPIO_InitStruct.Pin = NUCLEO_GPIO_PC14_Pin|NUCLEO_ADC1_9_GPIO_Pin|NUCLEO_ADC1_8_GPIO_Pin|NUCLEO_GPIO_PC6_Pin 
-                          |NUCLEO_GPIO_PC8_Pin|NUCLEO_GPIO_PC9_Pin|OLD_UART4_RX_Pin;
+                          |NUCLEO_GPIO_PC9_Pin|OLD_UART4_RX_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
