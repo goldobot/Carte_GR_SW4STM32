@@ -49,13 +49,9 @@
 #include "main.h"
 #include "stm32f3xx_hal.h"
 #include "cmsis_os.h"
+#include "goldobot/goldobot_main.h"
 
 /* USER CODE BEGIN Includes */
-#define FreeRTOS_Example
-#ifdef FreeRTOS_Example
-#include "../FreeRTOS_Example/Button.h"
-#include "../FreeRTOS_Example/LED.h"
-#endif
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -195,16 +191,9 @@ int main(void)
   osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
   defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
+  goldobot_main();
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
-#ifdef BUTTON_H_
-  osThreadDef(ButtonTask, StartButtonTask, osPriorityNormal, 0, 128);
-  ButtonTaskHandle = osThreadCreate(osThread(ButtonTask), (void*) ButtonTaskParameters);
-#endif
-#ifdef LED_H_
-  osThreadDef(LEDTask, StartLEDTask, osPriorityNormal, 0, 128);
-  LEDTaskHandle = osThreadCreate(osThread(LEDTask), (void*) LEDTaskParameters);
-#endif
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
