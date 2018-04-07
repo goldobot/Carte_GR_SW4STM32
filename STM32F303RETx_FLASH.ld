@@ -62,7 +62,8 @@ MEMORY
 {
 RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 64K
 CCMRAM (rw)      : ORIGIN = 0x10000000, LENGTH = 16K
-FLASH (rx)      : ORIGIN = 0x8000000, LENGTH = 512K
+FLASH (rx)      : ORIGIN = 0x8000000, LENGTH = 510K
+USER_FLASH (rx)      : ORIGIN = 0x807f800, LENGTH = 2K
 }
 
 /* Define output sections */
@@ -191,9 +192,13 @@ SECTIONS
     . = . + _Min_Stack_Size;
     . = ALIGN(8);
   } >RAM
-
   
-
+  /* User_flash s :ction to store configuration values */
+  .user_flash :
+  {
+   . = ALIGN(4);
+  } >USER_FLASH
+  
   /* Remove information from the standard libraries */
   /DISCARD/ :
   {
