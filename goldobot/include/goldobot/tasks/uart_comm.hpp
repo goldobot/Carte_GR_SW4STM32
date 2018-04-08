@@ -16,18 +16,22 @@ namespace goldobot
 
 
 	private:
-		static constexpr size_t c_buffer_size = 256;
+		static constexpr size_t c_buffer_size = 255;
 		void taskFunction() override;
 		void printf(const char* format...);
 
 		char read_char();
-		int read_line();
+		const char* read_line();
 
-		bool get_char(const char* prompt, char* c);
+		bool peek_char(char* c);
+		bool prompt_char(const char* prompt, char* c);
+		bool prompt_int(const char* prompt, int* c);
 
+		void loop_test_encoders();
+		void loop_test_motors();
 		void loop_test_odometry();
 
-		char m_buffer[c_buffer_size];
+		char m_buffer[c_buffer_size+1];
 		uint8_t m_buffer_index;
 	};
 }

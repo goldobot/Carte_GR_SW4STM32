@@ -29,9 +29,4 @@ namespace goldobot
 		static void uart_transmit();
 		static void uart_receive();
 	};
-
-	class Robot
-	{
-	public:
-	};
 }
