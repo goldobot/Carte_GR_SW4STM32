@@ -47,7 +47,7 @@ void Task::init()
 	xTaskCreate(
 			&Task::vTaskFunction,
 			name(),
-			200,// Stack size
+			512,// Stack size
 			this,
 			configMAX_PRIORITIES - 1,
 			&m_task_handle);
@@ -62,4 +62,9 @@ void Task::vTaskFunction(void* thisptr)
 {
 	reinterpret_cast<Task*>(thisptr)->m_last_wake_time = xTaskGetTickCount();
 	reinterpret_cast<Task*>(thisptr)->taskFunction();
+}
+
+void Task::checkStateUpdate()
+{
+
 }

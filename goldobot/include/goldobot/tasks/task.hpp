@@ -37,6 +37,7 @@ namespace goldobot
 		Task();
 		virtual void taskFunction() = 0;
 		void delayTicks(unsigned ticks);
+		void checkStateUpdate();
 
 		std::atomic<State> m_state;
 		State m_requested_state;

@@ -47,8 +47,8 @@ void Hal::uart_transmit()
 
 void Hal::read_encoders(uint16_t& left, uint16_t& right)
 {
-	left = 8192 - __HAL_TIM_GetCounter(&htim1);
-	right = 8192 - __HAL_TIM_GetCounter(&htim4);
+	left = 8192 - __HAL_TIM_GetCounter(&htim4);
+	right = 8192 - __HAL_TIM_GetCounter(&htim1);
 }
 
 void Hal::set_motors_enable(bool enabled)

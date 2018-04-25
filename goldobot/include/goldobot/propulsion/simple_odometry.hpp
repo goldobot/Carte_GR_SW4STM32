@@ -29,6 +29,10 @@ namespace goldobot
         RobotPose m_pose;
         OdometryConfig m_config;
 
+        double m_x;
+        double m_y;
+        float m_yaw;
+
         void updatePose(float dx, float dtheta, float dt);
     };
 }

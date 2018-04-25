@@ -30,6 +30,8 @@ namespace goldobot
 		void loop_test_encoders();
 		void loop_test_motors();
 		void loop_test_odometry();
+		void loop_calibrate_odometry();
+		void loop_measure_encoders_delta(int32_t* left, int32_t* right);
 
 		char m_buffer[c_buffer_size+1];
 		uint8_t m_buffer_index;

@@ -10,13 +10,15 @@ namespace goldobot
 	public:
 		static Robot& instance();
 		void init();
-		const SimpleOdometry& odometry() const;
+		void start();
+		SimpleOdometry& odometry();
 
 		OdometryConfig odometryConfig();
 		OdometryConfig defaultOdometryConfig();
-		void setOdometryConfig(OdometryConfig& config);
+		void setOdometryConfig(const OdometryConfig& config);
 	private:
 		PropulsionTask m_propulsion_task;
+		OdometryConfig m_odometry_config;
 		static Robot s_instance;
 	};
 }
