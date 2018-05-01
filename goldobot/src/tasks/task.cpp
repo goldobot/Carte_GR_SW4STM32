@@ -55,6 +55,11 @@ void Task::init()
 
 void Task::delayTicks(unsigned ticks)
 {
+	auto tick_count = xTaskGetTickCount();
+	if(tick_count - m_last_wake_time > ticks)
+	{
+		m_last_wake_time = tick_count;
+	}
 	vTaskDelayUntil(&m_last_wake_time, ticks);
 }
 

@@ -36,6 +36,7 @@ namespace goldobot
 	protected:
 		Task();
 		virtual void taskFunction() = 0;
+
 		void delayTicks(unsigned ticks);
 		void checkStateUpdate();
 

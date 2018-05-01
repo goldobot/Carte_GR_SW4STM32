@@ -12,6 +12,8 @@ namespace goldobot
 		void init();
 		void start();
 		SimpleOdometry& odometry();
+		PropulsionController& propulsion();
+
 
 		OdometryConfig odometryConfig();
 		OdometryConfig defaultOdometryConfig();

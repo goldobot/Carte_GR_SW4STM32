@@ -5,6 +5,7 @@ namespace goldobot
     class Vector2D
     {
     public:
+    	Vector2D& operator=(const Vector2D&) = default;
         float x;
         float y;
     };
@@ -18,3 +19,4 @@ namespace goldobot
     	float yaw_rate;
     };
 }
+

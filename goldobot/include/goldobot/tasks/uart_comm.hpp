@@ -2,10 +2,6 @@
 #include "goldobot/tasks/task.hpp"
 #include <cstdint>
 
-// FreeRTOS task
-#include "FreeRTOS.h"
-#include "task.h"
-
 namespace goldobot
 {
 	class UARTCommTask : public Task
@@ -16,7 +12,7 @@ namespace goldobot
 
 
 	private:
-		static constexpr size_t c_buffer_size = 255;
+		static constexpr uint16_t c_buffer_size = 255;
 		void taskFunction() override;
 		void printf(const char* format...);
 
@@ -32,7 +28,7 @@ namespace goldobot
 		void loop_test_odometry();
 		void loop_calibrate_odometry();
 		void loop_measure_encoders_delta(int32_t* left, int32_t* right);
-
+		void loop_test_propulsion();
 		char m_buffer[c_buffer_size+1];
 		uint8_t m_buffer_index;
 	};

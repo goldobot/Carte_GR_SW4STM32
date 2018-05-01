@@ -26,7 +26,10 @@ namespace goldobot
 		static
 		void set_motors_pwm(float left, float right);
 
-		static void uart_transmit();
-		static void uart_receive();
+		static
+		bool uart_read_char(int uart_index, char* c, bool blocking);
+
+		static
+		void uart_transmit(int uart_index, const char* buffer, uint16_t size);
 	};
 }

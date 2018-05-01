@@ -25,6 +25,11 @@ SimpleOdometry& Robot::odometry()
 	return m_propulsion_task.odometry();
 }
 
+PropulsionController& Robot::propulsion()
+{
+	return m_propulsion_task.controller();
+}
+
 OdometryConfig Robot::defaultOdometryConfig()
 {
 	OdometryConfig config;
@@ -33,6 +38,7 @@ OdometryConfig Robot::defaultOdometryConfig()
 	config.wheel_spacing = 3.052931e-01;
 	config.encoder_period = 8192;
 	config.update_period = 1e-3;
+	config.speed_filter_period = 0.01f;
 	return config;
 }
 

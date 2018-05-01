@@ -10,14 +10,6 @@
 
 using namespace goldobot;
 
-// Temporary
-#include "stm32f3xx_hal.h"
-extern "C"
-{
-	UART_HandleTypeDef huart2;
-}
-
-
 UARTCommTask::UARTCommTask()
 {
 }
@@ -37,7 +29,7 @@ void UARTCommTask::taskFunction()
 		printf("2: Test motors\n");
 		printf("3: Test odometry\n");
 		printf("4: Calibrate odometry\n");
-		printf("4: Test motion controller\n");
+		printf("5: Test propulsion\n");
 		printf("5: Test path planner\n");
 		printf("\n");
 		char c = 0;
@@ -57,6 +49,9 @@ void UARTCommTask::taskFunction()
 		case '4':
 			loop_calibrate_odometry();
 			break;
+		case '5':
+			loop_test_propulsion();
+			break;
 		default:
 			break;
 		}
@@ -72,16 +67,7 @@ void UARTCommTask::printf(const char* format, ...)
 	va_end(args);
 	if(num_chars > 0)
 	{
-		if(HAL_UART_Transmit(&huart2, (uint8_t*)m_buffer, num_chars, 1000)!= HAL_OK)
-		{
-			return;
-		}
-
-		// Wait for transfer complete
-		while (HAL_UART_GetState(&huart2) != HAL_UART_STATE_READY)
-		{
-			taskYIELD();
-		}
+		Hal::uart_transmit(0,m_buffer,num_chars);
 	}
 }
 
@@ -110,7 +96,7 @@ bool UARTCommTask::prompt_int(const char* prompt, int* c)
 
 bool UARTCommTask::peek_char(char* c)
 {
-	return HAL_UART_Receive(&huart2, (uint8_t *) c, 1, 0) == HAL_OK;
+	return Hal::uart_read_char(0, c,false);
 }
 
 const char* UARTCommTask::read_line()
@@ -128,14 +114,14 @@ const char* UARTCommTask::read_line()
 		{
 			if(m_buffer_index > 0)
 			{
-				HAL_UART_Transmit(&huart2, (uint8_t*)&c, 1, 1000);
+				Hal::uart_transmit(0, &c, 1);
 				m_buffer_index--;
 			}
 
 		}
 		else
 		{
-			HAL_UART_Transmit(&huart2, (uint8_t*)&c, 1, 1000);
+			Hal::uart_transmit(0, &c, 1);
 			m_buffer[m_buffer_index] = c;
 			m_buffer_index++;
 		}
@@ -147,10 +133,7 @@ const char* UARTCommTask::read_line()
 char UARTCommTask::read_char()
 {
 	char c;
-	while(HAL_UART_Receive(&huart2, (uint8_t *) &c, 1, 0) != HAL_OK)
-	{
-		taskYIELD();
-	}
+	Hal::uart_read_char(0,&c,true);
 	return c;
 }
 
@@ -180,7 +163,7 @@ void UARTCommTask::loop_test_odometry()
 	while(1)
 		{
 			auto pose = Robot::instance().odometry().pose();
-			printf("x= %.3fm, y= %.3fm, yaw=%.1fdeg    \r",pose.position.x, pose.position.y, pose.yaw*180/M_PI);
+			printf("x= %.3fm, y= %.3fm, yaw=%.1fdeg, speed= %.3f m.s-1    \r",pose.position.x, pose.position.y, pose.yaw*180/M_PI, pose.speed);
 			//printf("%.3f\n", pose.position.x);
 			char c = 0;
 			if(peek_char(&c))
@@ -304,8 +287,89 @@ void UARTCommTask::loop_test_motors()
 			prompt_int("Right motor pwm: ",&right_pwm);
 			Hal::set_motors_pwm(left_pwm * 0.01, right_pwm * 0.01);
 			break;
+		case '4':
+		{
+			int pwm = 0;
+			float speed_trace[200];
+			prompt_int("motor pwm: ",&pwm);
+			Hal::set_motors_enable(true);
+			Hal::set_motors_pwm(pwm * 0.01, pwm * 0.01);
+			for(int i =0; i< 200; i++)
+			{
+				if(i < 100)
+				{
+					Hal::set_motors_pwm(pwm * 0.01 * i/100, pwm * 0.01 * i/100);
+
+				} else
+				{
+					Hal::set_motors_pwm(pwm * 0.01 * (200-i)/100, pwm * 0.01 * (200-i)/100);
+				}
+				auto pose = Robot::instance().odometry().pose();
+				speed_trace[i] = pose.speed;
+				delayTicks(10);
+			}
+			Hal::set_motors_pwm(0,0);
+			for(int i =0; i< 200; i++)
+			{
+				printf("%f,\n", speed_trace[i]);
+			}
+
+		}
+
+			break;
 		case 'q':
 			return;
 		}
 	}
 }
+
+void UARTCommTask::loop_test_propulsion()
+{
+	goldobot::PropulsionController* controller = &(Robot::instance().propulsion());
+
+	while(1)
+		{
+			printf("Test motors\n");
+			printf("1: enable motors\n");
+			printf("2: disable motors\n");
+			printf("3: test_line\n");
+			printf("4: test repositioning\n");
+			printf("q: quit\n");
+			char choice = 0;
+			prompt_char("Enter command: ", &choice);
+			switch(choice)
+			{
+			case '1':
+				Hal::set_motors_enable(true);
+				break;
+			case '2':
+				Hal::set_motors_enable(false);
+				break;
+			case '3':
+			{
+				Vector2D points[3];
+				auto pose = Robot::instance().propulsion().target_pose();
+				points[0] = pose.position;
+				points[1] = points[0];
+				points[1].x += 0.5 * cos(pose.yaw);
+				points[1].y += 0.5 * sin(pose.yaw);
+				points[2] = points[1];
+				points[2].x += 0.5 * sin(pose.yaw);
+				points[2].y += 0.5 * cos(pose.yaw);
+				Robot::instance().propulsion().executeTrajectory(points, 3, 0.5,2,2);
+				while(Robot::instance().propulsion().state() == PropulsionController::State::FollowTrajectory)
+				{
+					delayTicks(100);
+				}
+				printf("\n");
+			}
+				break;
+			case '4':
+				Robot::instance().propulsion().executeRepositioning(0.1,{0,0},0);
+				break;
+			case 'q':
+				return;
+			}
+		}
+}
+

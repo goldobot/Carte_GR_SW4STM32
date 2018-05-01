@@ -1,6 +1,9 @@
 #include "goldobot/hal.hpp"
 #include "stm32f3xx_hal.h"
 
+#include "FreeRTOS.h"
+#include "task.h"
+
 #include <sys/unistd.h> // STDOUT_FILENO, STDERR_FILENO
 #include <errno.h>
 #include <math.h>
@@ -37,11 +40,6 @@ void Hal::init()
 
 	HAL_TIM_Base_Start(&htim3);
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
-}
-
-void Hal::uart_transmit()
-{
-	//HAL_UART_Transmit(&huart2, (uint8_t*)"foo", 3, 0xFFFF);
 }
 
 
@@ -98,33 +96,30 @@ void Hal::set_motors_pwm(float left, float right)
 	__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, right_pwm);
 }
 
-extern "C"
+bool Hal::uart_read_char(int uart_index, char* c, bool blocking)
 {
-	int _read(int file, char *data, int len)
+	if(!blocking)
 	{
-		if (file != STDIN_FILENO)
-	   {
-		  errno = EBADF;
-		  return -1;
-	   }
-		HAL_StatusTypeDef status = HAL_UART_Receive(&huart2, (uint8_t*)data, len, HAL_MAX_DELAY);
+		return HAL_UART_Receive(&huart2, (uint8_t*) c, 1, 0) != HAL_OK;
+	}
+	while(HAL_UART_Receive(&huart2, (uint8_t*) c, 1, 0) != HAL_OK)
+	{
+		taskYIELD();
+	}
+	return true;
+}
 
-		// return # of bytes written - as best we can tell
-	    return (status == HAL_OK ? len : 0);
+void Hal::uart_transmit(int uart_index, const char* buffer, uint16_t size)
+{
+	if(HAL_UART_Transmit(&huart2, (uint8_t*)buffer, size, 1000)!= HAL_OK)
+	{
+		return;
 	}
 
-	int _write(int file, char *data, int len)
+	// Wait for transfer complete
+	while (HAL_UART_GetState(&huart2) != HAL_UART_STATE_READY)
 	{
-	   if ((file != STDOUT_FILENO) && (file != STDERR_FILENO))
-	   {
-		  errno = EBADF;
-		  return -1;
-	   }
-
-	   // arbitrary timeout 1000
-	   HAL_StatusTypeDef status = HAL_UART_Transmit(&huart2, (uint8_t*)data, len, 1000);
-
-	   // return # of bytes written - as best we can tell
-	   return (status == HAL_OK ? len : 0);
+		taskYIELD();
 	}
 }
+

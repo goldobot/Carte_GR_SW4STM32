@@ -31,6 +31,8 @@ const RobotPose& SimpleOdometry::pose() const
 void SimpleOdometry::setConfig(const OdometryConfig& config)
 {
 	m_config = config;
+	m_speed_coeff_1 = expf(-config.update_period/config.speed_filter_period);
+	m_speed_coeff_2 = (1.0f - m_speed_coeff_1) / config.update_period;
 }
 
 void SimpleOdometry::reset(uint16_t left, uint16_t right)
@@ -72,6 +74,7 @@ void SimpleOdometry::update(uint16_t left, uint16_t right)
 	m_x += d_trans * cos(m_yaw + d_yaw * 0.5);
 	m_y += d_trans * sin(m_yaw + d_yaw * 0.5);
 	m_yaw += d_yaw;
+
 	if(m_yaw > M_PI)
 	{
 		m_yaw -= M_2_PI;
@@ -83,6 +86,8 @@ void SimpleOdometry::update(uint16_t left, uint16_t right)
 	m_pose.position.x = static_cast<float>(m_x);
 	m_pose.position.y = static_cast<float>(m_y);
 	m_pose.yaw = static_cast<float>(m_yaw);
+	m_pose.speed = m_pose.speed * m_speed_coeff_1 + d_trans * m_speed_coeff_2;
+	m_pose.yaw_rate = m_pose.yaw_rate * m_speed_coeff_1 + d_yaw * m_speed_coeff_2;
 }
 
 void SimpleOdometry::setPose(const RobotPose& pose)

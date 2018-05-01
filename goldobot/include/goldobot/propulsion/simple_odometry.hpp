@@ -32,6 +32,8 @@ namespace goldobot
         double m_x;
         double m_y;
         float m_yaw;
+        float m_speed_coeff_1;
+        float m_speed_coeff_2;
 
         void updatePose(float dx, float dtheta, float dt);
     };
