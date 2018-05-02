@@ -101,3 +101,19 @@ void SimpleOdometry::setPose(const RobotPose& pose)
 	m_yaw = pose.yaw;
 }
 
+void SimpleOdometry::measureLineNormal(Vector2D normal, float distance)
+{
+	// Project position on line
+	double new_x = normal.y*normal.y*m_x - normal.x*normal.y*m_y + normal.x*distance;
+	double new_y = -normal.x*normal.y*m_x + normal.x*normal.x*m_y + normal.y*distance;
+
+	// Select sign of new yaw to be consistent with current
+	float dp = normal.x * cos(m_yaw) + normal.y * sin(m_yaw);
+	double new_yaw = atan2(normal.y, normal.x) * (dp >= 0 ? 1 : -1);
+
+	m_x = new_x;
+	m_y = new_y;
+	m_yaw = new_yaw;
+}
+
+

@@ -33,8 +33,8 @@ PropulsionController& Robot::propulsion()
 OdometryConfig Robot::defaultOdometryConfig()
 {
 	OdometryConfig config;
-	config.dist_per_count_left =  1.530456e-05f;
-	config.dist_per_count_right = 1.510620e-05f;
+	config.dist_per_count_left = 1.513409e-05;
+	config.dist_per_count_right = 1.510209e-05;
 	config.wheel_spacing = 3.052931e-01;
 	config.encoder_period = 8192;
 	config.update_period = 1e-3;

@@ -111,6 +111,7 @@ namespace goldobot
 		SimpleOdometry* m_odometry;
 		RobotPose m_pose;
 		State m_state;
+		TestPattern m_test_pattern;
 
 		float m_left_motor_pwm;
 		float m_right_motor_pwm;
@@ -154,6 +155,12 @@ namespace goldobot
 		float m_speed_error;
 		float m_yaw_rate_error;
 
+		bool m_reposition_hit;
+		// Line equation for border on which to reposition
+		// Should take into account robot size in config
+		Vector2D m_reposition_border_normal;
+		float m_reposition_border_distance;
+
 
 		//! \brief compute motors pwm values when the robot is static. Use PID controllers on yaw and longitudinal position
 		void updateMotorsPwm();
@@ -166,6 +173,10 @@ namespace goldobot
 
 		//! \brief Update target yaw and yaw rate in PointTo mode
 		void updateTargetYaw();
+
+		void updateReposition();
+
+		void repositionReconfigureOdometry();
 
 		bool detectBlockage();
 

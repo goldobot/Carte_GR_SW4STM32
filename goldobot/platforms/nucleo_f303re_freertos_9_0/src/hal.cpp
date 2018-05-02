@@ -100,7 +100,7 @@ bool Hal::uart_read_char(int uart_index, char* c, bool blocking)
 {
 	if(!blocking)
 	{
-		return HAL_UART_Receive(&huart2, (uint8_t*) c, 1, 0) != HAL_OK;
+		return HAL_UART_Receive(&huart2, (uint8_t*) c, 1, 0) == HAL_OK;
 	}
 	while(HAL_UART_Receive(&huart2, (uint8_t*) c, 1, 0) != HAL_OK)
 	{

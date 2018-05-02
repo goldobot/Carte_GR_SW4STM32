@@ -8,6 +8,9 @@
 #include <cstdlib>
 #include <cmath>
 
+#include "FreeRTOS.h"
+#include "task.h"
+
 using namespace goldobot;
 
 UARTCommTask::UARTCommTask()
@@ -30,7 +33,7 @@ void UARTCommTask::taskFunction()
 		printf("3: Test odometry\r\n");
 		printf("4: Calibrate odometry\r\n");
 		printf("5: Test propulsion\r\n");
-		printf("5: Test path planner\r\n");
+		printf("6: Calibrate propulsion control\r\n");
 		printf("\n");
 		char c = 0;
 
@@ -51,6 +54,9 @@ void UARTCommTask::taskFunction()
 			break;
 		case '5':
 			loop_test_propulsion();
+			break;
+		case '6':
+			loop_calibrate_propulsion_control();
 			break;
 		default:
 			break;
@@ -91,6 +97,15 @@ bool UARTCommTask::prompt_int(const char* prompt, int* c)
 	printf("\r\n");
 	const char* line = read_line();
 	*c = atoi(line);
+	return true;
+}
+
+bool UARTCommTask::prompt_float(const char* prompt, float* c)
+{
+	printf(prompt);
+	printf("\r\n");
+	const char* line = read_line();
+	*c = atof(line);
 	return true;
 }
 
@@ -331,76 +346,132 @@ void UARTCommTask::loop_test_propulsion()
 	goldobot::PropulsionController* controller = &(Robot::instance().propulsion());
 
 	while(1)
+	{
+		printf("[Test propulsion]\r\n");
+		printf("1: enable motors\r\n");
+		printf("2: disable motors\r\n");
+		printf("3: test_line\r\n");
+		printf("4: test repositioning\r\n");
+		printf("q: quit\r\n");
+		char choice = 0;
+		prompt_char(">: ", &choice);
+		switch(choice)
 		{
-			printf("[Test propulsion]\r\n");
-			printf("1: enable motors\r\n");
-			printf("2: disable motors\r\n");
-			printf("3: test_line\r\n");
-			printf("4: test repositioning\r\n");
+		case '1':
+			Hal::set_motors_enable(true);
+			break;
+		case '2':
+			Hal::set_motors_enable(false);
+			break;
+		case '3':
+		{
+			Vector2D points[4];
+			auto pose = Robot::instance().propulsion().target_pose();
+			points[0] = pose.position;
+			points[1] = points[0];
+			points[1].x += 0.5 * cos(pose.yaw);
+			points[1].y += 0.5 * sin(pose.yaw);
+			points[2] = points[1];
+			points[2].x += 0.5 * sin(pose.yaw);
+			points[2].y += 0.5 * cos(pose.yaw);
+			points[3] = points[2];
+			points[3].x += 0.5 * cos(pose.yaw);
+			points[3].y += 0.5 * sin(pose.yaw);
+			Robot::instance().propulsion().executeTrajectory(points, 4, PropulsionController::Direction::Forward, 0.5,1,1);
+			while(controller->state() == PropulsionController::State::FollowTrajectory)
+			{
+				delayTicks(100);
+			}
+			vTaskDelay(1000);
+			print_propulsion_debug();
+		}
+			break;
+		case '4':
+			Robot::instance().propulsion().executeRepositioning(PropulsionController::Direction::Backward, 0.1,{1,0},0);
+			while(controller->state() == PropulsionController::State::Reposition)
+			{
+				delayTicks(100);
+			}
+			print_propulsion_debug();
+			break;
+		case 'q':
+			return;
+		}
+	}
+}
+
+void UARTCommTask::loop_calibrate_propulsion_control()
+{
+	goldobot::PropulsionController* controller = &(Robot::instance().propulsion());
+	while(1)
+		{
+			printf("[Calibrate propulsion]\r\n");
+			printf("1: speed steps\r\n");
+			printf("5: set_speed_kp\r\n");
+			printf("6: set_speed_ki\r\n");
 			printf("q: quit\r\n");
 			char choice = 0;
+			float coeff;
 			prompt_char(">: ", &choice);
 			switch(choice)
 			{
 			case '1':
 				Hal::set_motors_enable(true);
-				break;
-			case '2':
-				Hal::set_motors_enable(false);
-				break;
-			case '3':
-			{
-				Vector2D points[3];
-				auto pose = Robot::instance().propulsion().target_pose();
-				points[0] = pose.position;
-				points[1] = points[0];
-				points[1].x += 0.5 * cos(pose.yaw);
-				points[1].y += 0.5 * sin(pose.yaw);
-				points[2] = points[1];
-				points[2].x += 0.5 * sin(pose.yaw);
-				points[2].y += 0.5 * cos(pose.yaw);
-				Robot::instance().propulsion().executeTrajectory(points, 2, PropulsionController::Direction::Forward, 0.3,0.5,0.5);
-				while(Robot::instance().propulsion().state() == PropulsionController::State::FollowTrajectory)
+				controller->executeTest(PropulsionController::TestPattern::SpeedSteps);
+				while(controller->state() == PropulsionController::State::Test)
 				{
 					delayTicks(100);
-				}
-				printf("target_x,");
-				printf("target_y,");
-				printf("target_yaw,");
-				printf("target_speed,");
-				printf("robot_x,");
-				printf("robot_y,");
-				printf("robot_yaw,");
-				printf("robot_speed,");
-				printf("robot_yaw_rate,");
-				printf("pwm_left,");
-				printf("pwm_right\r\n");
-				delayTicks(10);
-				for(unsigned i = 0; i < controller->m_dbg_index;i++)
-				{
-					printf("%f,",controller->m_dbg_target_position_buffer[i].x);
-					printf("%f,",controller->m_dbg_target_position_buffer[i].y);
-					printf("%f,",controller->m_dbg_target_yaw_buffer[i]);
-					printf("%f,",controller->m_dbg_target_speed_buffer[i]);
-					printf("%f,",controller->m_dbg_pose_buffer[i].position.x);
-					printf("%f,",controller->m_dbg_pose_buffer[i].position.y);
-					printf("%f,",controller->m_dbg_pose_buffer[i].yaw);
-					printf("%f,",controller->m_dbg_pose_buffer[i].speed);
-					printf("%f,",controller->m_dbg_pose_buffer[i].yaw_rate);
-					printf("%f,",controller->m_dbg_left_pwm_buffer[i]);
-					printf("%f,",controller->m_dbg_right_pwm_buffer[i]);
-					printf("\r\n");
-					delayTicks(10);
-				}
-				printf("\n");
-			}
+				};
+				Hal::set_motors_enable(false);
+				print_propulsion_debug();
 				break;
-			case '4':
-				Robot::instance().propulsion().executeRepositioning(PropulsionController::Direction::Forward, 0.1,{0,0},0);
+			case '5':
+				prompt_float(">: ", &coeff);
+				controller->set_speed_kp(coeff);
+				break;
+			case '6':
+				prompt_float(">: ", &coeff);
+				controller->set_speed_ki(coeff);
 				break;
 			case 'q':
 				return;
-			}
+			default:
+				break;
+			};
 		}
+}
+
+void UARTCommTask::print_propulsion_debug()
+{
+	goldobot::PropulsionController* controller = &(Robot::instance().propulsion());
+	printf("target_x,");
+	printf("target_y,");
+	printf("target_yaw,");
+	printf("target_speed,");
+	printf("robot_x,");
+	printf("robot_y,");
+	printf("robot_yaw,");
+	printf("robot_speed,");
+	printf("robot_yaw_rate,");
+	printf("pwm_left,");
+	printf("pwm_right\r\n");
+	delayTicks(10);
+	for(unsigned i = 0; i < controller->m_dbg_index;i++)
+	{
+		printf("%f,",controller->m_dbg_target_position_buffer[i].x);
+		printf("%f,",controller->m_dbg_target_position_buffer[i].y);
+		printf("%f,",controller->m_dbg_target_yaw_buffer[i]);
+		printf("%f,",controller->m_dbg_target_speed_buffer[i]);
+		printf("%f,",controller->m_dbg_pose_buffer[i].position.x);
+		printf("%f,",controller->m_dbg_pose_buffer[i].position.y);
+		printf("%f,",controller->m_dbg_pose_buffer[i].yaw);
+		printf("%f,",controller->m_dbg_pose_buffer[i].speed);
+		printf("%f,",controller->m_dbg_pose_buffer[i].yaw_rate);
+		printf("%f,",controller->m_dbg_left_pwm_buffer[i]);
+		printf("%f,",controller->m_dbg_right_pwm_buffer[i]);
+		printf("\r\n");
+		delayTicks(10);
+	}
+	printf("\n");
 }
 
