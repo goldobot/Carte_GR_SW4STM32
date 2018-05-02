@@ -32,6 +32,7 @@ bool TrajectoryBuffer::push_segment(Vector2D* points, unsigned num_points)
 
 	m_current_first_index = 0;
 	m_current_last_index = num_points-1;
+	return true;
 }
 
 void TrajectoryBuffer::pop_segment()

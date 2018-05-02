@@ -1,40 +1,23 @@
 #pragma once
 #include "goldobot/core/geometry.hpp"
 #include "goldobot/core/pid_controller.hpp"
+#include "goldobot/core/trapezoidal_speed_profile.hpp"
 #include "goldobot/core/trajectory_buffer.hpp"
 #include "goldobot/core/circular_buffer.hpp"
 
 #include <cstdint>
 
-// To be removed once mutexes are abstracted
-#include "FreeRTOS.h"
-#include "task.h"
 
 namespace goldobot
 {
 	class SimpleOdometry;
 	class TrajectoryBuffer;
 
-
-	class TrapezoidalSpeedProfile
+	struct PropulsionConfiguration
 	{
-	public:
-		TrapezoidalSpeedProfile();
-		void update(float distance, float speed, float accel, float deccel);
-		float begin_time();
-		float end_time();
-		void compute(float t, float* val, float* deriv, float* accel);
-
-	private:
-		float m_c0[4];
-		float m_c1[4];
-		float m_c2[4];
-		float m_t[4];
+		float lookahead_distance;
+		float lookahead_time;
 	};
-
-
-
-
 
 	class PropulsionController
 	{
@@ -47,7 +30,21 @@ namespace goldobot
 			PointTo,
 			Reposition,
 			EmergencyStop,
-			Error
+			Error,
+			Test
+		};
+
+		enum TestPattern
+		{
+			SpeedSteps,
+			PositionSteps
+		};
+
+		enum class Error
+		{
+			EmergencyStop, // An emergency stop occurred during last command
+			RobotBlocked,
+			TrackingError // The tracking error became too large during last command
 		};
 
 		enum class Direction
@@ -58,26 +55,43 @@ namespace goldobot
 
 	public:
 		PropulsionController(SimpleOdometry* odometry);
+
 		State state() const;
+		RobotPose target_pose() const;
 
 		void update();
 
 		float leftMotorPwm();
 		float rightMotorPwm();
 
-		bool executeTrajectory(Vector2D* points, int num_points, float speed, float acceleration, float decceleration);
-		bool executeRepositioning(float speed, Vector2D normal, float distance_to_center);
-		RobotPose target_pose() const;
+		bool executeTrajectory(Vector2D* points, int num_points, Direction direction, float speed, float acceleration, float decceleration);
+		bool executeRepositioning(Direction direction, float speed, Vector2D normal, float distance_to_center);
+		bool executePointTo(Vector2D target, float yaw_rate, float accel, float deccel);
+		bool executeRotation(float delta_yaw, float yaw_rate, float accel, float deccel);
+
+		void executeTest(TestPattern patern);
+
+		void set_speed_feedforward(float ff);
+		void set_speed_kp(float kp);
+		void set_speed_kd(float kd);
+		void set_speed_ki(float ki);
+
+		void set_translation_kp(float kp);
+		void set_translation_kd(float kd);
+		void set_translation_ki(float ki);
 
 
 		Vector2D m_dbg_target_position_buffer[500];
 		float m_dbg_target_yaw_buffer[500];
+		float m_dbg_target_speed_buffer[500];
+		float m_dbg_left_pwm_buffer[500];
+		float m_dbg_right_pwm_buffer[500];
 		RobotPose m_dbg_pose_buffer[500];
 
 		int m_dbg_index;
 		int m_dbg_counter;
 
-	private:
+	//private:
 		enum class CommandType : uint8_t
 		{
 			Trajectory,
@@ -93,26 +107,29 @@ namespace goldobot
 			float decceleration;
 		};
 
-	private:
+	//private:
 		SimpleOdometry* m_odometry;
 		RobotPose m_pose;
 		State m_state;
 
 		float m_left_motor_pwm;
 		float m_right_motor_pwm;
+		float m_pwm_limit;
 
-		float m_lateral_error;
-		float m_longitudinal_error;
-		float yaw_error;
+		
 
-		// Trajectory following controllers
-		FeedForwardPIDController m_yaw_rate_pid;
+		// PID controllers
+		// Inner loop speed control PIDs
+		PIDController m_yaw_rate_pid;
+		PIDController m_speed_pid;
 
-		// Static positionning controllers
-		FeedForwardPIDController m_translation_pid;
-		FeedForwardPIDController m_yaw_pid;
+		// Outer loop position control PIDs
+		PIDController m_translation_pid;
+		PIDController m_yaw_pid;
+
 
 		TrajectoryBuffer m_trajectory_buffer;
+		float m_begin_yaw; // yaw at beginning of current PointTo command
 		TrapezoidalSpeedProfile m_speed_profile;
 
 		// Parameters on current segment
@@ -123,25 +140,37 @@ namespace goldobot
 
 		uint32_t m_time_base_ms;
 
+		// Targets
 		Vector2D m_target_position;
 		float m_target_yaw;
 		float m_target_speed;
+		float m_target_yaw_rate;
 		Vector2D m_lookahead_position;
 
+		// Errors
+		float m_lateral_error;
+		float m_longitudinal_error;
+		float m_yaw_error;
+		float m_speed_error;
+		float m_yaw_rate_error;
 
 
-		//! \brief compute motors pwm values when the robot is static. Use PID controllers on yaw and longitudinal position.
-		void computeMotorsPwmStatic();
+		//! \brief compute motors pwm values when the robot is static. Use PID controllers on yaw and longitudinal position
+		void updateMotorsPwm();
 
-		//! \brief compute motors pwm values when the robot is moving. Use a pure pursuit algorithm and PID controllers on speed and yaw rate.
-		void computeMotorsPwmMoving();
+		//! \brief compute motors pwm in test mode
+		void updateMotorsPwmTest();
 
-		//! \brief recompute current and lookahead positions.
+		//! \brief Update current and lookahead positions in TrajectoryFollowing mode
 		void updateTargetPositions();
 
-		void computePositionError();
+		//! \brief Update target yaw and yaw rate in PointTo mode
+		void updateTargetYaw();
+
+		bool detectBlockage();
 
 		// Initialize speed parameters for move command
 		void initMoveCommand(float speed, float accel, float deccel);
+		void initRotationCommand(float delta_yaw, float speed, float accel, float deccel);
 	};
 }

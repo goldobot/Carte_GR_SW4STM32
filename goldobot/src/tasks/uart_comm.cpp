@@ -24,17 +24,17 @@ void UARTCommTask::taskFunction()
 	setvbuf(stdin, NULL, _IONBF, 0);
 	while(1)
 	{
-		printf("Debug mode\n");
-		printf("1: Test encoders \n");
-		printf("2: Test motors\n");
-		printf("3: Test odometry\n");
-		printf("4: Calibrate odometry\n");
-		printf("5: Test propulsion\n");
-		printf("5: Test path planner\n");
+		printf("[Choose mode]\r\n");
+		printf("1: Test encoders\r\n");
+		printf("2: Test motors\r\n");
+		printf("3: Test odometry\r\n");
+		printf("4: Calibrate odometry\r\n");
+		printf("5: Test propulsion\r\n");
+		printf("5: Test path planner\r\n");
 		printf("\n");
 		char c = 0;
 
-		prompt_char("Enter command: ", &c);
+		prompt_char(">: ", &c);
 		switch(c)
 		{
 		case '1':
@@ -81,14 +81,14 @@ bool UARTCommTask::prompt_char(const char* prompt, char* c)
 		*c = line[0];
 		status = true;
 	}
-	printf("\n");
+	printf("\r\n");
 	return status;
 }
 
 bool UARTCommTask::prompt_int(const char* prompt, int* c)
 {
 	printf(prompt);
-	printf("\n");
+	printf("\r\n");
 	const char* line = read_line();
 	*c = atoi(line);
 	return true;
@@ -139,7 +139,7 @@ char UARTCommTask::read_char()
 
 void UARTCommTask::loop_test_encoders()
 {
-	printf("Test encoders\n");
+	printf("[Test encoders]\r\n");
 
 	while(1)
 	{
@@ -151,6 +151,7 @@ void UARTCommTask::loop_test_encoders()
 		char c = 0;
 		if(peek_char(&c))
 		{
+			printf("\r\n");
 			return;
 		}
 		delayTicks(100);
@@ -160,14 +161,16 @@ void UARTCommTask::loop_test_encoders()
 
 void UARTCommTask::loop_test_odometry()
 {
+	printf("[Test odometry]\r\n");
 	while(1)
 		{
 			auto pose = Robot::instance().odometry().pose();
-			printf("x= %.3fm, y= %.3fm, yaw=%.1fdeg, speed= %.3f m.s-1    \r",pose.position.x, pose.position.y, pose.yaw*180/M_PI, pose.speed);
+			printf("x= %.3fm, y= %.3fm, yaw=%.1fdeg, speed= %.3f m.s-1        \r",pose.position.x, pose.position.y, pose.yaw*180/M_PI, pose.speed);
 			//printf("%.3f\n", pose.position.x);
 			char c = 0;
 			if(peek_char(&c))
 			{
+				printf("\n");
 				return;
 			}
 			delayTicks(100);
@@ -180,15 +183,15 @@ void UARTCommTask::loop_calibrate_odometry()
 	OdometryConfig odometry_config = Robot::instance().odometryConfig();
 	while(1)
 	{
-		printf("Calibrate odometry\n");
-		printf("dist_per_count_left: %.6e\n", odometry_config.dist_per_count_left);
-		printf("dist_per_count_right: %.6e\n", odometry_config.dist_per_count_right);
-		printf("wheel_spacing: %.6e\n", odometry_config.wheel_spacing);
-		printf("1: calibrate translation\n");
-		printf("2: calibrate rotation\n");
-		printf("q: quit\n");
+		printf("[Calibrate odometry]\r\n");
+		printf("dist_per_count_left: %.6e\r\n", odometry_config.dist_per_count_left);
+		printf("dist_per_count_right: %.6e\r\n", odometry_config.dist_per_count_right);
+		printf("wheel_spacing: %.6e\r\n", odometry_config.wheel_spacing);
+		printf("1: calibrate translation\r\n");
+		printf("2: calibrate rotation\r\n");
+		printf("q: quit\r\n");
 		char choice = 0;
-		prompt_char("Enter command: ", &choice);
+		prompt_char(">: ", &choice);
 		switch(choice)
 		{
 		case '1':
@@ -266,13 +269,13 @@ void UARTCommTask::loop_test_motors()
 {
 	while(1)
 	{
-		printf("Test motors\n");
-		printf("1: enable motors\n");
-		printf("2: disable motors\n");
-		printf("3: set pwm [-100-100]\n");
-		printf("q: quit\n");
+		printf("[Test motors]\r\n");
+		printf("1: enable motors\r\n");
+		printf("2: disable motors\r\n");
+		printf("3: set pwm [-100-100]\r\n");
+		printf("q: quit\r\n");
 		char choice = 0;
-		prompt_char("Enter command: ", &choice);
+		prompt_char(">d: ", &choice);
 		switch(choice)
 		{
 		case '1':
@@ -311,7 +314,7 @@ void UARTCommTask::loop_test_motors()
 			Hal::set_motors_pwm(0,0);
 			for(int i =0; i< 200; i++)
 			{
-				printf("%f,\n", speed_trace[i]);
+				printf("%f, \n", speed_trace[i]);
 			}
 
 		}
@@ -329,14 +332,14 @@ void UARTCommTask::loop_test_propulsion()
 
 	while(1)
 		{
-			printf("Test motors\n");
-			printf("1: enable motors\n");
-			printf("2: disable motors\n");
-			printf("3: test_line\n");
-			printf("4: test repositioning\n");
-			printf("q: quit\n");
+			printf("[Test propulsion]\r\n");
+			printf("1: enable motors\r\n");
+			printf("2: disable motors\r\n");
+			printf("3: test_line\r\n");
+			printf("4: test repositioning\r\n");
+			printf("q: quit\r\n");
 			char choice = 0;
-			prompt_char("Enter command: ", &choice);
+			prompt_char(">: ", &choice);
 			switch(choice)
 			{
 			case '1':
@@ -356,16 +359,44 @@ void UARTCommTask::loop_test_propulsion()
 				points[2] = points[1];
 				points[2].x += 0.5 * sin(pose.yaw);
 				points[2].y += 0.5 * cos(pose.yaw);
-				Robot::instance().propulsion().executeTrajectory(points, 3, 0.5,2,2);
+				Robot::instance().propulsion().executeTrajectory(points, 2, PropulsionController::Direction::Forward, 0.3,0.5,0.5);
 				while(Robot::instance().propulsion().state() == PropulsionController::State::FollowTrajectory)
 				{
 					delayTicks(100);
+				}
+				printf("target_x,");
+				printf("target_y,");
+				printf("target_yaw,");
+				printf("target_speed,");
+				printf("robot_x,");
+				printf("robot_y,");
+				printf("robot_yaw,");
+				printf("robot_speed,");
+				printf("robot_yaw_rate,");
+				printf("pwm_left,");
+				printf("pwm_right\r\n");
+				delayTicks(10);
+				for(unsigned i = 0; i < controller->m_dbg_index;i++)
+				{
+					printf("%f,",controller->m_dbg_target_position_buffer[i].x);
+					printf("%f,",controller->m_dbg_target_position_buffer[i].y);
+					printf("%f,",controller->m_dbg_target_yaw_buffer[i]);
+					printf("%f,",controller->m_dbg_target_speed_buffer[i]);
+					printf("%f,",controller->m_dbg_pose_buffer[i].position.x);
+					printf("%f,",controller->m_dbg_pose_buffer[i].position.y);
+					printf("%f,",controller->m_dbg_pose_buffer[i].yaw);
+					printf("%f,",controller->m_dbg_pose_buffer[i].speed);
+					printf("%f,",controller->m_dbg_pose_buffer[i].yaw_rate);
+					printf("%f,",controller->m_dbg_left_pwm_buffer[i]);
+					printf("%f,",controller->m_dbg_right_pwm_buffer[i]);
+					printf("\r\n");
+					delayTicks(10);
 				}
 				printf("\n");
 			}
 				break;
 			case '4':
-				Robot::instance().propulsion().executeRepositioning(0.1,{0,0},0);
+				Robot::instance().propulsion().executeRepositioning(PropulsionController::Direction::Forward, 0.1,{0,0},0);
 				break;
 			case 'q':
 				return;

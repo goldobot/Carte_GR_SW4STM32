@@ -31,5 +31,8 @@ namespace goldobot
 
 		static
 		void uart_transmit(int uart_index, const char* buffer, uint16_t size);
+
+		static
+		void simulation_step();
 	};
 }

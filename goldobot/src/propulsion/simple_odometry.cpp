@@ -1,5 +1,7 @@
 #include <goldobot/propulsion/simple_odometry.hpp>
+#define _USE_MATH_DEFINES
 #include <cmath>
+#include <cstring>
 
 using namespace goldobot;
 
@@ -39,6 +41,7 @@ void SimpleOdometry::reset(uint16_t left, uint16_t right)
 {
 	m_left_encoder = left;
 	m_right_encoder = right;
+	std::memset(&m_pose, 0, sizeof(m_pose));
 }
 
 void SimpleOdometry::update(uint16_t left, uint16_t right)
@@ -77,11 +80,11 @@ void SimpleOdometry::update(uint16_t left, uint16_t right)
 
 	if(m_yaw > M_PI)
 	{
-		m_yaw -= M_2_PI;
+		m_yaw -= 2 * M_PI;
 	}
 	else if(m_yaw < -M_PI)
 	{
-		m_yaw += M_2_PI;
+		m_yaw += 2 * M_PI;
 	}
 	m_pose.position.x = static_cast<float>(m_x);
 	m_pose.position.y = static_cast<float>(m_y);

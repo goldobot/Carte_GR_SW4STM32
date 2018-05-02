@@ -2,33 +2,51 @@
 
 namespace goldobot
 {
+	struct PIDConfig
+	{
+		PIDConfig();
+		float period;
+		float kp;
+		float kd;
+		float ki;
+		float feed_forward;
+		float lim_iterm;
+		float lim_dterm;
+		float min_output;
+		float max_output;
+	};
 
-	class FeedForwardPIDController
+	class PIDController
 	{
 	public:
-		FeedForwardPIDController();
+		PIDController();
+		PIDController(const PIDConfig& config);
+
+		const PIDConfig& config() const;
+		void set_config(const PIDConfig& config);
+
+
+		void set_kp(float kp);
+		void set_kd(float kd);
+		void set_ki(float ki);
+		void set_feedforward(float feedforward);
 
 		float output() const;
 		void set_target(float target, float target_derivative=0.0f);
-		void reset(float current_value);
-		float update(float current_value, float dt);
-		float update(float current_value, float current_derivative, float dt);
+		void reset();
+		float update(float current_value);
 
 
-	//private:
-		float m_kp;// Proportional coefficient
-		float m_ki;// Integral coefficient
-		float m_kd;// Derivative coefficient
+	private:
+		float clamp(float val, float min_val, float max_val) const;
 
-		float m_ffp;// Proportional feedforward coefficient
-		float m_ffd;// Derivative feedforward coefficient
+		PIDConfig m_config;
 
-		float m_lim_i;// Integral term limit
-		float m_lim_d;// Derivative limit
-
-		float m_current_target;
-		float m_current_target_derivative;
+		float m_target;
+		float m_target_derivative;
 		float m_previous_value;
+		float m_integral_term;
 		float m_output;
+		bool m_first_run;
 	};
 }

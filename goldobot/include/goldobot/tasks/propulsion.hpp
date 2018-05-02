@@ -1,6 +1,5 @@
 #pragma once
 #include "goldobot/tasks/task.hpp"
-#include "goldobot/propulsion/command_queue.hpp"
 #include "goldobot/propulsion/simple_odometry.hpp"
 #include "goldobot/propulsion/controller.hpp"
 
