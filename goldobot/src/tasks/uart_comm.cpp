@@ -13,7 +13,10 @@
 
 using namespace goldobot;
 
-UARTCommTask::UARTCommTask()
+
+UARTCommTask::UARTCommTask() :
+    m_serializer(m_serialize_buffer, sizeof(m_serialize_buffer)),
+	m_deserializer(m_deserialize_buffer, sizeof(m_deserialize_buffer))
 {
 }
 
@@ -24,6 +27,49 @@ const char* UARTCommTask::name() const
 
 void UARTCommTask::taskFunction()
 {
+	Hal::uart_receive(0, m_recv_buffer, sizeof(m_recv_buffer), false);
+	while(1)
+	{
+		// If current transmission is finished, send next chunk of data from ring buffer
+		if(Hal::uart_transmit_finished(0))
+		{
+			size_t dtlen = m_serializer.pop_data((unsigned char*)m_send_buffer, sizeof(m_send_buffer));
+			if(dtlen)
+			{
+				Hal::uart_transmit(0, m_send_buffer, dtlen, false);
+			}
+		}
+		// Parse received data
+		if(Hal::uart_receive_finished(0))
+		{
+			m_deserializer.push_data((unsigned char*)m_recv_buffer, sizeof(m_recv_buffer));
+		} else
+		{
+			// Abort reception if previous was not finished
+			uint16_t bytes_received = Hal::uart_receive_abort(0);
+			if(bytes_received)
+			{
+				m_deserializer.push_data((unsigned char*)m_recv_buffer, bytes_received);
+			}
+		}
+		// Launch new receive command
+		Hal::uart_receive(0, m_recv_buffer, sizeof(m_recv_buffer), false);
+
+		// Process received mesage if needed
+		if(m_deserializer.message_ready())
+		{
+			uint16_t message_type = m_deserializer.message_type();
+			if(message_type != 0)
+			{
+				process_message(message_type);
+			} else
+			{
+				m_deserializer.pop_message(nullptr,0);
+			}
+		}
+		// Wait for next tick
+		delayTicks(1);
+	}
 	setvbuf(stdin, NULL, _IONBF, 0);
 	while(1)
 	{
@@ -475,3 +521,14 @@ void UARTCommTask::print_propulsion_debug()
 	printf("\n");
 }
 
+void UARTCommTask::send_message(uint16_t type, const char* buffer, uint16_t size)
+{
+	m_serializer.push_message(type, (const unsigned char*)(buffer), size);
+}
+
+void UARTCommTask::process_message(uint16_t message_type)
+{
+	unsigned char buff[32];
+	m_deserializer.pop_message(buff, sizeof(buff));
+	int foo=1;
+}

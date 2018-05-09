@@ -11,6 +11,4 @@ void goldobot_main()
 	goldobot::Hal::init();
 	goldobot::Robot::instance().init();
 	goldobot::Robot::instance().start();
-	//! \todo: select match or not
-	s_uart_comm_task.init();
 }

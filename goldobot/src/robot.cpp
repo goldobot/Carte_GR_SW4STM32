@@ -12,6 +12,8 @@ Robot& Robot::instance()
 void Robot::init()
 {
 	m_propulsion_task.init();
+	m_comm_task.init();
+	m_heartbeat_task.init();
 	setOdometryConfig(defaultOdometryConfig());
 }
 
@@ -28,6 +30,11 @@ SimpleOdometry& Robot::odometry()
 PropulsionController& Robot::propulsion()
 {
 	return m_propulsion_task.controller();
+}
+
+UARTCommTask& Robot::comm()
+{
+	return m_comm_task;
 }
 
 OdometryConfig Robot::defaultOdometryConfig()

@@ -21,6 +21,7 @@ namespace goldobot
 		PropulsionController m_controller;
 		uint16_t m_encoder_left;
 		uint16_t m_encoders_right;
+		uint16_t m_telemetry_counter;
 
 		void doStep();
 		void taskFunction() override;

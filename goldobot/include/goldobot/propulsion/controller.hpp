@@ -3,6 +3,7 @@
 #include "goldobot/core/pid_controller.hpp"
 #include "goldobot/core/trapezoidal_speed_profile.hpp"
 #include "goldobot/core/trajectory_buffer.hpp"
+#include "goldobot/propulsion/controller_config.hpp"
 #include "goldobot/core/circular_buffer.hpp"
 
 #include <cstdint>
@@ -81,12 +82,12 @@ namespace goldobot
 		void set_translation_ki(float ki);
 
 
-		Vector2D m_dbg_target_position_buffer[500];
-		float m_dbg_target_yaw_buffer[500];
-		float m_dbg_target_speed_buffer[500];
-		float m_dbg_left_pwm_buffer[500];
-		float m_dbg_right_pwm_buffer[500];
-		RobotPose m_dbg_pose_buffer[500];
+		Vector2D m_dbg_target_position_buffer[100];
+		float m_dbg_target_yaw_buffer[100];
+		float m_dbg_target_speed_buffer[100];
+		float m_dbg_left_pwm_buffer[100];
+		float m_dbg_right_pwm_buffer[100];
+		RobotPose m_dbg_pose_buffer[100];
 
 		int m_dbg_index;
 		int m_dbg_counter;

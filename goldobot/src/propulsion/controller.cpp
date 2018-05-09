@@ -98,6 +98,7 @@ PropulsionController::State PropulsionController::state() const
 void PropulsionController::set_speed_feedforward(float ff)
 {
 	m_speed_pid.set_feedforward(ff);
+
 }
 void PropulsionController::set_speed_kp(float kp)
 {

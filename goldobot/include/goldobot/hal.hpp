@@ -30,7 +30,19 @@ namespace goldobot
 		bool uart_read_char(int uart_index, char* c, bool blocking);
 
 		static
-		void uart_transmit(int uart_index, const char* buffer, uint16_t size);
+		bool uart_transmit(int uart_index, const char* buffer, uint16_t size, bool blocking = true);
+
+		static
+		bool uart_transmit_finished(int uart_index);
+
+		static
+		bool uart_receive(int uart_index, const char* buffer, uint16_t size, bool blocking = true);
+
+		static
+		bool uart_receive_finished(int uart_index);
+
+		static
+		uint16_t uart_receive_abort(int uart_index);
 
 		static
 		void simulation_step();
