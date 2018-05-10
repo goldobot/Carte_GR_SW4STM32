@@ -64,6 +64,8 @@ PropulsionController& PropulsionTask::controller()
 
 void PropulsionTask::taskFunction()
 {
+	// Set task to highest priority
+
 	// Setup odometry
 	uint16_t left;
 	uint16_t right;

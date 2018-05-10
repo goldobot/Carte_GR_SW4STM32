@@ -11,10 +11,14 @@ Robot& Robot::instance()
 
 void Robot::init()
 {
-	m_propulsion_task.init();
 	m_comm_task.init();
+	m_comm_task.send_message((uint16_t)CommMessageType::Reset,nullptr, 0);
 	m_heartbeat_task.init();
+
 	setOdometryConfig(defaultOdometryConfig());
+	m_propulsion_task.init();
+	m_main_task.init();
+
 }
 
 void Robot::start()

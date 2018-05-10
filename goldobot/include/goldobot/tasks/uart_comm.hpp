@@ -12,7 +12,10 @@ namespace goldobot
 	{
 		Sync=0,// "goldobot" synchronization message, used to synchronize stream parser
 		Heartbeat=1,// Current OS time in ms as uint32, sent every second
-		PropulsionTelemetry=2, //
+		Reset=2,// Sent once on startup
+		PropulsionTelemetry=3, //
+		StartOfMatch=4,
+		EndOfMatch=5,
 		SetMotorsEnable=64
 	};
 	class UARTCommTask : public Task
@@ -21,7 +24,7 @@ namespace goldobot
 		UARTCommTask();
 		const char* name() const override;
 
-		void send_message(uint16_t type, const char* buffer, uint16_t size);
+		bool send_message(uint16_t type, const char* buffer, uint16_t size);
 
 	private:
 		static constexpr uint16_t c_buffer_size = 255;

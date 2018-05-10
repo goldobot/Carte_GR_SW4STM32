@@ -18,6 +18,7 @@ UARTCommTask::UARTCommTask() :
     m_serializer(m_serialize_buffer, sizeof(m_serialize_buffer)),
 	m_deserializer(m_deserialize_buffer, sizeof(m_deserialize_buffer))
 {
+	m_serializer_mutex = xSemaphoreCreateMutex();
 }
 
 const char* UARTCommTask::name() const
@@ -33,10 +34,14 @@ void UARTCommTask::taskFunction()
 		// If current transmission is finished, send next chunk of data from ring buffer
 		if(Hal::uart_transmit_finished(0))
 		{
-			size_t dtlen = m_serializer.pop_data((unsigned char*)m_send_buffer, sizeof(m_send_buffer));
-			if(dtlen)
+			if(xSemaphoreTake(m_serializer_mutex, 1) == pdTRUE)
 			{
-				Hal::uart_transmit(0, m_send_buffer, dtlen, false);
+				size_t dtlen = m_serializer.pop_data((unsigned char*)m_send_buffer, sizeof(m_send_buffer));
+				if(dtlen)
+				{
+					Hal::uart_transmit(0, m_send_buffer, dtlen, false);
+				}
+				xSemaphoreGive(m_serializer_mutex);
 			}
 		}
 		// Parse received data
@@ -521,9 +526,15 @@ void UARTCommTask::print_propulsion_debug()
 	printf("\n");
 }
 
-void UARTCommTask::send_message(uint16_t type, const char* buffer, uint16_t size)
+bool UARTCommTask::send_message(uint16_t type, const char* buffer, uint16_t size)
 {
-	m_serializer.push_message(type, (const unsigned char*)(buffer), size);
+	if(xSemaphoreTake(m_serializer_mutex, 1) == pdTRUE)
+	{
+		m_serializer.push_message(type, (const unsigned char*)(buffer), size);
+		xSemaphoreGive(m_serializer_mutex);
+		return true;
+	}
+	return false;
 }
 
 void UARTCommTask::process_message(uint16_t message_type)

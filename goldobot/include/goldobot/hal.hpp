@@ -36,13 +36,25 @@ namespace goldobot
 		bool uart_transmit_finished(int uart_index);
 
 		static
+		void uart_wait_for_transmit(int uart_index);
+
+		static
 		bool uart_receive(int uart_index, const char* buffer, uint16_t size, bool blocking = true);
 
 		static
 		bool uart_receive_finished(int uart_index);
 
 		static
+		void uart_wait_for_receive(int uart_index);
+
+		static
 		uint16_t uart_receive_abort(int uart_index);
+
+		static
+		void set_gpio(int gpio_index, bool value);
+
+		static
+		bool get_gpio(int gpio_index);
 
 		static
 		void simulation_step();

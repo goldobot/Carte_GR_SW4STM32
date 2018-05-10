@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <math.h>
 
+
 #define MAXON_EN_Pin GPIO_PIN_15
 #define MAXON_EN_GPIO_Port GPIOC
 
@@ -17,7 +18,20 @@
 
 #define MAXON1_DIR_Pin GPIO_PIN_2
 #define MAXON1_DIR_GPIO_Port GPIOB
+
 using namespace goldobot;
+
+struct GPIODescriptor
+{
+	GPIO_TypeDef* port;
+	uint16_t pin;
+};
+
+static GPIODescriptor s_gpio_descriptors[] ={
+	{GPIOA, GPIO_PIN_5},//green led
+	{GPIOC, GPIO_PIN_13}//match start //tmp: blue button on nucleo
+};
+
 
 static SemaphoreHandle_t s_uart_semaphore;
 
@@ -45,6 +59,9 @@ extern "C"
 	}
 }
 
+UART_HandleTypeDef* g_uart_handles[] ={
+		&huart2
+};
 
 
 void Hal::init()
@@ -132,52 +149,95 @@ bool Hal::uart_read_char(int uart_index, char* c, bool blocking)
 
 bool Hal::uart_transmit(int uart_index, const char* buffer, uint16_t size, bool blocking)
 {
-	if(HAL_UART_Transmit_IT(&huart2, (uint8_t*)buffer, size)!= HAL_OK)
+	auto huart_ptr = g_uart_handles[uart_index];
+	if(HAL_UART_Transmit_IT(huart_ptr, (uint8_t*)buffer, size)!= HAL_OK)
 	{
 		return false;
 	}
-
-	// Wait for transfer complete
-	while (blocking && huart2.gState == HAL_UART_STATE_BUSY_TX)
+	if(blocking)
 	{
-		// Semaphore is unblocked by UART interrupts.
-		xSemaphoreTake(s_uart_semaphore, portMAX_DELAY);
+		Hal::uart_wait_for_transmit(uart_index);
 	}
 	return true;
 }
 
 bool Hal::uart_transmit_finished(int uart_index)
 {
-	return huart2.gState != HAL_UART_STATE_BUSY_TX;
+	auto huart_ptr = g_uart_handles[uart_index];
+	return huart_ptr->gState != HAL_UART_STATE_BUSY_TX;
+}
+
+void Hal::uart_wait_for_transmit(int uart_index)
+{
+	auto huart_ptr = g_uart_handles[uart_index];
+	while (huart_ptr->gState == HAL_UART_STATE_BUSY_TX)
+	{
+		// Semaphore is unblocked by UART interrupts.
+		xSemaphoreTake(s_uart_semaphore, portMAX_DELAY);
+	}
 }
 
 bool Hal::uart_receive(int uart_index, const char* buffer, uint16_t size, bool blocking)
 {
+	auto huart_ptr = g_uart_handles[uart_index];
 	if(HAL_UART_Receive_IT(&huart2, (uint8_t*)buffer, size)!= HAL_OK)
 	{
 		return false;
 	}
-
-	// Wait for transfer complete
-	while (blocking && huart2.RxState == HAL_UART_STATE_BUSY_RX)
+	if(blocking)
 	{
-		// Semaphore is unblocked by UART interrupts.
-		xSemaphoreTake(s_uart_semaphore, portMAX_DELAY);
+		Hal::uart_wait_for_receive(uart_index);
 	}
 	return true;
 }
 
 bool Hal::uart_receive_finished(int uart_index)
 {
-	return huart2.RxState != HAL_UART_STATE_BUSY_RX;
+	auto huart_ptr = g_uart_handles[uart_index];
+	return huart_ptr->RxState != HAL_UART_STATE_BUSY_RX;
+}
+
+void Hal::uart_wait_for_receive(int uart_index)
+{
+	auto huart_ptr = g_uart_handles[uart_index];
+	while (huart_ptr->RxState == HAL_UART_STATE_BUSY_RX)
+	{
+		// Semaphore is unblocked by UART interrupts.
+		xSemaphoreTake(s_uart_semaphore, portMAX_DELAY);
+	}
 }
 
 uint16_t Hal::uart_receive_abort(int uart_index)
 {
+	auto huart_ptr = g_uart_handles[uart_index];
+
 	portDISABLE_INTERRUPTS();
 	uint16_t bytes_received = huart2.RxXferSize - huart2.RxXferCount;
 	HAL_UART_AbortReceive_IT(&huart2);
 	portENABLE_INTERRUPTS();
+
+	// Unblock tasks potentially waiting for recevie to finish
+	xSemaphoreGive(s_uart_semaphore);
 	return bytes_received;
 }
+
+void Hal::set_gpio(int gpio_index, bool value)
+{
+	auto& desc = s_gpio_descriptors[gpio_index];
+	if(value)
+	{
+		HAL_GPIO_WritePin(desc.port, desc.pin, GPIO_PIN_SET);
+	} else
+	{
+		HAL_GPIO_WritePin(desc.port, desc.pin, GPIO_PIN_RESET);
+	}
+}
+
+bool Hal::get_gpio(int gpio_index)
+{
+	auto& desc = s_gpio_descriptors[gpio_index];
+	return HAL_GPIO_ReadPin(desc.port, desc.pin) == GPIO_PIN_SET;
+}
+
+
 
