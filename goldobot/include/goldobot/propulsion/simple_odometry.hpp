@@ -14,6 +14,7 @@ namespace goldobot
 		uint16_t rightEncoderValue() const;
 		const RobotPose& pose() const;
 
+		const OdometryConfig& config() const;
 		void setConfig(const OdometryConfig& config);
 		void setPose(const RobotPose& pose);
 

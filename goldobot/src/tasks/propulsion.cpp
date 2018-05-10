@@ -2,6 +2,10 @@
 #include "goldobot/hal.hpp"
 #include "goldobot/robot.hpp"
 
+#ifndef M_PI
+#define M_PI (3.14159265358979323846)
+#endif
+
 using namespace goldobot;
 
 PropulsionTask::PropulsionTask():
@@ -27,6 +31,20 @@ struct PropulsionTelemetry
 	int8_t right_pwm;
 };
 
+struct PropulsionTelemetryEx
+{
+	int16_t target_x;//quarters of mm
+	int16_t target_y;
+	int16_t target_yaw;
+	int16_t target_speed;// mm per second
+	int16_t target_yaw_rate;// mradian per second
+	int16_t longitudinal_error;
+	int16_t lateral_error;
+	int16_t yaw_error;
+	int16_t speed_error;
+	int16_t yaw_rate_error;
+};
+
 void PropulsionTask::doStep()
 {
 	// Update odometry
@@ -39,15 +57,35 @@ void PropulsionTask::doStep()
 
 	m_telemetry_counter++;
 
-	if(m_telemetry_counter == 10)
+	if(m_telemetry_counter % 10 == 0)
 	{
 		auto& comm = Robot::instance().comm();
 		PropulsionTelemetry msg;
 		msg.x = (int16_t)(m_controller.m_pose.position.x * 4e3f);
 		msg.y = (int16_t)(m_controller.m_pose.position.y * 4e3f);
+		msg.yaw = (int16_t)(m_controller.m_pose.yaw * 32767 / M_PI);
+		msg.speed = (int16_t)(m_controller.m_pose.speed * 1000);
+		msg.yaw_rate = (int16_t)(m_controller.m_pose.yaw_rate * 1000);
+		msg.left_encoder = left;
+		msg.right_encoder = right;
+		msg.left_pwm = (int16_t)(m_controller.m_left_motor_pwm * 100);
+		msg.right_pwm = (int16_t)(m_controller.m_right_motor_pwm * 100);
 		comm.send_message((uint16_t)CommMessageType::PropulsionTelemetry,(const char*)&msg, sizeof(msg));
-		m_telemetry_counter = 0;
 	}
+	if(m_telemetry_counter == 50)
+		{
+			auto& comm = Robot::instance().comm();
+			PropulsionTelemetryEx msg;
+			msg.target_x = (int16_t)(m_controller.m_target_position.x * 4e3f);
+			msg.target_y = (int16_t)(m_controller.m_target_position.y * 4e3f);
+			msg.target_yaw = (int16_t)(m_controller.m_target_yaw * 32767 / M_PI);
+			msg.target_speed = (int16_t)(m_controller.m_target_speed * 1000);
+			msg.target_yaw_rate = (int16_t)(m_controller.m_target_yaw_rate * 1000);
+			msg.longitudinal_error = (int16_t)(m_controller.m_longitudinal_error * 4e3f);
+			msg.lateral_error = (int16_t)(m_controller.m_lateral_error * 4e3f);
+			comm.send_message((uint16_t)CommMessageType::PropulsionTelemetryEx,(const char*)&msg, sizeof(msg));
+			m_telemetry_counter = 0;
+		}
 
 }
 

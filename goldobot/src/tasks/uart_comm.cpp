@@ -396,59 +396,7 @@ void UARTCommTask::loop_test_propulsion()
 {
 	goldobot::PropulsionController* controller = &(Robot::instance().propulsion());
 
-	while(1)
-	{
-		printf("[Test propulsion]\r\n");
-		printf("1: enable motors\r\n");
-		printf("2: disable motors\r\n");
-		printf("3: test_line\r\n");
-		printf("4: test repositioning\r\n");
-		printf("q: quit\r\n");
-		char choice = 0;
-		prompt_char(">: ", &choice);
-		switch(choice)
-		{
-		case '1':
-			Hal::set_motors_enable(true);
-			break;
-		case '2':
-			Hal::set_motors_enable(false);
-			break;
-		case '3':
-		{
-			Vector2D points[4];
-			auto pose = Robot::instance().propulsion().target_pose();
-			points[0] = pose.position;
-			points[1] = points[0];
-			points[1].x += 0.5 * cos(pose.yaw);
-			points[1].y += 0.5 * sin(pose.yaw);
-			points[2] = points[1];
-			points[2].x += 0.5 * sin(pose.yaw);
-			points[2].y += 0.5 * cos(pose.yaw);
-			points[3] = points[2];
-			points[3].x += 0.5 * cos(pose.yaw);
-			points[3].y += 0.5 * sin(pose.yaw);
-			Robot::instance().propulsion().executeTrajectory(points, 4, PropulsionController::Direction::Forward, 0.5,1,1);
-			while(controller->state() == PropulsionController::State::FollowTrajectory)
-			{
-				delayTicks(100);
-			}
-			vTaskDelay(1000);
-			print_propulsion_debug();
-		}
-			break;
-		case '4':
-			Robot::instance().propulsion().executeRepositioning(PropulsionController::Direction::Backward, 0.1,{1,0},0);
-			while(controller->state() == PropulsionController::State::Reposition)
-			{
-				delayTicks(100);
-			}
-			print_propulsion_debug();
-			break;
-		case 'q':
-			return;
-		}
-	}
+
 }
 
 void UARTCommTask::loop_calibrate_propulsion_control()
@@ -494,36 +442,7 @@ void UARTCommTask::loop_calibrate_propulsion_control()
 
 void UARTCommTask::print_propulsion_debug()
 {
-	goldobot::PropulsionController* controller = &(Robot::instance().propulsion());
-	printf("target_x,");
-	printf("target_y,");
-	printf("target_yaw,");
-	printf("target_speed,");
-	printf("robot_x,");
-	printf("robot_y,");
-	printf("robot_yaw,");
-	printf("robot_speed,");
-	printf("robot_yaw_rate,");
-	printf("pwm_left,");
-	printf("pwm_right\r\n");
-	delayTicks(10);
-	for(unsigned i = 0; i < controller->m_dbg_index;i++)
-	{
-		printf("%f,",controller->m_dbg_target_position_buffer[i].x);
-		printf("%f,",controller->m_dbg_target_position_buffer[i].y);
-		printf("%f,",controller->m_dbg_target_yaw_buffer[i]);
-		printf("%f,",controller->m_dbg_target_speed_buffer[i]);
-		printf("%f,",controller->m_dbg_pose_buffer[i].position.x);
-		printf("%f,",controller->m_dbg_pose_buffer[i].position.y);
-		printf("%f,",controller->m_dbg_pose_buffer[i].yaw);
-		printf("%f,",controller->m_dbg_pose_buffer[i].speed);
-		printf("%f,",controller->m_dbg_pose_buffer[i].yaw_rate);
-		printf("%f,",controller->m_dbg_left_pwm_buffer[i]);
-		printf("%f,",controller->m_dbg_right_pwm_buffer[i]);
-		printf("\r\n");
-		delayTicks(10);
-	}
-	printf("\n");
+
 }
 
 bool UARTCommTask::send_message(uint16_t type, const char* buffer, uint16_t size)
@@ -539,7 +458,19 @@ bool UARTCommTask::send_message(uint16_t type, const char* buffer, uint16_t size
 
 void UARTCommTask::process_message(uint16_t message_type)
 {
-	unsigned char buff[32];
-	m_deserializer.pop_message(buff, sizeof(buff));
+	switch((CommMessageType)m_deserializer.message_type())
+	{
+	case CommMessageType::DebugExecuteTrajectory:
+		{
+			auto config = Robot::instance().odometry().config();
+			send_message((uint16_t)CommMessageType::OdometryConfig, (char*)&config, sizeof(config));
+			m_deserializer.pop_message(nullptr, 0);
+		}
+		break;
+	default:
+		m_deserializer.pop_message(nullptr, 0);
+		break;
+	}
+
 	int foo=1;
 }

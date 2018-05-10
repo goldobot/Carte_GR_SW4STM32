@@ -16,7 +16,11 @@ namespace goldobot
 		PropulsionTelemetry=3, //
 		StartOfMatch=4,
 		EndOfMatch=5,
-		SetMotorsEnable=64
+		PropulsionTelemetryEx=6,
+		OdometryConfig=32,
+		PropulsionConfig=33,
+		SetMotorsEnable=64,
+		DebugExecuteTrajectory=65
 	};
 	class UARTCommTask : public Task
 	{

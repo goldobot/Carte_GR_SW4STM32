@@ -65,7 +65,10 @@ namespace goldobot
 		float leftMotorPwm();
 		float rightMotorPwm();
 
-		bool executeTrajectory(Vector2D* points, int num_points, Direction direction, float speed, float acceleration, float decceleration);
+		//! \brief reset robot pose. Only works if state is Inactive or Stopped. Also change odometry.
+		bool reset_pose(float x, float y, float yaw);
+
+		bool executeTrajectory(Vector2D* points, int num_points, float speed, float acceleration, float decceleration);
 		bool executeRepositioning(Direction direction, float speed, Vector2D normal, float distance_to_center);
 		bool executePointTo(Vector2D target, float yaw_rate, float accel, float deccel);
 		bool executeRotation(float delta_yaw, float yaw_rate, float accel, float deccel);
@@ -80,17 +83,6 @@ namespace goldobot
 		void set_translation_kp(float kp);
 		void set_translation_kd(float kd);
 		void set_translation_ki(float ki);
-
-
-		Vector2D m_dbg_target_position_buffer[100];
-		float m_dbg_target_yaw_buffer[100];
-		float m_dbg_target_speed_buffer[100];
-		float m_dbg_left_pwm_buffer[100];
-		float m_dbg_right_pwm_buffer[100];
-		RobotPose m_dbg_pose_buffer[100];
-
-		int m_dbg_index;
-		int m_dbg_counter;
 
 	//private:
 		enum class CommandType : uint8_t

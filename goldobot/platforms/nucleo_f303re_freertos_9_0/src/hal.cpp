@@ -1,4 +1,5 @@
 #include "goldobot/hal.hpp"
+#include "goldobot/robot_simulator.hpp"
 #include "stm32f3xx_hal.h"
 
 #include "FreeRTOS.h"
@@ -8,6 +9,8 @@
 #include <sys/unistd.h> // STDOUT_FILENO, STDERR_FILENO
 #include <errno.h>
 #include <math.h>
+
+#define SIMULATE_ROBOT
 
 
 #define MAXON_EN_Pin GPIO_PIN_15
@@ -63,6 +66,9 @@ UART_HandleTypeDef* g_uart_handles[] ={
 		&huart2
 };
 
+#ifdef SIMULATE_ROBOT
+static RobotSimulator s_robot_simulator;
+#endif
 
 void Hal::init()
 {
@@ -78,11 +84,26 @@ void Hal::init()
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
 
 	s_uart_semaphore = xSemaphoreCreateBinary();
+
+#ifdef SIMULATE_ROBOT
+	// Init simulator
+	RobotSimulatorConfig simulator_config;
+	simulator_config.speed_coeff = 1.7f; // Measured on big robot
+	simulator_config.wheels_spacing = 0.2f;
+	simulator_config.encoders_spacing = 0.3f;
+	simulator_config.encoders_counts_per_m = 1 / 1.5e-05f;
+	s_robot_simulator.m_config = simulator_config;
+#endif
 }
 
 
 void Hal::read_encoders(uint16_t& left, uint16_t& right)
 {
+#ifdef SIMULATE_ROBOT
+	left = s_robot_simulator.m_left_encoder;
+	right = s_robot_simulator.m_right_encoder;
+	return;
+#endif
 	left = 8192 - htim4.Instance->CNT;
 	right = 8192 - htim1.Instance->CNT;
 }
@@ -100,6 +121,11 @@ void Hal::set_motors_enable(bool enabled)
 
 void Hal::set_motors_pwm(float left, float right)
 {
+#ifdef SIMULATE_ROBOT
+	s_robot_simulator.m_left_pwm = left;
+	s_robot_simulator.m_right_pwm = right;
+	s_robot_simulator.do_step();
+#endif
 	int left_pwm = 0;
 	int right_pwm = 0;
 	if(left > 0)

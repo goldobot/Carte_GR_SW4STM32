@@ -29,7 +29,10 @@ const RobotPose& SimpleOdometry::pose() const
 {
 	return m_pose;
 }
-
+const OdometryConfig& SimpleOdometry::config() const
+{
+	return m_config;
+}
 void SimpleOdometry::setConfig(const OdometryConfig& config)
 {
 	m_config = config;

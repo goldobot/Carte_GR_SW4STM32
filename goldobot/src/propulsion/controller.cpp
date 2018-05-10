@@ -46,7 +46,6 @@ PropulsionController::PropulsionController(SimpleOdometry* odometry):
 		m_yaw_error(0),
 		m_speed_error(0),
 		m_yaw_rate_error(0),
-		m_dbg_index(0),
 		m_pwm_limit(1)
 {
 	m_state = State::Stopped;
@@ -203,26 +202,6 @@ void PropulsionController::update()
 	if(m_right_motor_pwm < -m_pwm_limit)
 	{
 		m_right_motor_pwm = -m_pwm_limit;
-	}
-
-	// debug
-	if(m_state ==State::FollowTrajectory || m_state == State::Reposition || m_state == State::Test)
-	{
-		m_dbg_counter++;
-		if(m_dbg_counter == 20)
-		{
-			m_dbg_counter = 0;
-			m_dbg_pose_buffer[m_dbg_index] = m_pose;
-			m_dbg_target_position_buffer[m_dbg_index] = m_target_position;
-			m_dbg_target_yaw_buffer[m_dbg_index] = m_target_yaw;
-			m_dbg_target_speed_buffer[m_dbg_index] = m_target_speed;
-			m_dbg_left_pwm_buffer[m_dbg_index] = m_left_motor_pwm;
-			m_dbg_right_pwm_buffer[m_dbg_index] = m_right_motor_pwm;
-			if(m_dbg_index < 499)
-			{
-				m_dbg_index++;
-			}
-		}
 	}
 }
 
@@ -406,12 +385,18 @@ void PropulsionController::updateTargetPositions()
 	m_speed_profile.compute(t,&parameter,&speed,&accel);
 	parameter = std::min(parameter, m_trajectory_buffer.max_parameter());
 
-	float lookahead_distance = 0.2;
+	float lookahead_distance = 0.15;
 	float lookahead_parameter = parameter + lookahead_distance;
 
 	auto target_point = m_trajectory_buffer.compute_point(parameter);
 	m_target_position = target_point.position;
 	m_target_yaw = atan2f(target_point.tangent.y, target_point.tangent.x);
+
+	// Robot target yaw is reversed compared to trajectory tangent if moving backward
+	if(m_direction == Direction::Backward)
+	{
+		m_target_yaw *= -1;
+	}
 
 	// Compute position of lookahead point
 	// Extend the trajectory past last point if necessary
@@ -469,7 +454,16 @@ void PropulsionController::repositionReconfigureOdometry()
 
 void PropulsionController::initMoveCommand(float speed, float accel, float deccel)
 {
+	// Compute speed progile
 	m_speed_profile.update(m_trajectory_buffer.max_parameter(), speed, accel, deccel);
+
+	// Compute direction by taking scalar product of current robot orientation vector with tangent of trajectory at origin
+	auto target_point = m_trajectory_buffer.compute_point(0);
+	float ux = cosf(m_target_yaw);
+	float uy = sinf(m_target_yaw);
+	m_direction = ux * target_point.tangent.x + uy * target_point.tangent.y > 0 ? Direction::Forward : Direction::Backward;
+
+	// Set command end time
 	m_command_begin_time = m_time_base_ms;
 	m_command_end_time = m_time_base_ms + static_cast<uint32_t>(ceilf(1000 * m_speed_profile.end_time()));
 }
@@ -483,14 +477,29 @@ void PropulsionController::initRotationCommand(float delta_yaw, float speed, flo
 	m_command_end_time = m_time_base_ms + static_cast<uint32_t>(ceilf(1000 * m_speed_profile.end_time()));
 }
 
-bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, Direction direction, float speed, float acceleration, float decceleration)
+bool PropulsionController::reset_pose(float x, float y, float yaw)
+{
+	if(m_state == State::Inactive || m_state == State::Stopped)
+	{
+		RobotPose pose;
+		pose.position.x = x;
+		pose.position.y = y;
+		pose.yaw = yaw;
+		pose.speed = 0;
+		pose.yaw_rate = 0;
+		m_odometry->setPose(pose);
+		m_target_position = pose.position;
+		m_target_yaw = yaw;
+		return true;
+	} else
+	{
+		return false;
+	}
+}
+bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, float speed, float acceleration, float decceleration)
 {
 	m_trajectory_buffer.push_segment(points, num_points);
 	initMoveCommand(speed, acceleration, decceleration);
-	m_direction = direction;
-
-	m_dbg_index = 0;
-	m_dbg_counter = 0;
 	m_state = State::FollowTrajectory;
 	return true;
 };
@@ -501,9 +510,7 @@ bool PropulsionController::executePointTo(Vector2D point, float speed, float acc
 	float diff_y = (point.y - m_pose.position.y);
 	float target_yaw = atan2f(diff_y, diff_x);
 	initRotationCommand(angleDiff(target_yaw, m_target_yaw), speed, acceleration, decceleration);
-	
-	m_dbg_index = 0;
-	m_dbg_counter = 0;
+
 	m_state = State::PointTo;
 	return true;
 };
@@ -512,8 +519,6 @@ bool PropulsionController::executeRotation(float delta_yaw, float yaw_rate, floa
 {
 	initRotationCommand(delta_yaw, yaw_rate, accel, deccel);
 
-	m_dbg_index = 0;
-	m_dbg_counter = 0;
 	m_state = State::PointTo;
 	return true;
 }
@@ -528,8 +533,6 @@ bool PropulsionController::executeRepositioning(Direction direction, float speed
 	m_command_begin_time = m_time_base_ms;
 	m_command_end_time = m_command_begin_time + 1000;
 
-	m_dbg_index = 0;
-	m_dbg_counter = 0;
 	m_state = State::Reposition;
 	return true;
 }
@@ -539,8 +542,6 @@ void PropulsionController::executeTest(TestPattern pattern)
 	m_test_pattern = pattern;
 	m_command_begin_time = m_time_base_ms;
 	m_command_end_time = m_command_begin_time + 4000;
-	m_dbg_index = 0;
-	m_dbg_counter = 0;
 	m_state = State::Test;
 }
 

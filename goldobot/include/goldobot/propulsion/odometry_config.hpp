@@ -13,6 +13,7 @@ namespace goldobot
         float wheel_spacing;
         //! \brief time between odometry updates, in seconds.
         float update_period;
+        //! \brief inverse of speed filter cutoff frequency
         float speed_filter_period;
         //! \brief period of the encoders counter.
         uint16_t encoder_period;
