@@ -458,6 +458,8 @@ bool UARTCommTask::send_message(uint16_t type, const char* buffer, uint16_t size
 
 void UARTCommTask::process_message(uint16_t message_type)
 {
+	goldobot::PropulsionController* propulsion = &(Robot::instance().propulsion());
+
 	switch((CommMessageType)m_deserializer.message_type())
 	{
 	case CommMessageType::DebugExecuteTrajectory:
@@ -467,6 +469,10 @@ void UARTCommTask::process_message(uint16_t message_type)
 			m_deserializer.pop_message(nullptr, 0);
 		}
 		break;
+	case CommMessageType::CmdEmergencyStop:
+		propulsion->emergency_stop();
+		break;
+
 	default:
 		m_deserializer.pop_message(nullptr, 0);
 		break;

@@ -29,6 +29,8 @@ struct PropulsionTelemetry
 	uint16_t right_encoder;
 	int8_t left_pwm;// percents
 	int8_t right_pwm;
+	uint8_t state;
+	uint8_t error;
 };
 
 struct PropulsionTelemetryEx
@@ -70,6 +72,8 @@ void PropulsionTask::doStep()
 		msg.right_encoder = right;
 		msg.left_pwm = (int16_t)(m_controller.m_left_motor_pwm * 100);
 		msg.right_pwm = (int16_t)(m_controller.m_right_motor_pwm * 100);
+		msg.state = (uint8_t)(m_controller.state());
+		msg.error = (uint8_t)(m_controller.error());
 		comm.send_message((uint16_t)CommMessageType::PropulsionTelemetry,(const char*)&msg, sizeof(msg));
 	}
 	if(m_telemetry_counter == 50)

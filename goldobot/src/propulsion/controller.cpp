@@ -33,6 +33,7 @@ float angleDiff(float a, float b)
 PropulsionController::PropulsionController(SimpleOdometry* odometry):
 		m_odometry(odometry),
 		m_state(State::Inactive),
+		m_error(Error::None),
 		m_left_motor_pwm(0),
 		m_right_motor_pwm(0),
 		m_time_base_ms(0),
@@ -94,6 +95,25 @@ PropulsionController::State PropulsionController::state() const
 	return m_state;
 }
 
+PropulsionController::Error PropulsionController::error() const
+{
+	return m_error;
+}
+
+void PropulsionController::clear_error()
+{
+	m_state = State::Stopped;
+	m_error = Error::None;
+}
+
+void PropulsionController::emergency_stop()
+{
+	if(m_state == State::FollowTrajectory || m_state == State::PointTo)
+	{
+		m_state = State::EmergencyStop;
+	}
+}
+
 void PropulsionController::set_speed_feedforward(float ff)
 {
 	m_speed_pid.set_feedforward(ff);
@@ -135,6 +155,8 @@ void PropulsionController::update()
 	m_pose = m_odometry->pose();
 	switch(m_state)
 	{
+	case State::Inactive:
+		break;
 	case State::Stopped:
 		updateMotorsPwm();
 		break;
@@ -172,6 +194,21 @@ void PropulsionController::update()
 				}
 			}
 		}
+		break;
+	case State::EmergencyStop:
+		{
+			m_left_motor_pwm = 0;
+			m_right_motor_pwm = 0;
+			if (fabsf(m_pose.speed) < 0.01 && fabsf(m_pose.yaw_rate) < 0.1)
+			{
+				m_state = State::Error;
+				m_error = Error::EmergencyStop;
+			}
+		}
+		break;
+	case State::Error:
+		m_left_motor_pwm = 0;
+		m_right_motor_pwm = 0;
 		break;
 	case State::Test:
 		{
@@ -498,6 +535,10 @@ bool PropulsionController::reset_pose(float x, float y, float yaw)
 }
 bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, float speed, float acceleration, float decceleration)
 {
+	if(m_state != State::Stopped)
+	{
+		return false;
+	}
 	m_trajectory_buffer.push_segment(points, num_points);
 	initMoveCommand(speed, acceleration, decceleration);
 	m_state = State::FollowTrajectory;
@@ -506,6 +547,10 @@ bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, f
 
 bool PropulsionController::executePointTo(Vector2D point, float speed, float acceleration, float decceleration)
 {
+	if(m_state != State::Stopped)
+	{
+		return false;
+	}
 	float diff_x = (point.x - m_pose.position.x);
 	float diff_y = (point.y - m_pose.position.y);
 	float target_yaw = atan2f(diff_y, diff_x);
@@ -517,6 +562,10 @@ bool PropulsionController::executePointTo(Vector2D point, float speed, float acc
 
 bool PropulsionController::executeRotation(float delta_yaw, float yaw_rate, float accel, float deccel)
 {
+	if(m_state != State::Stopped)
+	{
+		return false;
+	}
 	initRotationCommand(delta_yaw, yaw_rate, accel, deccel);
 
 	m_state = State::PointTo;
@@ -525,6 +574,10 @@ bool PropulsionController::executeRotation(float delta_yaw, float yaw_rate, floa
 
 bool PropulsionController::executeRepositioning(Direction direction, float speed, Vector2D normal, float distance_to_center)
 {
+	if(m_state != State::Stopped)
+	{
+		return false;
+	}
 	m_target_speed = direction == Direction::Forward ? speed : -speed;
 	m_direction = direction;
 	m_pwm_limit = 0.25;
@@ -539,6 +592,10 @@ bool PropulsionController::executeRepositioning(Direction direction, float speed
 
 void PropulsionController::executeTest(TestPattern pattern)
 {
+	if(m_state != State::Stopped)
+		{
+			return;
+		}
 	m_test_pattern = pattern;
 	m_command_begin_time = m_time_base_ms;
 	m_command_end_time = m_command_begin_time + 4000;

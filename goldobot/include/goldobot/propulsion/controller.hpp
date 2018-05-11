@@ -43,8 +43,9 @@ namespace goldobot
 
 		enum class Error
 		{
+			None,
 			EmergencyStop, // An emergency stop occurred during last command
-			RobotBlocked,
+			RobotBlocked, // Robot was blocked by an obstacle during last command
 			TrackingError // The tracking error became too large during last command
 		};
 
@@ -58,6 +59,8 @@ namespace goldobot
 		PropulsionController(SimpleOdometry* odometry);
 
 		State state() const;
+		Error error() const;
+		void clear_error();
 		RobotPose target_pose() const;
 
 		void update();
@@ -72,6 +75,9 @@ namespace goldobot
 		bool executeRepositioning(Direction direction, float speed, Vector2D normal, float distance_to_center);
 		bool executePointTo(Vector2D target, float yaw_rate, float accel, float deccel);
 		bool executeRotation(float delta_yaw, float yaw_rate, float accel, float deccel);
+
+		//! \brief Emergency stop. Abort current PointTo of FollowTrajectory command and bring the robot to a stop.
+		void emergency_stop();
 
 		void executeTest(TestPattern patern);
 
@@ -104,6 +110,7 @@ namespace goldobot
 		SimpleOdometry* m_odometry;
 		RobotPose m_pose;
 		State m_state;
+		Error m_error;
 		TestPattern m_test_pattern;
 
 		float m_left_motor_pwm;

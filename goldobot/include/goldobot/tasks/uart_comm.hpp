@@ -17,6 +17,8 @@ namespace goldobot
 		StartOfMatch=4,
 		EndOfMatch=5,
 		PropulsionTelemetryEx=6,
+		CmdEmergencyStop=16, // Order an emergency stop
+		CmdSelectSide=17, // Select side. payload is an unsigned byte, 0=green, 1=orange
 		OdometryConfig=32,
 		PropulsionConfig=33,
 		SetMotorsEnable=64,
