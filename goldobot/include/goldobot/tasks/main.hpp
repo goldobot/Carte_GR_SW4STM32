@@ -2,6 +2,7 @@
 #include "goldobot/tasks/task.hpp"
 #include "goldobot/propulsion/simple_odometry.hpp"
 #include "goldobot/propulsion/controller.hpp"
+#include "goldobot/trajectory_planner.hpp"
 
 #include <cstdint>
 
@@ -27,6 +28,8 @@ namespace goldobot
 		void matchBegin();
 		void matchStep();
 
+		void matchSelectNextObjective();
+
 	private:
 		enum class State
 		{
@@ -43,5 +46,8 @@ namespace goldobot
 		State m_match_state;
 		StartingSide m_starting_side;
 		uint32_t m_start_of_match_time;
+		TrajectoryPlanner m_trajectory_planner;
+		uint16_t m_current_trajectory_index;
+		uint16_t m_current_objective;
 	};
 }

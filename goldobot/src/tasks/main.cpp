@@ -49,46 +49,76 @@ void MainTask::matchBegin()
 	Hal::set_gpio(0, true);
 
 	// Dirty
-	Robot::instance().propulsion().reset_pose(0.2, -1.32, -M_PI/2);
-	g_foo = 0;
+	Robot::instance().propulsion().reset_pose(0.25, -1.32, -M_PI/2);
+	m_current_objective = 0;
+	matchSelectNextObjective();
 }
 
-Vector2D allpoints[] =
-{
-	{0.2, -1.32},
-	{0.2, -0.65},
-	{0.338, -0.65}
-};
 
 void MainTask::matchStep()
 {
 	auto& prop = Robot::instance().propulsion();
-	switch(g_foo)
-	{
-	case 0:
-		prop.executeTrajectory(allpoints, 2, 0.5,1,1);
-		g_foo = 1;
-		break;
-	case 1:
-		prop.executePointTo(allpoints[2], 1,1,1);
-		g_foo = 2;
-		break;
-	case 2:
-		prop.executeTrajectory(allpoints+1, 2, 0.5,1,1);
-		g_foo = 3;
-		break;
-	default:
-		break;
-	}
 
+	if(m_current_trajectory_index + 1 == m_trajectory_planner.num_trajectory_points())
+	{
+		matchSelectNextObjective();
+		return;
+	}
+	prop.executePointTo(m_trajectory_planner.trajectory_point(m_current_trajectory_index+1), 1,1,1);
+	while(prop.state() != PropulsionController::State::Stopped)
+	{
+		delayTicks(1);
+	}
+	Vector2D points[2];
+	points[0] = m_trajectory_planner.trajectory_point(m_current_trajectory_index);
+	points[1] = m_trajectory_planner.trajectory_point(m_current_trajectory_index+1);
+	prop.executeTrajectory(points, 2, 0.5,1,1);
 
 	while(prop.state() != PropulsionController::State::Stopped)
 	{
 		delayTicks(1);
 	}
+	m_current_trajectory_index++;
 }
+
+void MainTask::matchSelectNextObjective()
+{
+	m_trajectory_planner.set_current_point(m_current_objective);
+	switch(m_current_objective)
+	{
+	case 0:
+		m_current_objective = 3;
+		break;
+	case 3:
+		m_current_objective = 4;
+		break;
+	case 4:
+		m_current_objective = 3;
+		break;
+	}
+	m_current_trajectory_index = 0;
+	m_trajectory_planner.compute_costs();
+	m_trajectory_planner.compute_trajectory(m_current_objective);
+}
+
 void MainTask::taskFunction()
 {
+	// Dirty. init points
+
+	m_trajectory_planner.add_point(0.24, -1.32);// 1: green starting position
+	m_trajectory_planner.add_point(0.24, -0.65);
+	m_trajectory_planner.add_point(0.3, -0.65);
+	m_trajectory_planner.add_point(0.338, -0.65);// cube pos
+
+	m_trajectory_planner.add_point(0.938, -1.2);// Second cube on green side
+
+	m_trajectory_planner.add_edge(0,1);
+	m_trajectory_planner.add_edge(1,2);
+	m_trajectory_planner.add_edge(2,3);
+
+	m_trajectory_planner.add_edge(2,4);
+	m_trajectory_planner.compile();
+
 	auto& comm = Robot::instance().comm();
 
 
@@ -110,7 +140,7 @@ void MainTask::taskFunction()
 
 		case State::Match:
 			{
-				if(remainingMatchTime() < 85)
+				if(remainingMatchTime() < 70)
 				{
 					Hal::set_gpio(0, false);
 					m_match_state = State::PostMatch;
