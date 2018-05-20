@@ -20,6 +20,7 @@ namespace goldobot
 
 		OdometryConfig odometryConfig();
 		OdometryConfig defaultOdometryConfig();
+		PropulsionControllerConfig defaultPropulsionControllerConfig();
 		void setOdometryConfig(const OdometryConfig& config);
 	private:
 		PropulsionTask m_propulsion_task;

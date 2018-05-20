@@ -38,7 +38,9 @@ namespace goldobot
 		enum TestPattern
 		{
 			SpeedSteps,
-			PositionSteps
+			YawRateSteps,
+			PositionSteps,
+			YawSteps
 		};
 
 		enum class Error
@@ -58,7 +60,18 @@ namespace goldobot
 	public:
 		PropulsionController(SimpleOdometry* odometry);
 
+		bool test;
+
+		//! \brief Change state from Inactive to Stopped
+		void enable();
+
+		//! \brief Set the state to Inactive
+		void disable();
+
+		//! \brief Get current controller state
 		State state() const;
+
+		//! \brief Get current controller error code
 		Error error() const;
 		void clear_error();
 		RobotPose target_pose() const;
@@ -81,14 +94,8 @@ namespace goldobot
 
 		void executeTest(TestPattern patern);
 
-		void set_speed_feedforward(float ff);
-		void set_speed_kp(float kp);
-		void set_speed_kd(float kd);
-		void set_speed_ki(float ki);
-
-		void set_translation_kp(float kp);
-		void set_translation_kd(float kd);
-		void set_translation_ki(float ki);
+		const PropulsionControllerConfig& config() const;
+		void set_config(const PropulsionControllerConfig& config);
 
 	//private:
 		enum class CommandType : uint8_t
@@ -107,6 +114,7 @@ namespace goldobot
 		};
 
 	//private:
+		PropulsionControllerConfig m_config;
 		SimpleOdometry* m_odometry;
 		RobotPose m_pose;
 		State m_state;

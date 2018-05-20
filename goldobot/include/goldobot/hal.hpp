@@ -14,6 +14,9 @@ namespace goldobot
 		static
 		void  init();
 
+		static
+		void set_servo_pwm(uint16_t pwm);
+
 		//! \brief read wheel encoders value
 		static
 		void read_encoders(uint16_t& left, uint16_t& right);

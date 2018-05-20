@@ -11,6 +11,7 @@ SimpleOdometry::SimpleOdometry() :
 	m_x(0),
 	m_y(0),
 	m_yaw(0)
+
 {
 
 }
@@ -38,6 +39,8 @@ void SimpleOdometry::setConfig(const OdometryConfig& config)
 	m_config = config;
 	m_speed_coeff_1 = expf(-config.update_period/config.speed_filter_period);
 	m_speed_coeff_2 = (1.0f - m_speed_coeff_1) / config.update_period;
+	m_acceleration_coeff_1 = expf(-0.1*config.update_period/config.speed_filter_period);
+	m_acceleration_coeff_2 = (1.0f - m_acceleration_coeff_1) / config.update_period;
 }
 
 void SimpleOdometry::reset(uint16_t left, uint16_t right)
@@ -89,11 +92,23 @@ void SimpleOdometry::update(uint16_t left, uint16_t right)
 	{
 		m_yaw += 2 * M_PI;
 	}
+
+	float previous_speed = m_pose.speed;
+	float previous_yaw_rate = m_pose.yaw_rate;
+
 	m_pose.position.x = static_cast<float>(m_x);
 	m_pose.position.y = static_cast<float>(m_y);
 	m_pose.yaw = static_cast<float>(m_yaw);
+
+	// Speed filter
 	m_pose.speed = m_pose.speed * m_speed_coeff_1 + d_trans * m_speed_coeff_2;
 	m_pose.yaw_rate = m_pose.yaw_rate * m_speed_coeff_1 + d_yaw * m_speed_coeff_2;
+
+	// Acceleration filter
+	float d_speed = m_pose.speed - previous_speed;
+	float d_yaw_rate = previous_yaw_rate - m_pose.yaw_rate;
+	m_pose.acceleration = m_pose.acceleration * m_acceleration_coeff_1 + d_speed * m_acceleration_coeff_2;
+	m_pose.angular_acceleration = m_pose.angular_acceleration * m_acceleration_coeff_1 + d_yaw_rate * m_acceleration_coeff_2;
 }
 
 void SimpleOdometry::setPose(const RobotPose& pose)

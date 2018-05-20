@@ -53,7 +53,22 @@ void Task::init()
 			&m_task_handle);
 }
 
-void Task::delayTicks(unsigned ticks)
+void Task::set_priority(unsigned prio)
+{
+	vTaskPrioritySet(m_task_handle, prio);
+}
+
+void Task::delay(unsigned ticks)
+{
+	auto tick_count = xTaskGetTickCount();
+	if(tick_count - m_last_wake_time > ticks)
+	{
+		m_last_wake_time = tick_count;
+	}
+	vTaskDelay(ticks);
+}
+
+void Task::delay_periodic(unsigned ticks)
 {
 	auto tick_count = xTaskGetTickCount();
 	if(tick_count - m_last_wake_time > ticks)

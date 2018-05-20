@@ -11,11 +11,14 @@ Robot& Robot::instance()
 
 void Robot::init()
 {
+
+
 	m_comm_task.init();
 	m_comm_task.send_message((uint16_t)CommMessageType::Reset,nullptr, 0);
 	m_heartbeat_task.init();
 
 	setOdometryConfig(defaultOdometryConfig());
+	propulsion().set_config(defaultPropulsionControllerConfig());
 	m_propulsion_task.init();
 	m_main_task.init();
 
@@ -53,6 +56,36 @@ OdometryConfig Robot::defaultOdometryConfig()
 	return config;
 }
 
+PropulsionControllerConfig Robot::defaultPropulsionControllerConfig()
+{
+	PropulsionControllerConfig config;
+
+	config.speed_pid_config.period = 1e-3f;
+	config.yaw_rate_pid_config.period = 1e-3f;
+	config.translation_pid_config.period = 1e-3f;
+	config.yaw_pid_config.period = 1e-3f;
+
+	config.translation_pid_config.kp = 5;
+	config.yaw_pid_config.kp = 5;
+
+
+	// Configure speed pid
+	config.speed_pid_config.feed_forward = 0.64f;
+	config.speed_pid_config.kp = 0.5f;
+	config.speed_pid_config.lim_iterm = 0.2;
+
+	// Configure yaw rate pid
+	config.yaw_rate_pid_config.feed_forward = 0.1f / 1.7f;
+	config.yaw_rate_pid_config.kp = 0.2;
+
+	config.lookahead_distance = 0.15f;
+	config.lookahead_time = 0;
+	config.static_pwm_limit = 0.3;
+	config.moving_pwm_limit = 1;
+	config.repositioning_pwm_limit = 0.25;
+
+	return config;
+}
 OdometryConfig Robot::odometryConfig()
 {
 	return m_odometry_config;

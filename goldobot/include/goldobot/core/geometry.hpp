@@ -17,6 +17,8 @@ namespace goldobot
     	float yaw;
     	float speed;
     	float yaw_rate;
+    	float acceleration;
+    	float angular_acceleration;
     };
 }
 

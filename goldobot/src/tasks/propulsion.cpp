@@ -25,6 +25,8 @@ struct PropulsionTelemetry
 	int16_t yaw;
 	int16_t speed;// mm per second
 	int16_t yaw_rate;// mradian per second
+	int16_t acceleration;
+	int16_t angular_acceleration;
 	uint16_t left_encoder;
 	uint16_t right_encoder;
 	int8_t left_pwm;// percents
@@ -54,12 +56,18 @@ void PropulsionTask::doStep()
 	uint16_t right;
 	Hal::read_encoders(left, right);
 	m_odometry.update(left, right);
+
+	// Test emergency stop
+	if(Hal::get_gpio(2))
+	{
+		m_controller.emergency_stop();
+	}
 	m_controller.update();
 	Hal::set_motors_pwm(m_controller.leftMotorPwm(), m_controller.rightMotorPwm());
 
 	m_telemetry_counter++;
 
-	if(m_telemetry_counter % 10 == 0)
+	if(m_telemetry_counter % 5 == 0)
 	{
 		auto& comm = Robot::instance().comm();
 		PropulsionTelemetry msg;
@@ -68,6 +76,8 @@ void PropulsionTask::doStep()
 		msg.yaw = (int16_t)(m_controller.m_pose.yaw * 32767 / M_PI);
 		msg.speed = (int16_t)(m_controller.m_pose.speed * 1000);
 		msg.yaw_rate = (int16_t)(m_controller.m_pose.yaw_rate * 1000);
+		msg.acceleration = (int16_t)(m_controller.m_pose.acceleration * 1000);
+		msg.angular_acceleration = (int16_t)(m_controller.m_pose.angular_acceleration * 1000);
 		msg.left_encoder = left;
 		msg.right_encoder = right;
 		msg.left_pwm = (int16_t)(m_controller.m_left_motor_pwm * 100);
@@ -106,7 +116,8 @@ PropulsionController& PropulsionTask::controller()
 
 void PropulsionTask::taskFunction()
 {
-	// Set task to highest priority
+	// Set task to high
+	set_priority(6);
 
 	// Setup odometry
 	uint16_t left;
@@ -123,6 +134,6 @@ void PropulsionTask::taskFunction()
 			doStep();
 		}
 		// Execute the propulsion control loop every system tick (1ms)
-		delayTicks(1);
+		delay_periodic(1);
 	}
 }

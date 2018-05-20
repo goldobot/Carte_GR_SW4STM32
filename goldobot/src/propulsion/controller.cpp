@@ -49,45 +49,27 @@ PropulsionController::PropulsionController(SimpleOdometry* odometry):
 		m_yaw_rate_error(0),
 		m_pwm_limit(1)
 {
+	test = false;
+}
+
+void PropulsionController::enable()
+{
+	if(m_state != State::Inactive)
+	{
+		return;
+	}
+	m_pose = m_odometry->pose();
+	m_target_position = m_pose.position;
+	m_target_yaw = m_pose.yaw;
 	m_state = State::Stopped;
+}
 
-	PIDConfig speed_pid_config;
-	PIDConfig yaw_rate_pid_config;
-	PIDConfig translation_pid_config; 
-	PIDConfig yaw_pid_config;
-
-	speed_pid_config.period = 1e-3f;
-	yaw_rate_pid_config.period = 1e-3f;
-	translation_pid_config.period = 1e-3f;
-	yaw_pid_config.period = 1e-3f;
-
-	translation_pid_config.kp = 5;
-	yaw_pid_config.kp = 5;
-
-
-	// Configure speed pid
-	speed_pid_config.feed_forward = 0.64f;
-	speed_pid_config.kp = 0.5f;
-	speed_pid_config.lim_iterm = 0.2;
-
-	// Configure yaw rate pid
-	yaw_rate_pid_config.feed_forward = 0.1f / 1.7f;
-	yaw_rate_pid_config.kp = 0.2;
-	//yaw_rate_pid_config.kd = 1;
-
-	m_speed_pid.set_config(speed_pid_config);
-	m_yaw_rate_pid.set_config(yaw_rate_pid_config);
-	m_translation_pid.set_config(translation_pid_config);
-	m_yaw_pid.set_config(yaw_pid_config);
-
-	//test, 1/2 wheel spacing * speed feedforward
-	//m_yaw_rate_pid.m_ffp = 0.1/1.7;
-	//m_yaw_rate_pid.m_kp = 0;
-
-	//m_translation_pid.m_kp = 5;
-	//m_translation_pid.m_ffd = 1/1.7;
-	//m_translation_pid.m_kd = 1;
-
+void PropulsionController::disable()
+{
+	m_error = Error::None;
+	m_state = State::Inactive;
+	m_left_motor_pwm = 0;
+	m_right_motor_pwm = 0;
 }
 
 PropulsionController::State PropulsionController::state() const
@@ -100,6 +82,19 @@ PropulsionController::Error PropulsionController::error() const
 	return m_error;
 }
 
+const PropulsionControllerConfig& PropulsionController::config() const
+{
+	return m_config;
+}
+void PropulsionController::set_config(const PropulsionControllerConfig& config)
+{
+	m_config = config;
+	m_speed_pid.set_config(config.speed_pid_config);
+	m_yaw_rate_pid.set_config(config.yaw_rate_pid_config);
+	m_translation_pid.set_config(config.translation_pid_config);
+	m_yaw_pid.set_config(config.yaw_pid_config);
+}
+
 void PropulsionController::clear_error()
 {
 	m_state = State::Stopped;
@@ -108,47 +103,15 @@ void PropulsionController::clear_error()
 
 void PropulsionController::emergency_stop()
 {
+	if(!test)
+	{
+		return;
+	}
 	if(m_state == State::FollowTrajectory || m_state == State::PointTo)
 	{
 		m_state = State::EmergencyStop;
 	}
 }
-
-void PropulsionController::set_speed_feedforward(float ff)
-{
-	m_speed_pid.set_feedforward(ff);
-
-}
-void PropulsionController::set_speed_kp(float kp)
-{
-	m_speed_pid.set_kp(kp);
-}
-
-void PropulsionController::set_speed_kd(float kd)
-{
-	m_speed_pid.set_kd(kd);
-}
-
-void PropulsionController::set_speed_ki(float ki)
-{
-	m_speed_pid.set_ki(ki);
-}
-
-void PropulsionController::set_translation_kp(float kp)
-{
-	m_translation_pid.set_kp(kp);
-}
-
-void PropulsionController::set_translation_kd(float kd)
-{
-	m_translation_pid.set_kd(kd);
-}
-
-void PropulsionController::set_translation_ki(float ki)
-{
-	m_translation_pid.set_ki(ki);
-}
-
 
 void PropulsionController::update()
 {
@@ -158,10 +121,12 @@ void PropulsionController::update()
 	case State::Inactive:
 		break;
 	case State::Stopped:
+		m_pwm_limit = m_config.static_pwm_limit;
 		updateMotorsPwm();
 		break;
 	case State::FollowTrajectory:
 		{
+			m_pwm_limit = m_config.moving_pwm_limit;
 			updateTargetPositions();
 			updateMotorsPwm();
 			if(m_time_base_ms >= m_command_end_time)
@@ -172,6 +137,7 @@ void PropulsionController::update()
 		break;
 	case State::PointTo:
 		{
+			m_pwm_limit = m_config.moving_pwm_limit;
 			updateTargetYaw();
 			updateMotorsPwm();
 			if (m_time_base_ms >= m_command_end_time)
@@ -182,6 +148,7 @@ void PropulsionController::update()
 		break;
 	case State::Reposition:
 		{
+			m_pwm_limit = m_config.repositioning_pwm_limit;
 			updateReposition();
 			updateMotorsPwm();
 			// Check position error
@@ -212,10 +179,13 @@ void PropulsionController::update()
 		break;
 	case State::Test:
 		{
+			m_pwm_limit = m_config.moving_pwm_limit;
 			updateMotorsPwmTest();
 			if (m_time_base_ms >= m_command_end_time)
 			{
 				m_state = State::Stopped;
+				m_target_position = m_pose.position;
+				m_target_yaw = m_pose.yaw;
 			}
 		}
 		break;
@@ -360,7 +330,6 @@ void PropulsionController::updateMotorsPwmTest()
 
 		m_left_motor_pwm = speed_command;
 		m_right_motor_pwm = speed_command;
-
 		return;
 
 	}
@@ -422,7 +391,7 @@ void PropulsionController::updateTargetPositions()
 	m_speed_profile.compute(t,&parameter,&speed,&accel);
 	parameter = std::min(parameter, m_trajectory_buffer.max_parameter());
 
-	float lookahead_distance = 0.15;
+	float lookahead_distance = m_config.lookahead_distance + fabsf(m_target_speed) * m_config.lookahead_time;
 	float lookahead_parameter = parameter + lookahead_distance;
 
 	auto target_point = m_trajectory_buffer.compute_point(parameter);
@@ -580,7 +549,6 @@ bool PropulsionController::executeRepositioning(Direction direction, float speed
 	}
 	m_target_speed = direction == Direction::Forward ? speed : -speed;
 	m_direction = direction;
-	m_pwm_limit = 0.25;
 	m_reposition_hit = false;
 
 	m_command_begin_time = m_time_base_ms;

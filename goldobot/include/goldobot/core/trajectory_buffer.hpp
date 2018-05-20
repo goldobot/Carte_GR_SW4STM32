@@ -32,10 +32,10 @@ namespace goldobot
 
 	private:
 		// Trajectory control points
-		Vector2D m_control_points[16];
+		Vector2D m_control_points[32];
 
 		// Curve parameters of control points
-		float m_knot_parameters[16];
+		float m_knot_parameters[32];
 
 		uint16_t m_buffer_size;
 		uint16_t m_num_segments;

@@ -10,7 +10,7 @@
 #include <errno.h>
 #include <math.h>
 
-#define SIMULATE_ROBOT
+//#define SIMULATE_ROBOT
 
 
 #define MAXON_EN_Pin GPIO_PIN_15
@@ -32,7 +32,8 @@ struct GPIODescriptor
 
 static GPIODescriptor s_gpio_descriptors[] ={
 	{GPIOA, GPIO_PIN_5},//green led
-	{GPIOC, GPIO_PIN_13}//match start //tmp: blue button on nucleo
+	{GPIOC, GPIO_PIN_9},//match start //tmp: blue button on nucleo. //C9 in robot
+	{GPIOC, GPIO_PIN_8} // adversary detection on C8
 };
 
 
@@ -46,6 +47,7 @@ extern "C"
 	extern TIM_HandleTypeDef htim2;
 	extern TIM_HandleTypeDef htim3;
 	extern TIM_HandleTypeDef htim4;
+	extern TIM_HandleTypeDef htim16;
 
 	void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart)
 	{
@@ -119,6 +121,10 @@ void Hal::set_motors_enable(bool enabled)
 	}
 }
 
+void Hal::set_servo_pwm(uint16_t pwm)
+{
+	__HAL_TIM_SET_COMPARE(&htim16, TIM_CHANNEL_1, pwm);
+}
 void Hal::set_motors_pwm(float left, float right)
 {
 #ifdef SIMULATE_ROBOT
@@ -131,21 +137,21 @@ void Hal::set_motors_pwm(float left, float right)
 	if(left > 0)
 	{
 		left_pwm = static_cast<int>(left*10000);
-		HAL_GPIO_WritePin(MAXON2_DIR_GPIO_Port, MAXON2_DIR_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(MAXON2_DIR_GPIO_Port, MAXON2_DIR_Pin, GPIO_PIN_SET);
 	} else
 	{
 		left_pwm = static_cast<int>(-left*10000);
-		HAL_GPIO_WritePin(MAXON2_DIR_GPIO_Port, MAXON2_DIR_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(MAXON2_DIR_GPIO_Port, MAXON2_DIR_Pin, GPIO_PIN_RESET);
 	}
 
 	if(right > 0)
 	{
 		right_pwm = static_cast<int>(right*10000);
-		HAL_GPIO_WritePin(MAXON1_DIR_GPIO_Port, MAXON1_DIR_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(MAXON1_DIR_GPIO_Port, MAXON1_DIR_Pin, GPIO_PIN_RESET);
 	} else
 	{
 		right_pwm = static_cast<int>(-right*10000);
-		HAL_GPIO_WritePin(MAXON1_DIR_GPIO_Port, MAXON1_DIR_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(MAXON1_DIR_GPIO_Port, MAXON1_DIR_Pin, GPIO_PIN_SET);
 	}
 	if(left_pwm > 10000)
 	{

@@ -47,9 +47,16 @@ void MainTask::matchBegin()
 	m_match_state = State::Match;
 	m_start_of_match_time = clock;
 	Hal::set_gpio(0, true);
+	Hal::set_motors_enable(true);
+	auto& prop = Robot::instance().propulsion();
+	prop.test = true;
+	Robot::instance().propulsion().reset_pose(0, 0, 0);
+	m_current_objective = 0;
+	return;
+	//matchSelectNextObjective();
 
 	// Dirty
-	Robot::instance().propulsion().reset_pose(0.25, -1.32, -M_PI/2);
+	Robot::instance().propulsion().reset_pose(0.25, -1.28, -M_PI/2);
 	m_current_objective = 0;
 	matchSelectNextObjective();
 }
@@ -59,26 +66,16 @@ void MainTask::matchStep()
 {
 	auto& prop = Robot::instance().propulsion();
 
-	if(m_current_trajectory_index + 1 == m_trajectory_planner.num_trajectory_points())
+	if(m_current_objective == 0)
 	{
-		matchSelectNextObjective();
-		return;
-	}
-	prop.executePointTo(m_trajectory_planner.trajectory_point(m_current_trajectory_index+1), 1,1,1);
-	while(prop.state() != PropulsionController::State::Stopped)
-	{
-		delayTicks(1);
-	}
-	Vector2D points[2];
-	points[0] = m_trajectory_planner.trajectory_point(m_current_trajectory_index);
-	points[1] = m_trajectory_planner.trajectory_point(m_current_trajectory_index+1);
-	prop.executeTrajectory(points, 2, 0.5,1,1);
+		Vector2D points[2] = {
+				{0,0},
+				{1,0}
+		};
 
-	while(prop.state() != PropulsionController::State::Stopped)
-	{
-		delayTicks(1);
+		prop.executeTrajectory(points, 2, 0.5,1,1);
+		m_current_objective = 1;
 	}
-	m_current_trajectory_index++;
 }
 
 void MainTask::matchSelectNextObjective()
@@ -105,7 +102,7 @@ void MainTask::taskFunction()
 {
 	// Dirty. init points
 
-	m_trajectory_planner.add_point(0.24, -1.32);// 1: green starting position
+	m_trajectory_planner.add_point(0.24, -1.28);// 1: green starting position
 	m_trajectory_planner.add_point(0.24, -0.65);
 	m_trajectory_planner.add_point(0.3, -0.65);
 	m_trajectory_planner.add_point(0.338, -0.65);// cube pos
@@ -129,10 +126,14 @@ void MainTask::taskFunction()
 		switch(m_match_state)
 		{
 		case State::Idle:
-			m_match_state = State::WaitForStartOfMatch;
+			if(!Hal::get_gpio(1))
+			{
+				m_match_state = State::WaitForStartOfMatch;
+			}
+
 			break;
 		case State::WaitForStartOfMatch:
-			if(!Hal::get_gpio(1))
+			if(Hal::get_gpio(1))
 			{
 				matchBegin();
 			}
@@ -145,6 +146,7 @@ void MainTask::taskFunction()
 					Hal::set_gpio(0, false);
 					m_match_state = State::PostMatch;
 					comm.send_message((uint16_t)CommMessageType::EndOfMatch,(char*)&clock,sizeof(clock));
+					Hal::set_motors_enable(false);
 				} else
 				{
 					matchStep();
@@ -152,7 +154,8 @@ void MainTask::taskFunction()
 			}
 			break;
 		case State::PostMatch:
-			m_match_state = State::Idle;
+
+			//m_match_state = State::Idle;
 			break;
 		}
 		vTaskDelay(1);

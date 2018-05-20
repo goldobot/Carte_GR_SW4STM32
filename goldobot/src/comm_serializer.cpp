@@ -55,20 +55,25 @@ CommSerializer::CommSerializer(unsigned char* buffer, size_t size):
 
 }
 
-bool CommSerializer::push_message(uint16_t message_type, const unsigned char* buffer, size_t size)
+bool CommSerializer::push_message(uint16_t message_type, const unsigned char* buffer, size_t msg_size)
 {
+	// Reject message if buffer is full
+	if(size() + msg_size + 10 >= m_buffer_size)
+	{
+		return false;
+	}
     unsigned char header[4];
     unsigned char* ptr = header;
     ptr += write_varint(message_type, ptr);
-    ptr += write_varint(size, ptr);
+    ptr += write_varint(msg_size, ptr);
 
     // Compute crc
     uint16_t crc = update_crc16(header, ptr-header);
-    crc = update_crc16(buffer, size, crc);
+    crc = update_crc16(buffer, msg_size, crc);
 
     // Copy data into ring buffer
     push_data(header, ptr-header);
-    push_data(buffer, size);
+    push_data(buffer, msg_size);
     push_data((unsigned char*)(&crc), sizeof(crc));
 
     return true;

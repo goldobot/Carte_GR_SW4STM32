@@ -3,7 +3,7 @@
 
 namespace goldobot
 {
-	struct ControllerConfig
+	struct PropulsionControllerConfig
 	{
 		PIDConfig speed_pid_config;
 		PIDConfig yaw_rate_pid_config;
@@ -11,8 +11,8 @@ namespace goldobot
 		PIDConfig yaw_pid_config;
 		float lookahead_distance;
 		float lookahead_time;
-		float static_pid_limit;
-		float moving_pid_limit;
+		float static_pwm_limit;
+		float moving_pwm_limit;
 		float repositioning_pwm_limit;
 	};
 }
