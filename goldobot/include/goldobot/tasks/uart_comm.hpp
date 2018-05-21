@@ -23,6 +23,8 @@ namespace goldobot
 		CmdSelectSide=17, // Select side. payload is an unsigned byte, 0=green, 1=orange
 		OdometryConfig=32,
 		PropulsionConfig=33,
+		DynamixelDescr=34,
+		DynamixelRegisters=35,
 		DbgGetOdometryConfig=64,
 		DbgSetOdometryConfig=65,
 		DbgGetPropulsionConfig=66,
@@ -31,7 +33,14 @@ namespace goldobot
 		DbgSetPropulsionEnable=69,
 		DbgSetMotorsEnable=70,
 		DbgSetMotorsPwm=71,
-		DbgPropulsionTest=72
+		DbgPropulsionTest=72,
+		DbgDynamixelsList=73,
+		DbgDynamixelSetTorqueEnable=74,
+		DbgDynamixelSetGoalPosition=75,
+		DbgDynamixelSetTorqueLimit=76,
+		DbgDynamixelReadRegisters=77,
+		DbgDynamixelSetRegisters=78,
+		DbgPropulsionRelativeTrajectory=80
 	};
 	class UARTCommTask : public Task
 	{

@@ -51,6 +51,9 @@ namespace goldobot
 		void uart_wait_for_receive(int uart_index);
 
 		static
+		uint16_t uart_bytes_received(int uart_index);
+
+		static
 		uint16_t uart_receive_abort(int uart_index);
 
 		static

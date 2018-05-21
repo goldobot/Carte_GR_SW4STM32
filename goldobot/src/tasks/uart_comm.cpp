@@ -115,95 +115,6 @@ void UARTCommTask::debug_printf(const char* format, ...)
 	}
 }
 
-/*
-void UARTCommTask::loop_calibrate_odometry()
-{
-	OdometryConfig odometry_config = Robot::instance().odometryConfig();
-	while(1)
-	{
-		printf("[Calibrate odometry]\r\n");
-		printf("dist_per_count_left: %.6e\r\n", odometry_config.dist_per_count_left);
-		printf("dist_per_count_right: %.6e\r\n", odometry_config.dist_per_count_right);
-		printf("wheel_spacing: %.6e\r\n", odometry_config.wheel_spacing);
-		printf("1: calibrate translation\r\n");
-		printf("2: calibrate rotation\r\n");
-		printf("q: quit\r\n");
-		char choice = 0;
-		prompt_char(">: ", &choice);
-		switch(choice)
-		{
-		case '1':
-		{
-			printf("Advance the robot 50cm and press a key\n");
-			int32_t left_total;
-			int32_t right_total;
-			loop_measure_encoders_delta(&left_total, &right_total);
-			printf("counts_left: %i, counts_right: %i\n",left_total,right_total);
-			odometry_config.dist_per_count_left = 0.5f / left_total;
-			odometry_config.dist_per_count_right = 0.5f / right_total;
-
-		}
-			break;
-		case '2':
-		{
-			printf("Rotate the robot one time to the left and press a key\n");
-			int32_t left_total;
-			int32_t right_total;
-			loop_measure_encoders_delta(&left_total, &right_total);
-			printf("counts_left: %i, counts_right: %i\n",left_total,right_total);
-			float dist = fabs(right_total * odometry_config.dist_per_count_right - left_total * odometry_config.dist_per_count_left);
-			odometry_config.wheel_spacing = dist / (M_PI * 2);
-		}
-		break;
-		case 'q':
-			return;
-		}
-	}
-}
-
-void UARTCommTask::loop_measure_encoders_delta(int32_t* left_o, int32_t* right_o)
-{
-	*left_o = 0;
-	*right_o = 0;
-	uint16_t old_left;
-	uint16_t old_right;
-	char c = 0;
-	Hal::read_encoders(old_left, old_right);
-	while(!peek_char(&c) )
-	{
-		uint16_t left;
-		uint16_t right;
-
-		Hal::read_encoders(left, right);
-
-		int diff_left = left - old_left;
-		int diff_right = right - old_right;
-
-		old_left = left;
-		old_right = right;
-
-		if(diff_left > 4096)
-		{
-			diff_left -= 8192;
-		}
-		if(diff_left < -4096)
-		{
-			diff_left += 8192;
-		}
-		if(diff_right > 4096)
-		{
-			diff_right -= 8192;
-		}
-		if(diff_right < -4096)
-		{
-			diff_right += 8192;
-		}
-		*left_o += diff_left;
-		*right_o += diff_right;
-	}
-}
-*/
-
 bool UARTCommTask::send_message(uint16_t type, const char* buffer, uint16_t size)
 {
 	if(xSemaphoreTake(m_serializer_mutex, 1) == pdTRUE)
@@ -287,6 +198,66 @@ void UARTCommTask::process_message(uint16_t message_type)
 				propulsion->executeTest(PropulsionController::TestPattern::SpeedSteps);
 				break;
 			}
+		}
+		break;
+	case CommMessageType::DbgDynamixelsList:
+		{
+			m_deserializer.pop_message(nullptr, 0);
+			uint8_t buff[4] = {25,1};
+			for(unsigned id = 0; id < 0xFE; id++)
+			{
+				if(Robot::instance().arms().dynamixels_read_data(id,0 , buff, 4))
+				{
+					send_message((uint16_t)CommMessageType::DynamixelDescr, (char*)buff, 4);
+				}
+			}
+		}
+		break;
+	case CommMessageType::DbgDynamixelSetTorqueEnable:
+		{
+			unsigned char buff[2];
+			m_deserializer.pop_message(buff, 2);
+			// Torque enable
+			Robot::instance().arms().dynamixels_write_data(buff[0], 0x18, buff+1, 1);
+		}
+		break;
+	case CommMessageType::DbgDynamixelSetGoalPosition:
+		{
+			unsigned char buff[3];
+			m_deserializer.pop_message(buff, 3);
+			// Goal position
+			Robot::instance().arms().dynamixels_write_data(buff[0], 0x1E, buff+1, 2);
+		}
+		break;
+	case CommMessageType::DbgDynamixelSetTorqueLimit:
+		{
+			unsigned char buff[3];
+			m_deserializer.pop_message(buff, 3);
+			// Goal position
+			Robot::instance().arms().dynamixels_write_data(buff[0], 0x22, buff+1, 2);
+		}
+		break;
+	case CommMessageType::DbgDynamixelReadRegisters:
+			{
+				unsigned char buff[3];
+				unsigned char data_read[64];
+
+				m_deserializer.pop_message(buff, 3);
+				memcpy(data_read, buff, 2);
+				if(Robot::instance().arms().dynamixels_read_data(buff[0], buff[1], data_read+2, buff[2]))
+				{
+					send_message((uint16_t)CommMessageType::DynamixelRegisters, (char*)data_read, buff[2]+2);
+				}
+			}
+			break;
+	case CommMessageType::DbgDynamixelSetRegisters:
+		{
+			unsigned char buff[128];
+			uint16_t size = m_deserializer.message_size();
+			m_deserializer.pop_message(buff, 128);
+			//id, addr, data
+			if(Robot::instance().arms().dynamixels_write_data(buff[0], buff[1], buff+2, size-2));
+
 		}
 		break;
 

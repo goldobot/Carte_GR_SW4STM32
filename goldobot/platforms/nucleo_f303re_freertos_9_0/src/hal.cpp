@@ -33,7 +33,8 @@ struct GPIODescriptor
 static GPIODescriptor s_gpio_descriptors[] ={
 	{GPIOA, GPIO_PIN_5},//green led
 	{GPIOC, GPIO_PIN_9},//match start //tmp: blue button on nucleo. //C9 in robot
-	{GPIOC, GPIO_PIN_8} // adversary detection on C8
+	{GPIOC, GPIO_PIN_8}, // adversary detection on C8
+	{GPIOC, GPIO_PIN_5}
 };
 
 
@@ -41,6 +42,7 @@ static SemaphoreHandle_t s_uart_semaphore;
 
 extern "C"
 {
+	extern UART_HandleTypeDef huart1;
 	extern UART_HandleTypeDef huart2;
 
 	extern TIM_HandleTypeDef htim1;
@@ -65,7 +67,8 @@ extern "C"
 }
 
 UART_HandleTypeDef* g_uart_handles[] ={
-		&huart2
+		&huart2,
+		&huart1
 };
 
 #ifdef SIMULATE_ROBOT
@@ -166,19 +169,6 @@ void Hal::set_motors_pwm(float left, float right)
 	__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, right_pwm);
 }
 
-bool Hal::uart_read_char(int uart_index, char* c, bool blocking)
-{
-	if(!blocking)
-	{
-		return HAL_UART_Receive(&huart2, (uint8_t*) c, 1, 0) == HAL_OK;
-	}
-	while(HAL_UART_Receive(&huart2, (uint8_t*) c, 1, 0) != HAL_OK)
-	{
-		taskYIELD();
-	}
-	return true;
-}
-
 bool Hal::uart_transmit(int uart_index, const char* buffer, uint16_t size, bool blocking)
 {
 	auto huart_ptr = g_uart_handles[uart_index];
@@ -212,7 +202,7 @@ void Hal::uart_wait_for_transmit(int uart_index)
 bool Hal::uart_receive(int uart_index, const char* buffer, uint16_t size, bool blocking)
 {
 	auto huart_ptr = g_uart_handles[uart_index];
-	if(HAL_UART_Receive_IT(&huart2, (uint8_t*)buffer, size)!= HAL_OK)
+	if(HAL_UART_Receive_IT(huart_ptr, (uint8_t*)buffer, size)!= HAL_OK)
 	{
 		return false;
 	}
@@ -239,13 +229,21 @@ void Hal::uart_wait_for_receive(int uart_index)
 	}
 }
 
+uint16_t Hal::uart_bytes_received(int uart_index)
+{
+	auto huart_ptr = g_uart_handles[uart_index];
+	portDISABLE_INTERRUPTS();
+	uint16_t bytes_received = huart_ptr->RxXferSize - huart_ptr->RxXferCount;
+	portENABLE_INTERRUPTS();
+	return bytes_received;
+}
 uint16_t Hal::uart_receive_abort(int uart_index)
 {
 	auto huart_ptr = g_uart_handles[uart_index];
 
 	portDISABLE_INTERRUPTS();
-	uint16_t bytes_received = huart2.RxXferSize - huart2.RxXferCount;
-	HAL_UART_AbortReceive_IT(&huart2);
+	uint16_t bytes_received = huart_ptr->RxXferSize - huart_ptr->RxXferCount;
+	HAL_UART_AbortReceive_IT(huart_ptr);
 	portENABLE_INTERRUPTS();
 
 	// Unblock tasks potentially waiting for recevie to finish

@@ -21,6 +21,7 @@ void Robot::init()
 	propulsion().set_config(defaultPropulsionControllerConfig());
 	m_propulsion_task.init();
 	m_main_task.init();
+	m_arms_task.init();
 
 }
 
@@ -42,6 +43,11 @@ PropulsionController& Robot::propulsion()
 UARTCommTask& Robot::comm()
 {
 	return m_comm_task;
+}
+
+ArmsTask& Robot::arms()
+{
+	return m_arms_task;
 }
 
 OdometryConfig Robot::defaultOdometryConfig()

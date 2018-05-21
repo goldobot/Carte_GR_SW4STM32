@@ -2,6 +2,7 @@
 #include "goldobot/tasks/propulsion.hpp"
 #include "goldobot/tasks/uart_comm.hpp"
 #include "goldobot/tasks/heartbeat.hpp"
+#include "goldobot/tasks/arms.hpp"
 #include "goldobot/tasks/main.hpp"
 #include "goldobot/hal.hpp"
 
@@ -16,6 +17,7 @@ namespace goldobot
 		SimpleOdometry& odometry();
 		PropulsionController& propulsion();
 		UARTCommTask& comm();
+		ArmsTask& arms();
 
 
 		OdometryConfig odometryConfig();
@@ -28,6 +30,7 @@ namespace goldobot
 		HeartbeatTask m_heartbeat_task;
 		OdometryConfig m_odometry_config;
 		MainTask m_main_task;
+		ArmsTask m_arms_task;
 		static Robot s_instance;
 	};
 }

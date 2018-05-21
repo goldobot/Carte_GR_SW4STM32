@@ -60,11 +60,6 @@ void Task::set_priority(unsigned prio)
 
 void Task::delay(unsigned ticks)
 {
-	auto tick_count = xTaskGetTickCount();
-	if(tick_count - m_last_wake_time > ticks)
-	{
-		m_last_wake_time = tick_count;
-	}
 	vTaskDelay(ticks);
 }
 
