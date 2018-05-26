@@ -22,6 +22,20 @@ float clampAngle(float a)
 	return a;
 }
 
+static float clamp(float val, float min_val, float max_val)
+{
+	if(val < min_val)
+	{
+		return min_val;
+	} else if(val > max_val)
+	{
+		return max_val;
+	} else
+	{
+		return val;
+	}
+}
+
 float angleDiff(float a, float b)
 {
 	float diff = a - b;
@@ -61,7 +75,7 @@ void PropulsionController::enable()
 	m_pose = m_odometry->pose();
 	m_target_position = m_pose.position;
 	m_target_yaw = m_pose.yaw;
-	m_state = State::Stopped;
+	on_stopped_enter();
 }
 
 void PropulsionController::disable()
@@ -123,6 +137,10 @@ void PropulsionController::update()
 	case State::Stopped:
 		m_pwm_limit = m_config.static_pwm_limit;
 		updateMotorsPwm();
+		if(fabsf(m_longitudinal_error) > 0.1f)
+		{
+			m_state = State::Error;
+		}
 		break;
 	case State::FollowTrajectory:
 		{
@@ -131,7 +149,8 @@ void PropulsionController::update()
 			updateMotorsPwm();
 			if(m_time_base_ms >= m_command_end_time)
 			{
-				m_state = State::Stopped;
+				on_trajectory_exit();
+				on_stopped_enter();
 			}
 		}
 		break;
@@ -142,7 +161,8 @@ void PropulsionController::update()
 			updateMotorsPwm();
 			if (m_time_base_ms >= m_command_end_time)
 			{
-				m_state = State::Stopped;
+				on_rotation_exit();
+				on_stopped_enter();
 			}
 		}
 		break;
@@ -154,11 +174,8 @@ void PropulsionController::update()
 			// Check position error
 			if(m_time_base_ms >= m_command_end_time)
 			{
-				m_state = State::Stopped;
-				if(m_reposition_hit)
-				{
-					repositionReconfigureOdometry();
-				}
+				on_reposition_exit();
+				on_stopped_enter();
 			}
 		}
 		break;
@@ -180,12 +197,12 @@ void PropulsionController::update()
 	case State::Test:
 		{
 			m_pwm_limit = m_config.moving_pwm_limit;
-			updateMotorsPwmTest();
+			update_test();
+			updateMotorsPwm();
+
 			if (m_time_base_ms >= m_command_end_time)
 			{
-				m_state = State::Stopped;
-				m_target_position = m_pose.position;
-				m_target_yaw = m_pose.yaw;
+				on_test_exit();
 			}
 		}
 		break;
@@ -194,22 +211,9 @@ void PropulsionController::update()
 	m_time_base_ms++;
 
 	// Clamp outputs
-	if(m_left_motor_pwm > m_pwm_limit)
-	{
-		m_left_motor_pwm = m_pwm_limit;
-	}
-	if(m_left_motor_pwm < -m_pwm_limit)
-	{
-		m_left_motor_pwm = -m_pwm_limit;
-	}
-	if(m_right_motor_pwm > m_pwm_limit)
-	{
-		m_right_motor_pwm = m_pwm_limit;
-	}
-	if(m_right_motor_pwm < -m_pwm_limit)
-	{
-		m_right_motor_pwm = -m_pwm_limit;
-	}
+	m_left_motor_pwm = clamp(m_left_motor_pwm, -m_pwm_limit, m_pwm_limit);
+	m_right_motor_pwm = clamp(m_right_motor_pwm, -m_pwm_limit, m_pwm_limit);
+
 }
 
 
@@ -240,15 +244,7 @@ void PropulsionController::updateMotorsPwm()
 
 	if (m_state == State::FollowTrajectory)
 	{
-		// Pure pursuit computation, update target yaw rate
-		float diff_x = m_lookahead_position.x - m_pose.position.x;
-		float diff_y = m_lookahead_position.y - m_pose.position.y;
 
-		float rel_x = diff_x * ux + diff_y * uy;
-		float rel_y = -diff_x * uy + diff_y * ux;
-
-		float curvature = 2 * rel_y / (rel_x*rel_x + rel_y * rel_y);
-		m_target_yaw_rate = m_pose.speed * curvature;
 	}
 	
 	// Compute position error
@@ -264,39 +260,47 @@ void PropulsionController::updateMotorsPwm()
 	// Two nested PID controllers are used
 	// First is computing speed correction based on position error
 	// Second is computing motors pwm based on speed
-	m_translation_pid.set_target(0, 0);
-	float translation_command = m_translation_pid.update(m_longitudinal_error);
 
-	m_speed_pid.set_target(m_target_speed + translation_command);
-	float speed_command = m_speed_pid.update(m_pose.speed);
+	float translation_command = 0;
+	float speed_command = 0;
+
+	if(m_control_translation)
+	{
+		m_translation_pid.set_target(0, 0);
+		translation_command = m_translation_pid.update(m_longitudinal_error);
+	}
+
+	if(m_control_speed)
+	{
+		m_speed_pid.set_target(m_target_speed + translation_command);
+		speed_command = m_speed_pid.update(m_pose.speed);
+	}
 
 	// Compute yaw and yaw_rate command
 	// Two nested PID controllers are used
 	// First is computing speed correction based on yaw error
 	// Second is computing motors pwm difference based on yaw rate
-	float yaw_command;
-	if (m_state == State::FollowTrajectory)
-	{
-		// In trajectory following mode, yaw rate is controlled instead of yaw
-		// So the yaw PID is bypassed
-		m_yaw_error = 0;
-		yaw_command = 0;
-	}
-	else
+
+	float yaw_command = 0;
+	float yaw_rate_command = 0;
+	if (m_control_yaw)
 	{
 		m_yaw_pid.set_target(0);
 		yaw_command = m_yaw_pid.update(m_yaw_error);
 	}
 
-	m_yaw_rate_pid.set_target(m_target_yaw_rate + yaw_command);
-	float yaw_rate_command = m_yaw_rate_pid.update(m_pose.yaw_rate);
+	if(m_control_yaw_rate)
+	{
+		m_yaw_rate_pid.set_target(m_target_yaw_rate + yaw_command);
+		yaw_rate_command = m_yaw_rate_pid.update(m_pose.yaw_rate);
+	}
 
 	m_left_motor_pwm = speed_command -yaw_rate_command;
 	m_right_motor_pwm =  speed_command + yaw_rate_command;
 }
 
 
-void PropulsionController::updateMotorsPwmTest()
+void PropulsionController::update_test()
 {
 	// Current robot frame direction
 	float ux = cosf(m_pose.yaw);
@@ -325,84 +329,25 @@ void PropulsionController::updateMotorsPwmTest()
 		}
 		m_target_speed = speed_steps[step_index];
 
-		m_speed_pid.set_target(m_target_speed);
-		float speed_command = m_speed_pid.update(m_pose.speed);
-
-		m_left_motor_pwm = speed_command;
-		m_right_motor_pwm = speed_command;
-		return;
-
-	}
-	// Compute position error
-	float diff_x = (m_pose.position.x - m_target_position.x);
-	float diff_y = (m_pose.position.y - m_target_position.y);
-
-	m_longitudinal_error = diff_x * ux + diff_y * uy;
-	m_lateral_error = -diff_x * uy + diff_y * ux;
-	m_yaw_error = angleDiff(m_pose.yaw, m_target_yaw);
-	m_speed_error = m_pose.speed - m_target_speed;
-
-	// Compute translation and speed command
-	// Two nested PID controllers are used
-	// First is computing speed correction based on position error
-	// Second is computing motors pwm based on speed
-	m_translation_pid.set_target(0, 0);
-	float translation_command = m_translation_pid.update(m_longitudinal_error);
-
-	m_speed_pid.set_target(m_target_speed + translation_command);
-	float speed_command = m_speed_pid.update(m_pose.speed);
-
-	// Compute yaw and yaw_rate command
-	// Two nested PID controllers are used
-	// First is computing speed correction based on yaw error
-	// Second is computing motors pwm difference based on yaw rate
-	float yaw_command;
-	if (m_state == State::FollowTrajectory)
-	{
-		// In trajectory following mode, yaw rate is controlled instead of yaw
-		// So the yaw PID is bypassed
-		m_yaw_error = 0;
-		yaw_command = 0;
-	}
-	else
-	{
-		m_yaw_pid.set_target(0);
-		yaw_command = m_yaw_pid.update(m_yaw_error);
-	}
-
-	m_yaw_rate_pid.set_target(m_target_yaw_rate + yaw_command);
-	float yaw_rate_command = m_yaw_rate_pid.update(m_pose.yaw_rate);
-
-	m_left_motor_pwm = speed_command - yaw_rate_command;
-	m_right_motor_pwm = speed_command + yaw_rate_command;
-
-	if(m_state == State::Reposition && m_reposition_hit)
-	{
-		float reposition_pwm = m_direction == Direction::Forward ? 0.5 : -0.5;
-		m_left_motor_pwm = reposition_pwm;
-		m_right_motor_pwm = reposition_pwm;
 	}
 }
 
 void PropulsionController::updateTargetPositions()
 {
+	// Compute current distance on trajectory target
 	float t = (m_time_base_ms - m_command_begin_time) * 1e-3f;
 	float parameter, speed, accel;
 	m_speed_profile.compute(t,&parameter,&speed,&accel);
 	parameter = std::min(parameter, m_trajectory_buffer.max_parameter());
 
+	// Compute position of lookahead point in front of current position
 	float lookahead_distance = m_config.lookahead_distance + fabsf(m_target_speed) * m_config.lookahead_time;
 	float lookahead_parameter = parameter + lookahead_distance;
 
+	// Compute target position
 	auto target_point = m_trajectory_buffer.compute_point(parameter);
 	m_target_position = target_point.position;
-	m_target_yaw = atan2f(target_point.tangent.y, target_point.tangent.x);
 
-	// Robot target yaw is reversed compared to trajectory tangent if moving backward
-	if(m_direction == Direction::Backward)
-	{
-		m_target_yaw *= -1;
-	}
 
 	// Compute position of lookahead point
 	// Extend the trajectory past last point if necessary
@@ -423,6 +368,17 @@ void PropulsionController::updateTargetPositions()
 	float uy = sinf(m_pose.yaw);
 
 	m_target_speed = speed * (ux * target_point.tangent.x + uy * target_point.tangent.y);
+
+	// Pure pursuit computation, update target yaw rate
+	float diff_x = m_lookahead_position.x - m_pose.position.x;
+	float diff_y = m_lookahead_position.y - m_pose.position.y;
+
+	float rel_x = diff_x * ux + diff_y * uy;
+	float rel_y = -diff_x * uy + diff_y * ux;
+
+	float curvature = 2 * rel_y / (rel_x*rel_x + rel_y * rel_y);
+	m_target_yaw_rate = m_pose.speed * curvature;
+	m_target_yaw = m_pose.yaw;
 }
 
 void PropulsionController::updateTargetYaw()
@@ -447,6 +403,72 @@ void PropulsionController::updateReposition()
 		m_command_end_time = m_time_base_ms + 200;
 	}
 };
+
+void PropulsionController::on_stopped_enter()
+{
+	m_state = State::Stopped;
+	m_control_translation = true;
+	m_control_speed = true;
+	m_control_yaw = true;
+	m_control_yaw_rate = true;
+
+	m_target_speed = 0;
+	m_target_yaw_rate = 0;
+
+	m_pwm_limit = m_config.static_pwm_limit;
+}
+
+void PropulsionController::on_trajectory_exit()
+{
+	float parameter = m_trajectory_buffer.max_parameter();
+	auto target_point = m_trajectory_buffer.compute_point(parameter);
+	m_target_position = target_point.position;
+	m_target_yaw = atan2f(target_point.tangent.y, target_point.tangent.x);
+
+	if(m_direction == Direction::Backward)
+	{
+		m_target_yaw = clampAngle(m_target_yaw + M_PI);
+	}
+}
+
+void PropulsionController::on_rotation_exit()
+{
+	// \todo cleanup
+	float t = (m_command_end_time - m_command_begin_time) * 1e-3f;
+	float parameter, accel;
+	m_speed_profile.compute(t, &parameter, &m_target_yaw_rate, &accel);
+	m_target_yaw = clampAngle(m_begin_yaw + parameter);
+}
+
+void PropulsionController::on_reposition_exit()
+{
+	if(m_reposition_hit)
+	{
+		repositionReconfigureOdometry();
+		// Reset integral terms of pids
+		m_translation_pid.reset();
+		m_speed_pid.reset();
+		m_yaw_pid.reset();
+		m_yaw_rate_pid.reset();
+	}
+}
+
+void PropulsionController::on_test_exit()
+{
+	// Reset PIDs
+	m_translation_pid.reset();
+	m_speed_pid.reset();
+	m_yaw_pid.reset();
+	m_yaw_rate_pid.reset();
+
+	m_target_position = m_pose.position;
+	m_target_yaw = m_pose.yaw;
+	on_stopped_enter();
+	Vector2D points[2];
+	points[0] = m_pose.position;
+	points[1] = m_test_initial_position;
+	executeTrajectory(points, 2, 0.2,0.5,0.5);
+}
 
 void PropulsionController::repositionReconfigureOdometry()
 {
@@ -549,6 +571,8 @@ bool PropulsionController::executeRepositioning(Direction direction, float speed
 	}
 	m_target_speed = direction == Direction::Forward ? speed : -speed;
 	m_direction = direction;
+	m_reposition_border_normal = normal;
+	m_reposition_border_distance = distance_to_center;
 	m_reposition_hit = false;
 
 	m_command_begin_time = m_time_base_ms;
@@ -565,8 +589,21 @@ void PropulsionController::executeTest(TestPattern pattern)
 			return;
 		}
 	m_test_pattern = pattern;
+	m_test_initial_position = m_target_position;
+	m_test_initial_yaw = m_target_yaw;
+
 	m_command_begin_time = m_time_base_ms;
 	m_command_end_time = m_command_begin_time + 4000;
 	m_state = State::Test;
+
+	switch(m_test_pattern)
+	{
+	case TestPattern::SpeedSteps:
+		m_control_translation = false;
+		m_control_yaw = false;
+		m_control_yaw_rate = false;
+		break;
+
+	}
 }
 

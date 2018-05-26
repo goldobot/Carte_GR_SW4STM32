@@ -92,12 +92,13 @@ float PIDController::update(float current_value)
 	m_integral_term += error * m_config.ki * m_config.period;
 	m_integral_term = clamp(m_integral_term, -m_config.lim_iterm, m_config.lim_iterm);
 
-	// Compute and clamp derivative term
+	// Compute and clamp derivative term, set integral term to zero
 	float derivative_term = 0;
 	if (!m_first_run)
 	{
 		derivative_term = (m_target_derivative - (current_value - m_previous_value) / m_config.period) * m_config.kd;
 		derivative_term = clamp(derivative_term, -m_config.lim_dterm, m_config.lim_dterm);
+		m_integral_term = 0;
 	}
 	else
 	{

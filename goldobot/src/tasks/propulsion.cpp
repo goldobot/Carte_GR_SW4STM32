@@ -63,10 +63,28 @@ void PropulsionTask::doStep()
 		m_controller.emergency_stop();
 	}
 	m_controller.update();
-	Hal::set_motors_pwm(m_controller.leftMotorPwm(), m_controller.rightMotorPwm());
+	if(m_controller.state() != PropulsionController::State::Inactive)
+	{
+		Hal::set_motors_pwm(m_controller.leftMotorPwm(), m_controller.rightMotorPwm());
+	}
+
 
 	m_telemetry_counter++;
 
+	if(m_telemetry_counter == 50)
+	{
+		auto& comm = Robot::instance().comm();
+		PropulsionTelemetryEx msg;
+		msg.target_x = (int16_t)(m_controller.m_target_position.x * 4e3f);
+		msg.target_y = (int16_t)(m_controller.m_target_position.y * 4e3f);
+		msg.target_yaw = (int16_t)(m_controller.m_target_yaw * 32767 / M_PI);
+		msg.target_speed = (int16_t)(m_controller.m_target_speed * 1000);
+		msg.target_yaw_rate = (int16_t)(m_controller.m_target_yaw_rate * 1000);
+		msg.longitudinal_error = (int16_t)(m_controller.m_longitudinal_error * 4e3f);
+		msg.lateral_error = (int16_t)(m_controller.m_lateral_error * 4e3f);
+		comm.send_message(CommMessageType::PropulsionTelemetryEx,(const char*)&msg, sizeof(msg));
+		m_telemetry_counter = 0;
+	}
 	if(m_telemetry_counter % 5 == 0)
 	{
 		auto& comm = Robot::instance().comm();
@@ -84,22 +102,9 @@ void PropulsionTask::doStep()
 		msg.right_pwm = (int16_t)(m_controller.m_right_motor_pwm * 100);
 		msg.state = (uint8_t)(m_controller.state());
 		msg.error = (uint8_t)(m_controller.error());
-		comm.send_message((uint16_t)CommMessageType::PropulsionTelemetry,(const char*)&msg, sizeof(msg));
+		comm.send_message(CommMessageType::PropulsionTelemetry,(const char*)&msg, sizeof(msg));
 	}
-	if(m_telemetry_counter == 50)
-		{
-			auto& comm = Robot::instance().comm();
-			PropulsionTelemetryEx msg;
-			msg.target_x = (int16_t)(m_controller.m_target_position.x * 4e3f);
-			msg.target_y = (int16_t)(m_controller.m_target_position.y * 4e3f);
-			msg.target_yaw = (int16_t)(m_controller.m_target_yaw * 32767 / M_PI);
-			msg.target_speed = (int16_t)(m_controller.m_target_speed * 1000);
-			msg.target_yaw_rate = (int16_t)(m_controller.m_target_yaw_rate * 1000);
-			msg.longitudinal_error = (int16_t)(m_controller.m_longitudinal_error * 4e3f);
-			msg.lateral_error = (int16_t)(m_controller.m_lateral_error * 4e3f);
-			comm.send_message((uint16_t)CommMessageType::PropulsionTelemetryEx,(const char*)&msg, sizeof(msg));
-			m_telemetry_counter = 0;
-		}
+
 
 }
 

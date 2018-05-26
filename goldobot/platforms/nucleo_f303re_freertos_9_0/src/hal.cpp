@@ -140,21 +140,21 @@ void Hal::set_motors_pwm(float left, float right)
 	if(left > 0)
 	{
 		left_pwm = static_cast<int>(left*10000);
-		HAL_GPIO_WritePin(MAXON2_DIR_GPIO_Port, MAXON2_DIR_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(MAXON2_DIR_GPIO_Port, MAXON2_DIR_Pin, GPIO_PIN_RESET);
 	} else
 	{
 		left_pwm = static_cast<int>(-left*10000);
-		HAL_GPIO_WritePin(MAXON2_DIR_GPIO_Port, MAXON2_DIR_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(MAXON2_DIR_GPIO_Port, MAXON2_DIR_Pin, GPIO_PIN_SET);
 	}
 
 	if(right > 0)
 	{
 		right_pwm = static_cast<int>(right*10000);
-		HAL_GPIO_WritePin(MAXON1_DIR_GPIO_Port, MAXON1_DIR_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(MAXON1_DIR_GPIO_Port, MAXON1_DIR_Pin, GPIO_PIN_SET);
 	} else
 	{
 		right_pwm = static_cast<int>(-right*10000);
-		HAL_GPIO_WritePin(MAXON1_DIR_GPIO_Port, MAXON1_DIR_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(MAXON1_DIR_GPIO_Port, MAXON1_DIR_Pin, GPIO_PIN_RESET);
 	}
 	if(left_pwm > 10000)
 	{

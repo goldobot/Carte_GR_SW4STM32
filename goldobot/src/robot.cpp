@@ -11,10 +11,10 @@ Robot& Robot::instance()
 
 void Robot::init()
 {
-
+	m_robot_config.front_length = 0.170;
 
 	m_comm_task.init();
-	m_comm_task.send_message((uint16_t)CommMessageType::Reset,nullptr, 0);
+	m_comm_task.send_message(CommMessageType::Reset,nullptr, 0);
 	m_heartbeat_task.init();
 
 	setOdometryConfig(defaultOdometryConfig());
@@ -45,6 +45,11 @@ UARTCommTask& Robot::comm()
 	return m_comm_task;
 }
 
+MainTask& Robot::mainTask()
+{
+	return m_main_task;
+}
+
 ArmsTask& Robot::arms()
 {
 	return m_arms_task;
@@ -71,8 +76,13 @@ PropulsionControllerConfig Robot::defaultPropulsionControllerConfig()
 	config.translation_pid_config.period = 1e-3f;
 	config.yaw_pid_config.period = 1e-3f;
 
-	config.translation_pid_config.kp = 5;
-	config.yaw_pid_config.kp = 5;
+	config.translation_pid_config.kp = 25;
+	config.translation_pid_config.ki = 25;
+	config.translation_pid_config.lim_iterm = 0.2;
+
+	config.yaw_pid_config.kp = 20;
+	config.yaw_pid_config.ki = 40;
+	config.yaw_pid_config.lim_iterm = 0;2;
 
 
 	// Configure speed pid
@@ -95,6 +105,11 @@ PropulsionControllerConfig Robot::defaultPropulsionControllerConfig()
 OdometryConfig Robot::odometryConfig()
 {
 	return m_odometry_config;
+}
+
+const RobotConfig& Robot::robotConfig() const
+{
+	return m_robot_config;
 }
 
 void Robot::setOdometryConfig(const OdometryConfig& config)

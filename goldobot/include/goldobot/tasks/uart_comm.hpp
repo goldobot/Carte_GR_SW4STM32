@@ -1,6 +1,7 @@
 #pragma once
 #include "goldobot/tasks/task.hpp"
 #include "goldobot/comm_serializer.hpp"
+#include "goldobot/message_types.hpp"
 #include <cstdint>
 
 #include "FreeRTOS.h"
@@ -8,47 +9,13 @@
 
 namespace goldobot
 {
-	enum class CommMessageType : uint16_t
-	{
-		Sync=0,// "goldobot" synchronization message, used to synchronize stream parser
-		Heartbeat=1,// Current OS time in ms as uint32, sent every second
-		Reset=2,// Sent once on startup
-		PropulsionTelemetry=3, //
-		StartOfMatch=4,
-		EndOfMatch=5,
-		PropulsionTelemetryEx=6,
-		CommStats=7,
-		DbgPrintf=8,
-		CmdEmergencyStop=16, // Order an emergency stop
-		CmdSelectSide=17, // Select side. payload is an unsigned byte, 0=green, 1=orange
-		OdometryConfig=32,
-		PropulsionConfig=33,
-		DynamixelDescr=34,
-		DynamixelRegisters=35,
-		DbgGetOdometryConfig=64,
-		DbgSetOdometryConfig=65,
-		DbgGetPropulsionConfig=66,
-		DbgSetPropulsionConfig=67,
-		DbgReset=68,
-		DbgSetPropulsionEnable=69,
-		DbgSetMotorsEnable=70,
-		DbgSetMotorsPwm=71,
-		DbgPropulsionTest=72,
-		DbgDynamixelsList=73,
-		DbgDynamixelSetTorqueEnable=74,
-		DbgDynamixelSetGoalPosition=75,
-		DbgDynamixelSetTorqueLimit=76,
-		DbgDynamixelReadRegisters=77,
-		DbgDynamixelSetRegisters=78,
-		DbgPropulsionRelativeTrajectory=80
-	};
 	class UARTCommTask : public Task
 	{
 	public:
 		UARTCommTask();
 		const char* name() const override;
 
-		bool send_message(uint16_t type, const char* buffer, uint16_t size);
+		bool send_message(CommMessageType msg_type, const char* buffer, uint16_t size);
 		void debug_printf(const char* format...);
 	private:
 		static constexpr uint16_t c_printf_buffer_size = 255;
@@ -64,6 +31,7 @@ namespace goldobot
 
 		char m_send_buffer[128];
 		char m_recv_buffer[128];
+		unsigned char m_tmp_buffer[512];
 
 		char m_printf_buffer[c_printf_buffer_size+1];
 

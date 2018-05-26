@@ -22,8 +22,8 @@ void HeartbeatTask::taskFunction()
 	{
 		uint32_t clock = xTaskGetTickCount();
 		auto& comm = Robot::instance().comm();
-		comm.send_message(0,"goldobot",8);
-		comm.send_message((uint16_t)CommMessageType::Heartbeat,(char*)&clock,sizeof(clock));
+		comm.send_message(CommMessageType::Sync,"goldobot",8);
+		comm.send_message(CommMessageType::Heartbeat,(char*)&clock,sizeof(clock));
 		delay_periodic(1000);
 	}
 }

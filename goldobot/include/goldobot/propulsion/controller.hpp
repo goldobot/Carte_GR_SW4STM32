@@ -118,8 +118,14 @@ namespace goldobot
 		SimpleOdometry* m_odometry;
 		RobotPose m_pose;
 		State m_state;
+		bool m_control_translation;
+		bool m_control_yaw;
+		bool m_control_speed;
+		bool m_control_yaw_rate;
 		Error m_error;
 		TestPattern m_test_pattern;
+		Vector2D m_test_initial_position;
+		float m_test_initial_yaw;
 
 		float m_left_motor_pwm;
 		float m_right_motor_pwm;
@@ -187,6 +193,15 @@ namespace goldobot
 		void repositionReconfigureOdometry();
 
 		bool detectBlockage();
+
+		void check_tracking_error();
+		void update_test();
+
+		void on_stopped_enter();
+		void on_trajectory_exit();
+		void on_rotation_exit();
+		void on_reposition_exit();
+		void on_test_exit();
 
 		// Initialize speed parameters for move command
 		void initMoveCommand(float speed, float accel, float deccel);

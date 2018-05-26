@@ -132,6 +132,10 @@ void SimpleOdometry::measureLineNormal(Vector2D normal, float distance)
 	m_x = new_x;
 	m_y = new_y;
 	m_yaw = new_yaw;
+
+	m_pose.position.x = static_cast<float>(m_x);
+	m_pose.position.y = static_cast<float>(m_y);
+	m_pose.yaw = static_cast<float>(m_yaw);
 }
 
 

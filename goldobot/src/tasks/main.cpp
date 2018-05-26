@@ -3,6 +3,9 @@
 #include "goldobot/hal.hpp"
 #include "goldobot/robot.hpp"
 
+#include "stm32f3xx.h"
+#include <cstring>
+
 #include "FreeRTOS.h"
 #include "task.h"
 
@@ -14,8 +17,10 @@ using namespace goldobot;
 
 int g_foo;
 MainTask::MainTask():
-    m_match_state(State::Idle)
+    m_match_state(State::Idle),
+	m_dbg_message_queue(m_dbg_message_queue_buffer, 512)
 {
+	m_dbg_message_queue_mutex = xSemaphoreCreateMutex();;
 }
 
 const char* MainTask::name() const
@@ -43,7 +48,7 @@ void MainTask::matchBegin()
 {
 	auto& comm = Robot::instance().comm();
 	uint32_t clock = xTaskGetTickCount();
-	comm.send_message((uint16_t)CommMessageType::StartOfMatch,(char*)&clock,sizeof(clock));
+	comm.send_message(CommMessageType::StartOfMatch,(char*)&clock,sizeof(clock));
 	m_match_state = State::Match;
 	m_start_of_match_time = clock;
 	Hal::set_gpio(0, true);
@@ -122,6 +127,7 @@ void MainTask::taskFunction()
 	while(1)
 	{
 		uint32_t clock = xTaskGetTickCount();
+		process_messages();
 
 		switch(m_match_state)
 		{
@@ -145,7 +151,7 @@ void MainTask::taskFunction()
 				{
 					Hal::set_gpio(0, false);
 					m_match_state = State::PostMatch;
-					comm.send_message((uint16_t)CommMessageType::EndOfMatch,(char*)&clock,sizeof(clock));
+					comm.send_message(CommMessageType::EndOfMatch,(char*)&clock,sizeof(clock));
 					Hal::set_motors_enable(false);
 				} else
 				{
@@ -161,3 +167,244 @@ void MainTask::taskFunction()
 		vTaskDelay(1);
 	}
 }
+
+bool MainTask::push_message(uint16_t message_type, const unsigned char* buffer, size_t size)
+{
+	bool retval = false;
+	if(xSemaphoreTake(m_dbg_message_queue_mutex, portMAX_DELAY) == pdTRUE)
+	{
+		retval = m_dbg_message_queue.push_message(message_type, buffer, size);
+		xSemaphoreGive(m_dbg_message_queue_mutex);
+	}
+
+	return retval;
+}
+
+void MainTask::pop_message(unsigned char* buffer, size_t size)
+{
+	if(xSemaphoreTake(m_dbg_message_queue_mutex, portMAX_DELAY) == pdTRUE)
+	{
+		m_dbg_message_queue.pop_message(buffer, size);
+		xSemaphoreGive(m_dbg_message_queue_mutex);
+	}
+}
+
+void MainTask::process_messages()
+{
+	while(m_dbg_message_queue.message_ready())
+	{
+		process_message((CommMessageType)m_dbg_message_queue.message_type(), m_dbg_message_queue.message_size());
+	}
+}
+
+void MainTask::process_message(CommMessageType message_type, uint16_t message_size)
+{
+	auto& comm = Robot::instance().comm();
+	goldobot::PropulsionController* propulsion = &(Robot::instance().propulsion());
+
+	switch(message_type)
+	{
+	case CommMessageType::DbgGetOdometryConfig:
+		{
+			auto config = Robot::instance().odometry().config();
+			comm.send_message(CommMessageType::DbgGetOdometryConfig, (char*)&config, sizeof(config));
+			pop_message(nullptr, 0);
+		}
+		break;
+	case CommMessageType::DbgGetPropulsionConfig:
+		{
+			auto config = Robot::instance().propulsion().config();
+			comm.send_message(CommMessageType::DbgGetPropulsionConfig, (char*)&config, sizeof(config));
+			pop_message(nullptr, 0);
+		}
+		break;
+	case CommMessageType::DbgSetPropulsionConfig:
+		{
+			PropulsionControllerConfig config;
+			pop_message((unsigned char*)&config, sizeof(config));
+			propulsion->set_config(config);
+		}
+		break;
+	case CommMessageType::DbgReset:
+		// Reset the micro
+		NVIC_SystemReset();
+		break;
+	case CommMessageType::CmdEmergencyStop:
+		propulsion->emergency_stop();
+		pop_message(nullptr, 0);
+		break;
+	case CommMessageType::DbgSetPropulsionEnable:
+		{
+			uint8_t enabled;
+			pop_message((unsigned char*)&enabled, 1);
+			if(enabled)
+			{
+				propulsion->enable();
+			} else
+			{
+				propulsion->disable();
+			}
+		}
+		break;
+	case CommMessageType::DbgSetMotorsEnable:
+		{
+			uint8_t enabled;
+			pop_message((unsigned char*)&enabled, 1);
+			Hal::set_motors_enable(enabled);
+		}
+		break;
+	case CommMessageType::DbgSetMotorsPwm:
+		{
+			float pwm[2];
+			pop_message((unsigned char*)&pwm, 8);
+			Hal::set_motors_pwm(pwm[0], pwm[1]);
+		}
+		break;
+	case CommMessageType::DbgPropulsionTest:
+		{
+			uint8_t id;
+			pop_message((unsigned char*)&id, 1);
+			switch(id)
+			{
+			case 0:
+				propulsion->executeTest(PropulsionController::TestPattern::SpeedSteps);
+				break;
+			}
+		}
+		break;
+	case CommMessageType::DbgDynamixelsList:
+		{
+			pop_message(nullptr, 0);
+			uint8_t buff[4] = {25,1};
+			for(unsigned id = 0; id < 0xFE; id++)
+			{
+				if(Robot::instance().arms().dynamixels_read_data(id,0 , buff, 4))
+				{
+					comm.send_message(CommMessageType::DbgDynamixelDescr, (char*)buff, 4);
+				}
+			}
+		}
+		break;
+	case CommMessageType::DbgDynamixelSetTorqueEnable:
+		{
+			unsigned char buff[2];
+			pop_message(buff, 2);
+			// Torque enable
+			Robot::instance().arms().dynamixels_write_data(buff[0], 0x18, buff+1, 1);
+		}
+		break;
+	case CommMessageType::DbgDynamixelSetGoalPosition:
+		{
+			unsigned char buff[3];
+			pop_message(buff, 3);
+			// Goal position
+			Robot::instance().arms().dynamixels_write_data(buff[0], 0x1E, buff+1, 2);
+		}
+		break;
+	case CommMessageType::DbgDynamixelSetTorqueLimit:
+		{
+			unsigned char buff[3];
+			pop_message(buff, 3);
+			// Goal position
+			Robot::instance().arms().dynamixels_write_data(buff[0], 0x22, buff+1, 2);
+		}
+		break;
+	case CommMessageType::DbgDynamixelGetRegisters:
+			{
+				unsigned char buff[3];
+				unsigned char data_read[64];
+
+				pop_message(buff, 3);
+				std::memcpy(data_read, buff, 2);
+				if(Robot::instance().arms().dynamixels_read_data(buff[0], buff[1], data_read+2, buff[2]))
+				{
+					comm.send_message(CommMessageType::DbgDynamixelGetRegisters, (char*)data_read, buff[2]+2);
+				}
+			}
+			break;
+	case CommMessageType::DbgDynamixelSetRegisters:
+		{
+			unsigned char buff[128];
+			uint16_t size = message_size;
+			pop_message(buff, 128);
+			//id, addr, data
+			if(Robot::instance().arms().dynamixels_write_data(buff[0], buff[1], buff+2, size-2));
+
+		}
+		break;
+	case CommMessageType::DbgPropulsionSetPose:
+		{
+			float pose[3];
+			pop_message((unsigned char*)&pose, 12);
+			Robot::instance().propulsion().reset_pose(pose[0], pose[1], pose[2]);
+		}
+		break;
+	case CommMessageType::DbgPropulsionExecuteReposition:
+		{
+			unsigned char buff[17];
+			pop_message(buff, 17);
+			int8_t dir = *(int8_t*)(buff);
+			float speed = *(float*)(buff+1);
+			Vector2D normal = *(Vector2D*)(buff+5);
+			float distance_to_center = *(float*)(buff+13);
+
+			if(dir == 1)
+			{
+				Robot::instance().propulsion().executeRepositioning(
+						PropulsionController::Direction::Forward,
+						speed,
+						normal,
+						distance_to_center - Robot::instance().robotConfig().front_length);
+			}
+
+
+		}
+		break;
+	case CommMessageType::DbgPropulsionExecuteTrajectory:
+		{
+			unsigned char buff[13];
+			pop_message(buff,13);
+			uint8_t pattern = buff[0];
+			float speed = *(float*)(buff+1);
+			float accel = *(float*)(buff+5);
+			float deccel = *(float*)(buff+9);
+			Robot::instance().propulsion().reset_pose(0, 0, 0);
+			switch(pattern)
+			{
+			case 0:
+				{
+					Vector2D points[2] = {{0,0}, {0.5,0}};
+					Robot::instance().propulsion().executeTrajectory(points,2,speed, accel, deccel);
+				}
+				break;
+			case 1:
+				{
+					Vector2D points[2] = {{0,0}, {-0.5,0}};
+					Robot::instance().propulsion().executeTrajectory(points,2,speed, accel, deccel);
+				}
+				break;
+			case 2:
+				{
+					Vector2D points[3] = {{0,0}, {0.5,0}, {0.5,0.5}};
+					Robot::instance().propulsion().executeTrajectory(points,3,speed, accel, deccel);
+				}
+				break;
+			case 3:
+				{
+					Vector2D points[3] = {{0,0}, {-0.5,0}, {-0.5,-0.5}};
+					Robot::instance().propulsion().executeTrajectory(points,3,speed, accel, deccel);
+				}
+				break;
+
+			}
+
+		}
+		break;
+
+	default:
+		pop_message(nullptr, 0);
+		break;
+	}
+}
+
+

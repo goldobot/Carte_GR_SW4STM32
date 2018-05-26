@@ -8,6 +8,14 @@
 
 namespace goldobot
 {
+	struct RobotConfig
+	{
+		//! \brief distance from wheels axis to front of the robot
+		float front_length;
+		//! \brief distance from wheels axis to back of the robot
+		float back_length;
+	};
+
 	class Robot
 	{
 	public:
@@ -18,8 +26,9 @@ namespace goldobot
 		PropulsionController& propulsion();
 		UARTCommTask& comm();
 		ArmsTask& arms();
+		MainTask& mainTask();
 
-
+		const RobotConfig& robotConfig() const;
 		OdometryConfig odometryConfig();
 		OdometryConfig defaultOdometryConfig();
 		PropulsionControllerConfig defaultPropulsionControllerConfig();
@@ -29,6 +38,7 @@ namespace goldobot
 		UARTCommTask m_comm_task;
 		HeartbeatTask m_heartbeat_task;
 		OdometryConfig m_odometry_config;
+		RobotConfig m_robot_config;
 		MainTask m_main_task;
 		ArmsTask m_arms_task;
 		static Robot s_instance;
