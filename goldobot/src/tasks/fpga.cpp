@@ -271,12 +271,41 @@ int FpgaTask::goldo_fpga_get_stepper_pos (int stp_id, unsigned int *new_pos)
 
 int FpgaTask::goldo_fpga_columns_calib (void)
 {
-  // FIXME : TODO
+  int result;
+  unsigned int apb_addr = 0x800084f0;
+
+  /* calib right */
+  result = goldo_fpga_master_spi_write_word (apb_addr, 11);
+  if (result!=0) {
+    return result;
+  }
+
+  delay_periodic(10000); /* FIXME : TODO : tune */
+
+  /* calib left */
+  result = goldo_fpga_master_spi_write_word (apb_addr, 12);
+  if (result!=0) {
+    return result;
+  }
+
+  delay_periodic(10000); /* FIXME : TODO : tune */
+
   return 0;
 }
 
 int FpgaTask::goldo_fpga_columns_move (int col_id)
 {
-  // FIXME : TODO
+  int result;
+  unsigned int apb_addr = 0x800084f0;
+
+  if ((col_id<1) || (col_id>3)) {
+    return -1;
+  }
+
+  result = goldo_fpga_master_spi_write_word (apb_addr, col_id);
+  if (result!=0) {
+    return result;
+  }
+
   return 0;
 }
