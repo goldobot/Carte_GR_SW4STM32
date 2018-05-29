@@ -55,5 +55,17 @@ namespace goldobot
 		DbgPropulsionExecuteReposition=87,
 		DbgMiscRepositionStartGreen=100,
 		DbgReset=127,
+
+		// FPGA
+		FpgaGetVersion=256,
+		FpgaCmdServo=272,
+		FpgaCmdDCMotor=288,
+		FpgaCmdPumpR=289,
+		FpgaCmdPumpL=290,
+		FpgaCmdConveyorBelt=291,
+		FpgaCmdStepper=304,
+		FpgaGetStepperPos=305,
+		FpgaColumnsCalib=320,
+		FpgaColumnsMove=321,
 	};
 }
