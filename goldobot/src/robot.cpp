@@ -74,11 +74,16 @@ PropulsionControllerConfig Robot::defaultPropulsionControllerConfig()
 	config.speed_pid_config.period = 1e-3f;
 	config.yaw_rate_pid_config.period = 1e-3f;
 	config.translation_pid_config.period = 1e-3f;
+	config.translation_cruise_pid_config.period = 1e-3f;
 	config.yaw_pid_config.period = 1e-3f;
 
-	config.translation_pid_config.kp = 25;
-	config.translation_pid_config.ki = 25;
+	config.translation_pid_config.kp = 20;
+	config.translation_pid_config.ki = 20;
 	config.translation_pid_config.lim_iterm = 0.2;
+
+	config.translation_cruise_pid_config.kp = 5;
+	config.translation_cruise_pid_config.ki = 15;
+	config.translation_cruise_pid_config.lim_iterm = 0.1;
 
 	config.yaw_pid_config.kp = 20;
 	config.yaw_pid_config.ki = 40;
@@ -92,7 +97,7 @@ PropulsionControllerConfig Robot::defaultPropulsionControllerConfig()
 
 	// Configure yaw rate pid
 	config.yaw_rate_pid_config.feed_forward = 0.1f / 1.7f;
-	config.yaw_rate_pid_config.kp = 0.2;
+	config.yaw_rate_pid_config.kp = 0.5;
 
 	config.lookahead_distance = 0.15f;
 	config.lookahead_time = 0;
