@@ -415,6 +415,7 @@ void PropulsionController::on_stopped_enter()
 	m_target_speed = 0;
 	m_target_yaw_rate = 0;
 
+	m_translation_pid.set_config(m_config.translation_pid_config);
 	m_pwm_limit = m_config.static_pwm_limit;
 }
 
@@ -533,6 +534,7 @@ bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, f
 	m_trajectory_buffer.push_segment(points, num_points);
 	initMoveCommand(speed, acceleration, decceleration);
 	m_state = State::FollowTrajectory;
+	m_translation_pid.set_config(m_config.translation_cruise_pid_config);
 	return true;
 };
 

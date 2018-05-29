@@ -20,6 +20,23 @@ namespace goldobot
 		Green=1,
 		Orange=2
 	};
+
+	enum class OpCode : uint16_t
+	{
+		SetPose=1,
+		ExecuteTrajectory=2,
+		PointTo=3,
+	};
+
+	struct Command
+	{
+		uint8_t begin_index;
+		uint8_t end_index;
+		float speed;
+		float acceleration;
+		float decceleration;
+	};
+
 	class MainTask : public Task
 	{
 	public:
@@ -55,6 +72,7 @@ namespace goldobot
 		void process_messages();
 		void process_message(CommMessageType message_type, uint16_t message_size);
 
+		void on_msg_dbg_execute_trajectory();
 
 		void taskFunction() override;
 
@@ -67,5 +85,9 @@ namespace goldobot
 		SemaphoreHandle_t m_dbg_message_queue_mutex;
 		MessageQueue m_dbg_message_queue;
 		unsigned char m_dbg_message_queue_buffer[512];
+
+		Vector2D m_waypoints[64];
+		uint8_t m_trajectories[128];
+		Command m_commands[32];
 	};
 }

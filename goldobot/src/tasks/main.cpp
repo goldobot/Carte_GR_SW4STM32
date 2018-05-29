@@ -264,12 +264,21 @@ void MainTask::process_message(CommMessageType message_type, uint16_t message_si
 		{
 			uint8_t id;
 			pop_message((unsigned char*)&id, 1);
+			uint8_t status = 0;
+			comm.send_message(CommMessageType::DbgPropulsionExecuteTrajectory, (char*)&status, 1);
+
 			switch(id)
 			{
 			case 0:
 				propulsion->executeTest(PropulsionController::TestPattern::SpeedSteps);
 				break;
 			}
+			while(propulsion->state() == PropulsionController::State::Test)
+			{
+				delay(1);
+			}
+			status = 1;
+			comm.send_message(CommMessageType::DbgPropulsionExecuteTrajectory, (char*)&status, 1);
 		}
 		break;
 	case CommMessageType::DbgDynamixelsList:
@@ -361,50 +370,70 @@ void MainTask::process_message(CommMessageType message_type, uint16_t message_si
 		}
 		break;
 	case CommMessageType::DbgPropulsionExecuteTrajectory:
-		{
-			unsigned char buff[13];
-			pop_message(buff,13);
-			uint8_t pattern = buff[0];
-			float speed = *(float*)(buff+1);
-			float accel = *(float*)(buff+5);
-			float deccel = *(float*)(buff+9);
-			Robot::instance().propulsion().reset_pose(0, 0, 0);
-			switch(pattern)
-			{
-			case 0:
-				{
-					Vector2D points[2] = {{0,0}, {0.5,0}};
-					Robot::instance().propulsion().executeTrajectory(points,2,speed, accel, deccel);
-				}
-				break;
-			case 1:
-				{
-					Vector2D points[2] = {{0,0}, {-0.5,0}};
-					Robot::instance().propulsion().executeTrajectory(points,2,speed, accel, deccel);
-				}
-				break;
-			case 2:
-				{
-					Vector2D points[3] = {{0,0}, {0.5,0}, {0.5,0.5}};
-					Robot::instance().propulsion().executeTrajectory(points,3,speed, accel, deccel);
-				}
-				break;
-			case 3:
-				{
-					Vector2D points[3] = {{0,0}, {-0.5,0}, {-0.5,-0.5}};
-					Robot::instance().propulsion().executeTrajectory(points,3,speed, accel, deccel);
-				}
-				break;
-
-			}
-
-		}
+		on_msg_dbg_execute_trajectory();
 		break;
 
 	default:
 		pop_message(nullptr, 0);
 		break;
 	}
+}
+
+void MainTask::on_msg_dbg_execute_trajectory()
+{
+	auto& comm = Robot::instance().comm();
+	auto& propulsion = Robot::instance().propulsion();
+
+	unsigned char buff[14];
+	pop_message(buff,14);
+	uint8_t pattern = buff[0];
+	int8_t direction = buff[0];
+	float speed = *(float*)(buff+2);
+	float accel = *(float*)(buff+6);
+	float deccel = *(float*)(buff+10);
+	propulsion.reset_pose(0, 0, 0);
+	uint8_t status = 0;
+	comm.send_message(CommMessageType::DbgPropulsionExecuteTrajectory, (char*)&status, 1);
+
+	switch(pattern)
+	{
+	case 0:
+		{
+			Vector2D points[2] = {{0,0}, {0.5,0}};
+			propulsion.executeTrajectory(points,2,speed, accel, deccel);
+		}
+		break;
+	case 1:
+		{
+			Vector2D points[2] = {{0,0}, {-0.5,0}};
+			propulsion.executeTrajectory(points,2,speed, accel, deccel);
+		}
+		break;
+	case 2:
+		{
+			Vector2D points[3] = {{0,0}, {0.5,0}, {0.5,0.5}};
+			propulsion.executeTrajectory(points,3,speed, accel, deccel);
+		}
+		break;
+	case 3:
+		{
+			Vector2D points[3] = {{0,0}, {-0.5,0}, {-0.5,-0.5}};
+			propulsion.executeTrajectory(points,3,speed, accel, deccel);
+		}
+		break;
+	case 4:
+		{
+			Vector2D points[4] = {{0,0}, {0.5,0}, {0.5,0.5}, {1,0.5} };
+			propulsion.executeTrajectory(points,4,speed, accel, deccel);
+		}
+		break;
+	}
+	while(propulsion.state() == PropulsionController::State::FollowTrajectory)
+	{
+		delay(1);
+	}
+	status = 1;
+	comm.send_message(CommMessageType::DbgPropulsionExecuteTrajectory, (char*)&status, 1);
 }
 
 
