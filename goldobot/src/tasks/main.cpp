@@ -372,6 +372,15 @@ void MainTask::process_message(CommMessageType message_type, uint16_t message_si
 	case CommMessageType::DbgPropulsionExecuteTrajectory:
 		on_msg_dbg_execute_trajectory();
 		break;
+	case CommMessageType::FpgaCmdDCMotor:
+		{
+			unsigned char buff[3];
+			pop_message(buff, 3);
+			int motor_id = buff[0];
+			int pwm = *(int16_t*)(buff+1);
+			Robot::instance().fpgaTask().goldo_fpga_cmd_motor(motor_id, pwm);
+		}
+		break;
 
 	default:
 		pop_message(nullptr, 0);

@@ -21,7 +21,6 @@ namespace goldobot
 
 	public:
 		bool m_command_requested;
-		uint16_t* m_positions;
 		uint16_t m_servo_ids[5];
 		uint16_t m_servo_positions[5];
 		uint16_t m_servo_speeds[5];

@@ -9,21 +9,40 @@
 #include "goldobot/hal.hpp"
 #include "goldobot/robot.hpp"
 #include "FreeRTOS.h"
+#include "stm32f3xx_hal.h"
 
 #define SPI_FRAME_SZ 6
 #define POOL_MAX_CNT 100000
 
 using namespace goldobot;
 
+extern "C"
+{
+	extern SPI_HandleTypeDef hspi1;
+}
+
 FpgaTask::FpgaTask() {
 }
 
+const char* FpgaTask::name() const
+{
+	return "fpga";
+}
 void FpgaTask::taskFunction()
 {
-	//dynamixels_reset_all();
+	while(1)
+	{
+		delay(1);
+	}
 }
 
 int FpgaTask::goldo_fpga_send_spi_frame(void) {
+	HAL_SPI_TransmitReceive_IT(&hspi1, spi_buf_out, spi_buf_in,SPI_FRAME_SZ);
+	while(HAL_SPI_GetState(&hspi1) != HAL_SPI_STATE_READY)
+	{
+
+	}
+	return 0;
 	int i;
 	volatile uint8_t *spi_dr = (uint8_t *) 0x4001300c;
 	volatile uint32_t *spi_sr = (uint32_t *) 0x40013008;
@@ -34,13 +53,15 @@ int FpgaTask::goldo_fpga_send_spi_frame(void) {
 	pool_cnt = 0;
 	while (((*spi_sr)&2)==0) {
 	  pool_cnt++;
-	  if (pool_cnt>POOL_MAX_CNT) return -1;
+	  if (pool_cnt>POOL_MAX_CNT)
+		  return -1;
 	}
 	*spi_dr = spi_buf_out[i];
 	pool_cnt = 0;
 	while (((*spi_sr)&1)==0){
 	  pool_cnt++;
-	  if (pool_cnt>POOL_MAX_CNT) return -1;
+	  if (pool_cnt>POOL_MAX_CNT)
+		  return -1;
 	}
 	spi_buf_in[i] = *spi_dr;
 	}

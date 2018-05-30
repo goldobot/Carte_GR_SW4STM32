@@ -55,6 +55,11 @@ ArmsTask& Robot::arms()
 	return m_arms_task;
 }
 
+FpgaTask& Robot::fpgaTask()
+{
+	return m_fpga_task;
+}
+
 OdometryConfig Robot::defaultOdometryConfig()
 {
 	OdometryConfig config;
