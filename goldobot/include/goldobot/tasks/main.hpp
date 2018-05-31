@@ -73,6 +73,10 @@ namespace goldobot
 		void process_message(CommMessageType message_type, uint16_t message_size);
 
 		void on_msg_dbg_execute_trajectory();
+		void on_msg_dbg_arms_set_pose();
+		void on_msg_dbg_arms_set_command();
+		void on_msg_dbg_arms_set_sequences(uint16_t message_size);
+		void on_msg_dbg_arms_execute_sequence();
 
 		void taskFunction() override;
 

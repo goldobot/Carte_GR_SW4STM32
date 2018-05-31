@@ -381,6 +381,28 @@ void MainTask::process_message(CommMessageType message_type, uint16_t message_si
 			Robot::instance().fpgaTask().goldo_fpga_cmd_motor(motor_id, pwm);
 		}
 		break;
+	case CommMessageType::FpgaCmdServo:
+		{
+			unsigned char buff[5];
+			pop_message(buff, 5);
+			int motor_id = buff[0];
+			int pwm = *(uint32_t*)(buff+1);
+			Robot::instance().fpgaTask().goldo_fpga_cmd_servo(motor_id, pwm);
+		}
+		break;
+	case CommMessageType::DbgArmsSetPose:
+		on_msg_dbg_arms_set_pose();
+		break;
+	case CommMessageType::DbgArmsSetCommand:
+		on_msg_dbg_arms_set_command();
+		break;
+	case CommMessageType::DbgArmsSetSequences:
+		on_msg_dbg_arms_set_sequences(message_size);
+		break;
+	case CommMessageType::DbgArmsExecuteSequence:
+		on_msg_dbg_arms_execute_sequence();
+		break;
+
 
 	default:
 		pop_message(nullptr, 0);
@@ -444,5 +466,37 @@ void MainTask::on_msg_dbg_execute_trajectory()
 	status = 1;
 	comm.send_message(CommMessageType::DbgPropulsionExecuteTrajectory, (char*)&status, 1);
 }
+
+void MainTask::on_msg_dbg_arms_set_pose()
+{
+	auto& arms = Robot::instance().arms();
+	unsigned char buff[12];
+	pop_message(buff,12);
+	uint16_t* ptr = arms.m_arms_positions+buff[0]*(32*5) + buff[1]*5;
+	memcpy(ptr, buff+2, 10);
+}
+
+void MainTask::on_msg_dbg_arms_set_command()
+{
+	auto& arms = Robot::instance().arms();
+	unsigned char buff[7];
+	pop_message(buff,7);
+	memcpy(arms.m_arms_commands+buff[0], buff+1, 6);
+}
+
+void MainTask::on_msg_dbg_arms_set_sequences(uint16_t message_size)
+{
+	auto& arms = Robot::instance().arms();
+	pop_message((unsigned char*)(arms.m_arms_sequences), message_size);
+}
+
+void MainTask::on_msg_dbg_arms_execute_sequence()
+{
+	auto& arms = Robot::instance().arms();
+	unsigned char buff[2];
+	pop_message(buff,2);
+	arms.execute_sequence(buff[0], buff[1]);
+}
+
 
 

@@ -92,7 +92,7 @@ PropulsionControllerConfig Robot::defaultPropulsionControllerConfig()
 
 	config.yaw_pid_config.kp = 20;
 	config.yaw_pid_config.ki = 40;
-	config.yaw_pid_config.lim_iterm = 0;2;
+	config.yaw_pid_config.lim_iterm = 0.2;
 
 
 	// Configure speed pid

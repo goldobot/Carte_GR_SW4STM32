@@ -26,8 +26,14 @@ struct DynamixelPacketHeader
     uint8_t length;
     uint8_t command;
 };
-ArmsTask::ArmsTask()
+ArmsTask::ArmsTask():
+		m_arms_moving{false, false}
 {
+	m_arms_servo_ids[0] = 4; //left slider
+	m_arms_servo_ids[1] = 83; // left  rotation
+	m_arms_servo_ids[2] = 84; //left shoulder
+	m_arms_servo_ids[3] = 5; // left elbow
+	m_arms_servo_ids[4] = 6; //left head
 }
 
 const char* ArmsTask::name() const
@@ -35,15 +41,73 @@ const char* ArmsTask::name() const
 	return "arms";
 }
 
+void ArmsTask::execute_sequence(uint8_t arm_id, uint8_t sequence_id)
+{
+	m_arms_next_command_ts[arm_id] = xTaskGetTickCount();
+	m_arms_current_sequence[arm_id] = sequence_id;
+	m_arms_current_idx[arm_id] = m_arms_sequences[m_arms_current_sequence[arm_id]].begin_command_idx;
+	m_arms_moving[arm_id] = true;
+}
+
 void ArmsTask::taskFunction()
 {
-	//dynamixels_reset_all();
 	while(1)
 	{
 		delay_periodic(1);
+		uint32_t clock = xTaskGetTickCount();
+		for(int arm_id = 0; arm_id<2; arm_id++)
+		{
+			if(m_arms_moving[arm_id])
+			{
+				if(clock >= m_arms_next_command_ts[arm_id])
+				{
+					const auto& seq = m_arms_sequences[m_arms_current_sequence[arm_id]];
+					if(m_arms_current_idx[arm_id] < seq.end_command_idx)
+					{
+						auto& cmd = m_arms_commands[m_arms_current_idx[arm_id]];
+						_execute_command(arm_id, cmd);
+						m_arms_next_command_ts[arm_id] = clock + cmd.delay_ms;
+						m_arms_current_idx[arm_id]++;
+
+					} else
+					{
+						m_arms_moving[arm_id] = false;
+					}
+				}
+			}
+		}
 	}
 }
 
+void ArmsTask::_execute_command(int arm_id, const ArmCommand& command)
+{
+	switch(command.type)
+	{
+	case 0:
+		break;
+	case 1:
+		go_to_position(arm_id, command.pos_id);
+		break;
+	case 2:
+		Robot::instance().fpgaTask().goldo_fpga_cmd_motor(arm_id, command.pump_pwm);
+		break;
+	default:
+		break;
+
+	}
+}
+
+void ArmsTask::go_to_position(uint8_t arm_id, uint8_t pos_id)
+{
+	for(int i=0; i< 5;i++)
+	{
+		uint16_t buff[1];
+		int pos_idx = pos_id + 32*arm_id;
+		buff[0] = m_arms_positions[pos_idx*5+i];
+		dynamixels_reg_write(m_arms_servo_ids[i + arm_id * 5],0x1E,(unsigned char*)buff, 2);
+	}
+	dynamixels_action();
+}
 
 
 bool ArmsTask::dynamixels_read_data(uint8_t id, uint8_t address, unsigned char* buffer, uint8_t size)
