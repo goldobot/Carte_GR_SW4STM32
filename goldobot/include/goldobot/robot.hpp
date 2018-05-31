@@ -4,6 +4,7 @@
 #include "goldobot/tasks/heartbeat.hpp"
 #include "goldobot/tasks/arms.hpp"
 #include "goldobot/tasks/main.hpp"
+#include "goldobot/tasks/fpga.hpp"
 #include "goldobot/hal.hpp"
 
 namespace goldobot
@@ -27,6 +28,7 @@ namespace goldobot
 		UARTCommTask& comm();
 		ArmsTask& arms();
 		MainTask& mainTask();
+		FpgaTask& fpgaTask();
 
 		const RobotConfig& robotConfig() const;
 		OdometryConfig odometryConfig();
@@ -41,6 +43,7 @@ namespace goldobot
 		RobotConfig m_robot_config;
 		MainTask m_main_task;
 		ArmsTask m_arms_task;
+		FpgaTask m_fpga_task;
 		static Robot s_instance;
 	};
 }
