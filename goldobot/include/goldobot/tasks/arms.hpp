@@ -35,7 +35,7 @@ namespace goldobot
 
 		// Dirty provisional api
 
-		void go_to_position(uint8_t arm_id, uint8_t pos_id);
+		void go_to_position(uint8_t arm_id, uint8_t pos_id, uint16_t time_ms, int torque_setting=0);
 		void execute_sequence(uint8_t arm_id, uint8_t sequence_id);
 
 		//! \brief Read data from dynamixel registers
@@ -66,6 +66,7 @@ namespace goldobot
 		ArmSequence m_arms_sequences[16];
 
 		bool m_arms_moving[2];
+		uint8_t m_arms_current_position[2];
 		uint8_t m_arms_current_sequence[2];
 		uint8_t m_arms_current_idx[2];
 		uint32_t m_arms_next_command_ts[2];
