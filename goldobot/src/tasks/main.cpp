@@ -9,6 +9,8 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
+#include <cmath>
+
 using namespace goldobot;
 
 #ifndef M_PI
@@ -20,7 +22,8 @@ MainTask::MainTask():
     m_match_state(State::Idle),
 	m_dbg_message_queue(m_dbg_message_queue_buffer, 512)
 {
-	m_dbg_message_queue_mutex = xSemaphoreCreateMutex();;
+	m_dbg_message_queue_mutex = xSemaphoreCreateMutex();
+	m_speed_settings[0] = {0.5,1,1,2,1,1,0.2};
 }
 
 const char* MainTask::name() const
@@ -103,6 +106,136 @@ void MainTask::matchSelectNextObjective()
 	m_trajectory_planner.compute_trajectory(m_current_objective);
 }
 
+void MainTask::sequence_step()
+{
+	if(!m_sequence_active)
+	{
+		return;
+	}
+
+	auto& arms = Robot::instance().arms();
+	auto& propulsion = Robot::instance().propulsion();
+	auto& cmd = m_commands[m_current_command_id];
+
+	//exec
+	if(!m_wait_current_cmd)
+	{
+		float delta_yaw=0;
+		switch(cmd.opcode)
+		{
+		case OpCode::Delay:
+			m_wait_current_cmd = true;
+			m_delay_finished_ts = xTaskGetTickCount() + cmd.delay_ms;
+			break;
+		case OpCode::SetPose:
+			propulsion.reset_pose(m_waypoints[cmd.set_pose.pose_id].x, m_waypoints[cmd.set_pose.pose_id].y, cmd.set_pose.angle_deg * M_PI / 180);
+			break;
+
+		case OpCode::Rotation:
+			delta_yaw = cmd.rotation.angle * M_PI / 180;
+			propulsion.executeRotation(delta_yaw,1,1,1);
+			m_wait_current_cmd = cmd.blocking;
+			break;
+		case OpCode::Reposition:
+			{
+				auto dir = PropulsionController::Direction::Forward;
+				float angle_rad = cmd.reposition.angle * M_PI/180;
+				Vector2D normal = {cosf(angle_rad), sinf(angle_rad)};
+
+				// Check angle of current robot position compared to border
+				auto pose = Robot::instance().odometry().pose();
+				float ux = cos(pose.yaw);
+				float uy = sinf(pose.yaw);
+				float dist_m = cmd.reposition.distance*1e-3;
+
+				if(ux * normal.x + uy * normal.y >= 0)
+				{
+					dir = PropulsionController::Direction::Forward;
+					dist_m -= Robot::instance().robotConfig().front_length;
+				} else
+				{
+					dir = PropulsionController::Direction::Backward;
+					dist_m -= Robot::instance().robotConfig().back_length;
+				}
+
+				propulsion.executeRepositioning(dir, 0.2,normal,dist_m);
+				m_wait_current_cmd = cmd.blocking;
+			}
+			break;
+		case OpCode::Trajectory:
+		{
+			Vector2D points[16];
+			for(unsigned i=0;i < cmd.trajectory.num_points;i++)
+			{
+				int pt_id = m_trajectory_points[cmd.trajectory.begin_idx + i];
+				points[i] = m_waypoints[pt_id];
+			}
+			auto& ss = m_speed_settings[cmd.trajectory.speed_settings];
+			propulsion.executeTrajectory(points,cmd.trajectory.num_points,ss.speed, ss.acceleration, ss.decceleration);
+			m_wait_current_cmd = cmd.blocking;
+		}
+		break;
+		case OpCode::ArmsGoToPosition:
+			arms.go_to_position(cmd.arms.arm_id, cmd.arms.seq_or_pos_id,0);
+			m_wait_current_cmd = cmd.blocking;
+			break;
+		case OpCode::ArmsExecuteSequence:
+			arms.execute_sequence(cmd.arms.arm_id, cmd.arms.seq_or_pos_id);
+			m_wait_current_cmd = cmd.blocking;
+			break;
+		default:
+			break;
+		}
+	}
+	// waiting
+	if(m_wait_current_cmd)
+	{
+		switch(cmd.opcode)
+		{
+		case OpCode::Delay:
+			if(m_delay_finished_ts >= xTaskGetTickCount())
+			{
+				m_wait_current_cmd = false;
+			}
+
+			break;
+		case OpCode::Rotation:
+			if(propulsion.state() == PropulsionController::State::Stopped)
+			{
+				m_wait_current_cmd = false;
+			}
+			break;
+		case OpCode::Reposition:
+			if(propulsion.state() == PropulsionController::State::Stopped)
+			{
+				m_wait_current_cmd = false;
+			}
+			break;
+		case OpCode::Trajectory:
+			if(propulsion.state() == PropulsionController::State::Stopped)
+			{
+				m_wait_current_cmd = false;
+			}
+			break;
+		case OpCode::ArmsGoToPosition:
+			m_wait_current_cmd = false;
+			break;
+		case OpCode::ArmsExecuteSequence:
+			m_wait_current_cmd = arms.m_arms_moving[cmd.arms.arm_id];
+			break;
+		}
+	}
+
+	if(!m_wait_current_cmd)
+	{
+		m_current_command_id++;
+		if (m_current_command_id == m_sequences[m_current_sequence_id].end_idx)
+		{
+			m_sequence_active = false;
+		}
+	}
+}
+
 void MainTask::taskFunction()
 {
 	// Dirty. init points
@@ -128,6 +261,7 @@ void MainTask::taskFunction()
 	{
 		uint32_t clock = xTaskGetTickCount();
 		process_messages();
+		sequence_step();
 
 		switch(m_match_state)
 		{
@@ -211,6 +345,13 @@ void MainTask::process_message(CommMessageType message_type, uint16_t message_si
 			pop_message(nullptr, 0);
 		}
 		break;
+	case CommMessageType::DbgSetOdometryConfig:
+			{
+				OdometryConfig config;
+				pop_message((unsigned char*)&config, sizeof(config));
+				Robot::instance().odometry().setConfig(config);
+			}
+			break;
 	case CommMessageType::DbgGetPropulsionConfig:
 		{
 			auto config = Robot::instance().propulsion().config();
@@ -271,6 +412,15 @@ void MainTask::process_message(CommMessageType message_type, uint16_t message_si
 			{
 			case 0:
 				propulsion->executeTest(PropulsionController::TestPattern::SpeedSteps);
+				break;
+			case 1:
+				propulsion->executeTest(PropulsionController::TestPattern::YawRateSteps);
+				break;
+			case 2:
+				propulsion->executeTest(PropulsionController::TestPattern::PositionStaticSteps);
+				break;
+			case 3:
+				propulsion->executeTest(PropulsionController::TestPattern::YawSteps);
 				break;
 			}
 			while(propulsion->state() == PropulsionController::State::Test)
@@ -399,10 +549,27 @@ void MainTask::process_message(CommMessageType message_type, uint16_t message_si
 	case CommMessageType::DbgArmsSetSequences:
 		on_msg_dbg_arms_set_sequences(message_size);
 		break;
+	case CommMessageType::DbgArmsGoToPosition:
+		on_msg_dbg_arms_go_to_position();
+		break;
 	case CommMessageType::DbgArmsExecuteSequence:
 		on_msg_dbg_arms_execute_sequence();
 		break;
-
+	case CommMessageType::DbgRobotSetCommand:
+		on_msg_dbg_robot_set_command();
+		break;
+	case CommMessageType::DbgRobotSetPoint:
+		on_msg_dbg_robot_set_point();
+		break;
+	case CommMessageType::DbgRobotSetSequence:
+		on_msg_dbg_robot_set_sequence();
+		break;
+	case CommMessageType::DbgRobotExecuteSequence:
+		on_msg_dbg_robot_execute_sequence();
+		break;
+	case CommMessageType::DbgRobotSetTrajectoryPoint:
+		on_msg_dbg_robot_set_trajectory_point();
+		break;
 
 	default:
 		pop_message(nullptr, 0);
@@ -472,8 +639,11 @@ void MainTask::on_msg_dbg_arms_set_pose()
 	auto& arms = Robot::instance().arms();
 	unsigned char buff[12];
 	pop_message(buff,12);
-	uint16_t* ptr = arms.m_arms_positions+buff[0]*(32*5) + buff[1]*5;
-	memcpy(ptr, buff+2, 10);
+
+	auto& arm_descr = arms.m_arms_descr[buff[0]];
+
+	uint16_t* ptr = arms.m_arms_positions+arm_descr.positions_idx_begin + buff[1]*arm_descr.num_servos;
+	memcpy(ptr, buff+2, arm_descr.num_servos * 2);
 }
 
 void MainTask::on_msg_dbg_arms_set_command()
@@ -490,6 +660,13 @@ void MainTask::on_msg_dbg_arms_set_sequences(uint16_t message_size)
 	pop_message((unsigned char*)(arms.m_arms_sequences), message_size);
 }
 
+void MainTask::on_msg_dbg_arms_go_to_position()
+{
+	auto& arms = Robot::instance().arms();
+	unsigned char buff[2];
+	pop_message(buff,2);
+	arms.go_to_position(buff[0], buff[1], 2000, 0);
+}
 void MainTask::on_msg_dbg_arms_execute_sequence()
 {
 	auto& arms = Robot::instance().arms();
@@ -497,6 +674,48 @@ void MainTask::on_msg_dbg_arms_execute_sequence()
 	pop_message(buff,2);
 	arms.execute_sequence(buff[0], buff[1]);
 }
+
+void MainTask::on_msg_dbg_robot_set_command()
+{
+	unsigned char buff[12];
+	pop_message(buff,12);
+	uint16_t id = *(uint16_t*)(buff);
+	m_commands[id] = *(Command*)(buff+2);
+}
+
+void MainTask::on_msg_dbg_robot_set_point()
+{
+	unsigned char buff[10];
+	pop_message(buff,10);
+	uint16_t id = *(uint16_t*)(buff);
+	m_waypoints[id] = *(Vector2D*)(buff+2);
+}
+
+void MainTask::on_msg_dbg_robot_set_trajectory_point()
+{
+	unsigned char buff[2];
+	pop_message(buff,2);
+	m_trajectory_points[buff[0]] = buff[1];
+}
+
+void MainTask::on_msg_dbg_robot_set_sequence()
+{
+	uint16_t buff[3];
+	pop_message((unsigned char*)buff,6);
+	m_sequences[buff[0]] = {buff[1], buff[2]};
+}
+
+void MainTask::on_msg_dbg_robot_execute_sequence()
+{
+	uint8_t seq_id;
+	pop_message((unsigned char*)&seq_id,1);
+
+	m_current_sequence_id = seq_id;
+	m_current_command_id = m_sequences[m_current_sequence_id].begin_idx;
+	m_sequence_active = true;
+	m_wait_current_cmd = false;
+}
+
 
 
 

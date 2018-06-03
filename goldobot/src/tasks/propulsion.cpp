@@ -47,6 +47,8 @@ struct PropulsionTelemetryEx
 	int16_t yaw_error;
 	int16_t speed_error;
 	int16_t yaw_rate_error;
+	int32_t left_acc;
+	int32_t right_acc;
 };
 
 void PropulsionTask::doStep()
@@ -82,6 +84,8 @@ void PropulsionTask::doStep()
 		msg.target_yaw_rate = (int16_t)(m_controller.m_target_yaw_rate * 1000);
 		msg.longitudinal_error = (int16_t)(m_controller.m_longitudinal_error * 4e3f);
 		msg.lateral_error = (int16_t)(m_controller.m_lateral_error * 4e3f);
+		msg.left_acc = m_controller.m_odometry->m_left_accumulator;
+		msg.right_acc = m_controller.m_odometry->m_right_accumulator;
 		comm.send_message(CommMessageType::PropulsionTelemetryEx,(const char*)&msg, sizeof(msg));
 		m_telemetry_counter = 0;
 	}

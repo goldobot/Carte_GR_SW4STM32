@@ -28,9 +28,11 @@ namespace goldobot
 
 
         
-    private:
+    //private:
 		uint16_t m_left_encoder;
 		uint16_t m_right_encoder;
+		int32_t m_left_accumulator;
+		int32_t m_right_accumulator;
         RobotPose m_pose;
         OdometryConfig m_config;
 

@@ -11,13 +11,13 @@ using namespace goldobot;
 
 float clampAngle(float a)
 {
-	if (a > M_PI)
+	while(a > M_PI)
 	{
-		return a - M_PI * 2;
+		a = a - M_PI * 2;
 	}
-	if (a < -M_PI)
+	while (a < -M_PI)
 	{
-		return a + M_PI * 2;
+		a = a + M_PI * 2;
 	}
 	return a;
 }
@@ -303,32 +303,107 @@ void PropulsionController::updateMotorsPwm()
 void PropulsionController::update_test()
 {
 	// Current robot frame direction
-	float ux = cosf(m_pose.yaw);
-	float uy = sinf(m_pose.yaw);
 
-	if(m_test_pattern == TestPattern::SpeedSteps)
+	int step_time = 500;
+	switch(m_test_pattern)
+	{
+	case TestPattern::SpeedSteps:
+		step_time = 500;
+		break;
+	case TestPattern::YawSteps:
+		step_time = 1000;
+		break;
+	case TestPattern::PositionStaticSteps:
+			step_time = 1000;
+			break;
+
+	}
+
+	int step_index = (m_time_base_ms - m_command_begin_time)/step_time;
+	if(step_index < 0)
+	{
+		step_index = 0;
+	}
+	if(step_index > 8)
+	{
+		step_index = 8;
+	}
+
+	switch(m_test_pattern)
+	{
+	case TestPattern::SpeedSteps:
 	{
 		float speed_steps[] = {
-				0,
+				0.0,
 				0.1,
-				0.3,
 				0.3,
 				0.6,
 				0,
-				-0.2,
+				-0.1,
+				-0.3,
+				-0.6,
 				0
-		};
-		int step_index = (m_time_base_ms - m_command_begin_time)/500;
-		if(step_index < 0)
-		{
-			step_index = 0;
-		}
-		if(step_index > 7)
-		{
-			step_index = 7;
-		}
-		m_target_speed = speed_steps[step_index];
+				};
 
+				m_target_speed = speed_steps[step_index];
+	}
+	break;
+	case TestPattern::YawRateSteps:
+	{
+		float speed_steps[] = {
+				0.0,
+				0.2,
+				0.6,
+				2,
+				0,
+				-0.2,
+				-0.6,
+				-2,
+				0
+				};
+
+				m_target_yaw_rate = speed_steps[step_index];
+	}
+	break;
+	case TestPattern::YawSteps:
+		{
+			float speed_steps[] = {
+					0.0,
+					0.1,
+					0.3,
+					0.6,
+					0,
+					-0.1,
+					-0.3,
+					-0.6,
+					0
+					};
+
+					m_target_yaw = speed_steps[step_index];
+					m_target_yaw_rate = 0;
+		}
+		break;
+	case TestPattern::PositionStaticSteps:
+			{
+				float speed_steps[] = {
+						0.0,
+						0.05,
+						0.15,
+						0.30,
+						0.30,
+						0.50,
+						0.50,
+						0.25,
+						0
+						};
+					float ux = cosf(m_test_initial_yaw);
+					float uy = sinf(m_test_initial_yaw);
+					m_target_position.x = m_test_initial_position.x+ux*speed_steps[step_index];
+					m_target_position.y = m_test_initial_position.y+uy*speed_steps[step_index];
+					m_target_speed = 0;
+			}
+	default:
+		break;
 	}
 }
 
@@ -397,10 +472,10 @@ void PropulsionController::updateReposition()
 	m_target_position.x += ux * m_target_speed * 1e-3;
 	m_target_position.y += uy * m_target_speed * 1e-3;
 
-	if(fabs(m_longitudinal_error) > 0.04 && ! m_reposition_hit)
+	if(fabs(m_longitudinal_error) > 0.06 && ! m_reposition_hit)
 	{
 		m_reposition_hit = true;
-		m_command_end_time = m_time_base_ms + 200;
+		m_command_end_time = m_time_base_ms + 500;
 	}
 };
 
@@ -465,10 +540,6 @@ void PropulsionController::on_test_exit()
 	m_target_position = m_pose.position;
 	m_target_yaw = m_pose.yaw;
 	on_stopped_enter();
-	Vector2D points[2];
-	points[0] = m_pose.position;
-	points[1] = m_test_initial_position;
-	executeTrajectory(points, 2, 0.2,0.5,0.5);
 }
 
 void PropulsionController::repositionReconfigureOdometry()
@@ -578,7 +649,7 @@ bool PropulsionController::executeRepositioning(Direction direction, float speed
 	m_reposition_hit = false;
 
 	m_command_begin_time = m_time_base_ms;
-	m_command_end_time = m_command_begin_time + 1000;
+	m_command_end_time = m_command_begin_time + 1500;
 
 	m_state = State::Reposition;
 	return true;
@@ -602,8 +673,31 @@ void PropulsionController::executeTest(TestPattern pattern)
 	{
 	case TestPattern::SpeedSteps:
 		m_control_translation = false;
+		m_control_speed = true;
 		m_control_yaw = false;
 		m_control_yaw_rate = false;
+		m_command_end_time = m_command_begin_time + 4500;
+		break;
+	case TestPattern::PositionStaticSteps:
+		m_control_translation = true;
+		m_control_speed = true;
+		m_control_yaw = false;
+		m_control_yaw_rate = false;
+		m_command_end_time = m_command_begin_time + 9000;
+		break;
+	case TestPattern::YawRateSteps:
+		m_control_translation = false;
+		m_control_speed = false;
+		m_control_yaw = false;
+		m_control_yaw_rate = true;
+		m_command_end_time = m_command_begin_time + 4500;
+		break;
+	case TestPattern::YawSteps:
+		m_control_translation = false;
+		m_control_speed = false;
+		m_control_yaw = true;
+		m_control_yaw_rate = true;
+		m_command_end_time = m_command_begin_time + 9000;
 		break;
 
 	}

@@ -39,8 +39,9 @@ namespace goldobot
 		{
 			SpeedSteps,
 			YawRateSteps,
-			PositionSteps,
-			YawSteps
+			PositionStaticSteps,
+			YawSteps,
+			PositionMovingSteps
 		};
 
 		enum class Error

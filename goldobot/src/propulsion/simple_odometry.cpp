@@ -75,6 +75,9 @@ void SimpleOdometry::update(uint16_t left, uint16_t right)
 		diff_right += m_config.encoder_period;
 	}
 
+	m_left_accumulator += diff_left;
+	m_right_accumulator += diff_right;
+
 	double d_left = diff_left * m_config.dist_per_count_left;
 	double d_right = diff_right * m_config.dist_per_count_right;
 	double d_yaw = (d_right - d_left) / m_config.wheel_spacing;

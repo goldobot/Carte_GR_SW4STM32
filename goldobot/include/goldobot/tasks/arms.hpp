@@ -27,6 +27,15 @@ namespace goldobot
 		uint8_t begin_command_idx;
 		uint8_t end_command_idx;
 	};
+
+	struct ArmDescr
+	{
+		uint8_t servo_idx_begin;
+		uint8_t num_servos;
+		uint16_t positions_idx_begin;
+		uint8_t pump_idx;
+	};
+
 	class ArmsTask : public Task
 	{
 	public:
@@ -52,23 +61,27 @@ namespace goldobot
 		bool dynamixels_receive_packet();
 		void taskFunction() override;
 
+		static constexpr int c_num_arms=6;
+
 		unsigned char m_dynamixels_buffer[256];
 		bool m_dynamixels_receive_ok;
 		uint8_t m_dynamixels_receive_id;
 		uint8_t m_dynamixels_receive_num_parameters;
 		uint8_t m_dynamixels_receive_error;
 
-		uint8_t m_arms_servo_ids[5*2];
-		uint16_t m_arms_positions[5*32*2];
+		ArmDescr m_arms_descr[c_num_arms];
+		uint8_t m_arms_servo_ids[14];
+		uint8_t m_arms_servo_types[14];
+		uint16_t m_arms_positions[5*64*2 + 16*2+8*2];
 		uint16_t m_arms_torque_settings[8*5];
 
-		ArmCommand m_arms_commands[64];
-		ArmSequence m_arms_sequences[16];
+		ArmCommand m_arms_commands[128];
+		ArmSequence m_arms_sequences[32];
 
-		bool m_arms_moving[2];
-		uint8_t m_arms_current_position[2];
-		uint8_t m_arms_current_sequence[2];
-		uint8_t m_arms_current_idx[2];
-		uint32_t m_arms_next_command_ts[2];
+		bool m_arms_moving[c_num_arms];
+		uint8_t m_arms_current_position[c_num_arms];
+		uint8_t m_arms_current_sequence[c_num_arms];
+		uint8_t m_arms_current_idx[c_num_arms];
+		uint32_t m_arms_next_command_ts[c_num_arms];
 	};
 }
