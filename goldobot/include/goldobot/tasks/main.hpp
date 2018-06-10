@@ -14,7 +14,7 @@
 
 namespace goldobot
 {
-	enum class StartingSide : uint16_t
+	enum class Side : uint16_t
 	{
 		Unknown=0,
 		Green=1,
@@ -97,7 +97,6 @@ namespace goldobot
 		MainTask();
 		const char* name() const override;
 
-		void setStartingSide(StartingSide side);
 		// Number of seconds before end of match
 		int remainingMatchTime();
 		void preMatchBegin();
@@ -108,6 +107,10 @@ namespace goldobot
 		void matchSelectNextObjective();
 
 		bool push_message(uint16_t message_type, const unsigned char* buffer, size_t size);
+
+		void execute_sequence(int id);
+		bool _execute_command(const Command& cmd);
+		bool _current_command_finished(const Command& cmd);
 
 		void sequence_step();
 
@@ -144,7 +147,7 @@ namespace goldobot
 		void taskFunction() override;
 
 		State m_match_state;
-		StartingSide m_starting_side;
+		Side m_side;
 		uint32_t m_start_of_match_time;
 		TrajectoryPlanner m_trajectory_planner;
 		uint16_t m_current_trajectory_index;
