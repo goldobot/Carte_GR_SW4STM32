@@ -36,6 +36,14 @@ namespace goldobot
 		uint8_t pump_idx;
 	};
 
+	struct ServoDescr
+	{
+		uint8_t servo_id;
+		uint8_t servo_type;
+		uint16_t limit_low;
+		uint16_t limit_high;
+	};
+
 	class ArmsTask : public Task
 	{
 	public:
@@ -61,18 +69,20 @@ namespace goldobot
 		bool dynamixels_receive_packet();
 		void taskFunction() override;
 
-		static constexpr int c_num_arms=6;
+		static constexpr int c_num_arms = 6;
+		static constexpr int c_num_servos = 20;
+		static constexpr int c_num_positions = 256;
 
 		unsigned char m_dynamixels_buffer[256];
 		bool m_dynamixels_receive_ok;
 		uint8_t m_dynamixels_receive_id;
 		uint8_t m_dynamixels_receive_num_parameters;
 		uint8_t m_dynamixels_receive_error;
+		uint8_t m_dynamixels_receive_offset;
 
-		ArmDescr m_arms_descr[c_num_arms];
-		uint8_t m_arms_servo_ids[14];
-		uint8_t m_arms_servo_types[14];
-		uint16_t m_arms_positions[5*64*2 + 16*2+8*2];
+		ArmDescr m_arms_descrs[c_num_arms];
+		ServoDescr m_servo_descrs[c_num_servos];
+		uint16_t m_arms_positions[1024];
 		uint16_t m_arms_torque_settings[8*5];
 
 		ArmCommand m_arms_commands[128];

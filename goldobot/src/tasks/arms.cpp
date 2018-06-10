@@ -34,47 +34,39 @@ ArmsTask::ArmsTask()
 		m_arms_moving[i] = false;
 		m_arms_current_position[i] = 0;
 	}
-	m_arms_servo_ids[0] = 4; //left slider
-	m_arms_servo_ids[1] = 83; // left  rotation
-	m_arms_servo_ids[2] = 84; //left shoulder
-	m_arms_servo_ids[3] = 5; // left elbow
-	m_arms_servo_ids[4] = 6; //left head
+	// left arm
+	m_servo_descrs[0] = {4,0,0,1023}; //left slider
+	m_servo_descrs[1] = {83,1,0,4095}; // left  rotation
+	m_servo_descrs[2] = {84,1,0,4095}; //left shoulder
+	m_servo_descrs[3] = {5,0,0,1023}; // left elbow
+	m_servo_descrs[4] = {6,0,0,1023}; //left head
 
-	m_arms_servo_ids[5] = 1; //left slider
-	m_arms_servo_ids[6] = 81; // left  rotation
-	m_arms_servo_ids[7] = 82; //left shoulder
-	m_arms_servo_ids[8] = 2; // left elbow
-	m_arms_servo_ids[9] = 3; //left head
+	//right arm
+	m_servo_descrs[5] = {1,0,0,1023}; //left slider
+	m_servo_descrs[6] = {81,1,0,4095}; // left  rotation
+	m_servo_descrs[7] = {82,1,0,4095}; //left shoulder
+	m_servo_descrs[8] = {2,0,0,1023}; // left elbow
+	m_servo_descrs[9] = {3,0,0,1023}; //left head
 
-	m_arms_servo_ids[10] = 101; // grabber servo
-	m_arms_servo_ids[11] = 7; //grabber pincer
+	//pince
+	m_servo_descrs[10] = {101,0,0,1023}; // grabber servo
+	m_servo_descrs[11] = {7,2,0,65535}; //grabber pincer
 
-	m_arms_servo_ids[12] = 7; // bascule
-	m_arms_servo_ids[13] = 8; // gache
+	//bascule
+	m_servo_descrs[12] = {7,0,0,1023}; // bascule
+	m_servo_descrs[13] = {8,0,0,1023}; // gache
 
-	m_arms_servo_types[0] = 0;//ax12
-	m_arms_servo_types[1] = 1;//mx28
-	m_arms_servo_types[2] = 1;//mx28
-	m_arms_servo_types[3] = 0;//ax12
-	m_arms_servo_types[4] = 0;//ax18
+	//colonnes
+	m_servo_descrs[14] = {1,2,0,65535}; // gache gauche
+	m_servo_descrs[15] = {0,2,0,65535}; // gache droite
+	m_servo_descrs[16] = {3,2,0,65535}; // porte gauche
+	m_servo_descrs[17] = {2,2,0,65535}; // porte droite
 
-	m_arms_servo_types[5] = 0;//ax12
-	m_arms_servo_types[6] = 1;//mx28
-	m_arms_servo_types[7] = 1;//mx28
-	m_arms_servo_types[8] = 0;//ax12
-	m_arms_servo_types[9] = 0;//ax28
-
-	m_arms_servo_types[10] = 0;//ax28
-	m_arms_servo_types[11] = 2;//servo
-
-	m_arms_servo_types[12] = 0;//ax28
-	m_arms_servo_types[13] = 0;//servo
-
-
-	m_arms_descr[0] = {0,5,0,0};
-	m_arms_descr[1] = {5,5,5*64,1};
-	m_arms_descr[2] = {10,2,5*64+5*64,255};
-	m_arms_descr[3] = {12,2,5*64+5*64+16*2,255};
+	m_arms_descrs[0] = {0,5,0,0};
+	m_arms_descrs[1] = {5,5,5*64,1};
+	m_arms_descrs[2] = {10,2,5*64+5*64,255};
+	m_arms_descrs[3] = {12,2,5*64+5*64+16*2,255};
+	m_arms_descrs[4] = {14,4,5*64+5*64+16*2+8*2,255};
 
 }
 
@@ -123,7 +115,7 @@ void ArmsTask::taskFunction()
 
 void ArmsTask::_execute_command(int arm_id, const ArmCommand& command)
 {
-	auto& arm_descr = m_arms_descr[arm_id];
+	auto& arm_descr = m_arms_descrs[arm_id];
 
 	switch(command.type)
 	{
@@ -146,7 +138,7 @@ void ArmsTask::_execute_command(int arm_id, const ArmCommand& command)
 
 void ArmsTask::go_to_position(uint8_t arm_id, uint8_t pos_id, uint16_t time_ms, int torque_settings)
 {
-	auto& arm_descr = m_arms_descr[arm_id];
+	auto& arm_descr = m_arms_descrs[arm_id];
 
 	int pos_idx = pos_id * arm_descr.num_servos + arm_descr.positions_idx_begin;
 	int prev_pos_idx =  m_arms_current_position[arm_id] * arm_descr.num_servos + arm_descr.positions_idx_begin;
@@ -155,32 +147,32 @@ void ArmsTask::go_to_position(uint8_t arm_id, uint8_t pos_id, uint16_t time_ms, 
 	// Launch dynamixels
 	for(int i=0; i< arm_descr.num_servos;i++)
 	{
-		int servo_idx = i+arm_descr.servo_idx_begin;
+		auto& servo_descr = m_servo_descrs[i+arm_descr.servo_idx_begin];
 		uint16_t buff[3];
 		uint16_t prev_pos = m_arms_positions[prev_pos_idx+i];
 		buff[0] = m_arms_positions[pos_idx+i];
 
-		if(m_arms_servo_types[servo_idx] < 2)
+		if(servo_descr.servo_type < 2)
 		{
-			dynamixels_read_data(m_arms_servo_ids[servo_idx],0x24,(unsigned char*)&prev_pos, 2);
+			dynamixels_read_data(servo_descr.servo_id,0x24,(unsigned char*)&prev_pos, 2);
 		}
 		int diff_angle = abs(m_arms_positions[pos_idx+i] - prev_pos);
 
-		switch(m_arms_servo_types[servo_idx])
+		switch(servo_descr.servo_type)
 		{
 		case 0:
 			//ax 12
 			buff[1] = std::min<uint16_t>((diff_angle*25000)/(time_ms*57), 0x3ff);
-			dynamixels_reg_write(m_arms_servo_ids[servo_idx],0x1E,(unsigned char*)buff, 4);
+			dynamixels_reg_write(servo_descr.servo_id,0x1E,(unsigned char*)buff, 4);
 			break;
 		case 1:
 			//mx28
 			buff[1] = std::min<uint16_t>((diff_angle*128)/(time_ms), 0x3ff);
-			dynamixels_reg_write(m_arms_servo_ids[servo_idx],0x1E,(unsigned char*)buff, 4);
+			dynamixels_reg_write(servo_descr.servo_id,0x1E,(unsigned char*)buff, 4);
 			break;
 		case 2:
 			//goldo servo
-			Robot::instance().fpgaTask().goldo_fpga_cmd_servo(m_arms_servo_ids[servo_idx], buff[0]);
+			Robot::instance().fpgaTask().goldo_fpga_cmd_servo(servo_descr.servo_id, buff[0]);
 			break;
 		default:
 			break;
