@@ -34,7 +34,8 @@ static GPIODescriptor s_gpio_descriptors[] ={
 	{GPIOA, GPIO_PIN_5},//green led
 	{GPIOC, GPIO_PIN_9},//match start //tmp: blue button on nucleo. //C9 in robot
 	{GPIOC, GPIO_PIN_8}, // adversary detection on C8
-	{GPIOC, GPIO_PIN_5}
+	{GPIOC, GPIO_PIN_5}, //dynamixels direction
+	{GPIOC, GPIO_PIN_6} //side selection
 };
 
 
@@ -267,6 +268,11 @@ bool Hal::get_gpio(int gpio_index)
 {
 	auto& desc = s_gpio_descriptors[gpio_index];
 	return HAL_GPIO_ReadPin(desc.port, desc.pin) == GPIO_PIN_SET;
+}
+
+bool Hal::user_flash_erase(int start_page, int num_pages)
+{
+
 }
 
 

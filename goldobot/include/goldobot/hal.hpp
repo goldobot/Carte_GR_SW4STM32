@@ -63,6 +63,12 @@ namespace goldobot
 		bool get_gpio(int gpio_index);
 
 		static
+		bool user_flash_erase(int start_page, int num_pages);
+
+		static
+		bool user_flash_read(uint16_t start_offset, char* buffer, uint16_t size);
+
+		static
 		void simulation_step();
 	};
 }
