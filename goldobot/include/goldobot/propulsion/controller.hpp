@@ -8,6 +8,9 @@
 
 #include <cstdint>
 
+#include "FreeRTOS.h"
+#include "semphr.h"
+
 
 namespace goldobot
 {
@@ -175,6 +178,8 @@ namespace goldobot
 		// Should take into account robot size in config
 		Vector2D m_reposition_border_normal;
 		float m_reposition_border_distance;
+
+		SemaphoreHandle_t m_mutex;
 
 
 		//! \brief compute motors pwm values when the robot is static. Use PID controllers on yaw and longitudinal position

@@ -64,6 +64,7 @@ PropulsionController::PropulsionController(SimpleOdometry* odometry):
 		m_pwm_limit(1)
 {
 	test = false;
+	m_mutex = xSemaphoreCreateMutex();
 }
 
 void PropulsionController::enable()
@@ -129,6 +130,9 @@ void PropulsionController::emergency_stop()
 
 void PropulsionController::update()
 {
+	while(xSemaphoreTake(m_mutex, 1) != pdTRUE)
+	{
+	}
 	m_pose = m_odometry->pose();
 	switch(m_state)
 	{
@@ -213,7 +217,7 @@ void PropulsionController::update()
 	// Clamp outputs
 	m_left_motor_pwm = clamp(m_left_motor_pwm, -m_pwm_limit, m_pwm_limit);
 	m_right_motor_pwm = clamp(m_right_motor_pwm, -m_pwm_limit, m_pwm_limit);
-
+	xSemaphoreGive(m_mutex);
 }
 
 
@@ -579,6 +583,9 @@ void PropulsionController::initRotationCommand(float delta_yaw, float speed, flo
 
 bool PropulsionController::reset_pose(float x, float y, float yaw)
 {
+	while(xSemaphoreTake(m_mutex, 1) != pdTRUE)
+		{
+		}
 	if(m_state == State::Inactive || m_state == State::Stopped)
 	{
 		RobotPose pose;
@@ -590,16 +597,22 @@ bool PropulsionController::reset_pose(float x, float y, float yaw)
 		m_odometry->setPose(pose);
 		m_target_position = pose.position;
 		m_target_yaw = yaw;
+		xSemaphoreGive(m_mutex);
 		return true;
 	} else
 	{
+		xSemaphoreGive(m_mutex);
 		return false;
 	}
 }
 bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, float speed, float acceleration, float decceleration)
 {
+	while(xSemaphoreTake(m_mutex, 1) != pdTRUE)
+		{
+		}
 	if(m_state != State::Stopped)
 	{
+		xSemaphoreGive(m_mutex);
 		return false;
 	}
 	m_trajectory_buffer.push_segment(points, num_points);
@@ -611,8 +624,12 @@ bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, f
 
 bool PropulsionController::executePointTo(Vector2D point, float speed, float acceleration, float decceleration)
 {
+	while(xSemaphoreTake(m_mutex, 1) != pdTRUE)
+		{
+		}
 	if(m_state != State::Stopped)
 	{
+		xSemaphoreGive(m_mutex);
 		return false;
 	}
 	float diff_x = (point.x - m_pose.position.x);
@@ -626,8 +643,12 @@ bool PropulsionController::executePointTo(Vector2D point, float speed, float acc
 
 bool PropulsionController::executeRotation(float delta_yaw, float yaw_rate, float accel, float deccel)
 {
+	while(xSemaphoreTake(m_mutex, 1) != pdTRUE)
+		{
+		}
 	if(m_state != State::Stopped)
 	{
+		xSemaphoreGive(m_mutex);
 		return false;
 	}
 	initRotationCommand(delta_yaw, yaw_rate, accel, deccel);
@@ -638,8 +659,12 @@ bool PropulsionController::executeRotation(float delta_yaw, float yaw_rate, floa
 
 bool PropulsionController::executeRepositioning(Direction direction, float speed, Vector2D normal, float distance_to_center)
 {
+	while(xSemaphoreTake(m_mutex, 1) != pdTRUE)
+		{
+		}
 	if(m_state != State::Stopped)
 	{
+		xSemaphoreGive(m_mutex);
 		return false;
 	}
 	m_target_speed = direction == Direction::Forward ? speed : -speed;
@@ -648,17 +673,30 @@ bool PropulsionController::executeRepositioning(Direction direction, float speed
 	m_reposition_border_distance = distance_to_center;
 	m_reposition_hit = false;
 
+	if(direction == Direction::Backward)
+	{
+		m_reposition_border_normal.x *= -1;
+		m_reposition_border_normal.y *= -1;
+		m_reposition_border_distance *= -1;
+	}
+
 	m_command_begin_time = m_time_base_ms;
 	m_command_end_time = m_command_begin_time + 1500;
 
 	m_state = State::Reposition;
+
+	xSemaphoreGive(m_mutex);
 	return true;
 }
 
 void PropulsionController::executeTest(TestPattern pattern)
 {
+	while(xSemaphoreTake(m_mutex, 1) != pdTRUE)
+		{
+		}
 	if(m_state != State::Stopped)
 		{
+		xSemaphoreGive(m_mutex);
 			return;
 		}
 	m_test_pattern = pattern;
@@ -699,7 +737,9 @@ void PropulsionController::executeTest(TestPattern pattern)
 		m_control_yaw_rate = true;
 		m_command_end_time = m_command_begin_time + 9000;
 		break;
-
+	default:
+		break;
 	}
+	xSemaphoreGive(m_mutex);
 }
 
