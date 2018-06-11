@@ -33,6 +33,7 @@ namespace goldobot
 		uint8_t servo_idx_begin;
 		uint8_t num_servos;
 		uint16_t positions_idx_begin;
+		uint8_t num_positions;
 		uint8_t pump_idx;
 	};
 
@@ -67,6 +68,7 @@ namespace goldobot
 	//private:
 		void dynamixels_transmit_packet(uint8_t id,  uint8_t command,  unsigned char* parameters, uint8_t num_parameters);
 		bool dynamixels_receive_packet();
+		void register_arm(unsigned num_servos, unsigned num_positions, unsigned pump_id, const uint16_t* default_positions);
 		void taskFunction() override;
 
 		static constexpr int c_num_arms = 6;
@@ -93,5 +95,7 @@ namespace goldobot
 		uint8_t m_arms_current_sequence[c_num_arms];
 		uint8_t m_arms_current_idx[c_num_arms];
 		uint32_t m_arms_next_command_ts[c_num_arms];
+
+		uint16_t m_num_arms;
 	};
 }

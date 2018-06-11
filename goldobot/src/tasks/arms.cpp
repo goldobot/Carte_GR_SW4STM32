@@ -9,6 +9,44 @@
 
 using namespace goldobot;
 
+const uint16_t c_left_arm_default_positions[5]={
+	780,
+	2100,
+	1320,
+	760,
+	355
+};
+
+const uint16_t c_right_arm_default_positions[5]={
+	244,
+	1996,
+	2776,
+	264,
+	669
+};
+
+const uint16_t c_grabber_default_positions[2]={
+		95,
+		34500
+};
+
+const uint16_t c_bascule_default_positions[2]={
+		767,
+		295
+};
+
+const uint16_t c_columns_default_positions[4]={
+	21000,
+	21000,
+	46500,
+	49500
+};
+
+const uint16_t c_cubibox_default_positions[2]={
+		21000,
+		21000
+};
+
 /** Defines         **/
 /** Instruction Set **/
 #define AX_PING                     1
@@ -27,7 +65,8 @@ struct DynamixelPacketHeader
     uint8_t length;
     uint8_t command;
 };
-ArmsTask::ArmsTask()
+ArmsTask::ArmsTask():
+	m_num_arms(0)
 {
 	for(unsigned i=0;i < c_num_arms; i++)
 	{
@@ -62,12 +101,37 @@ ArmsTask::ArmsTask()
 	m_servo_descrs[16] = {3,2,0,65535}; // porte gauche
 	m_servo_descrs[17] = {2,2,0,65535}; // porte droite
 
-	m_arms_descrs[0] = {0,5,0,0};
-	m_arms_descrs[1] = {5,5,5*64,1};
-	m_arms_descrs[2] = {10,2,5*64+5*64,255};
-	m_arms_descrs[3] = {12,2,5*64+5*64+16*2,255};
-	m_arms_descrs[4] = {14,4,5*64+5*64+16*2+8*2,255};
+	m_servo_descrs[18] = {4,2,0,65535}; // cubibox gauche
+	m_servo_descrs[19] = {5,2,0,65535}; // cubibox droite
 
+	register_arm(5,64,0,c_left_arm_default_positions);
+	register_arm(5,64,1,c_right_arm_default_positions);
+	register_arm(2,16,0,c_grabber_default_positions);
+	register_arm(2,8,0,c_bascule_default_positions);
+	register_arm(4,8,0,c_columns_default_positions);
+	register_arm(2,8,0,c_cubibox_default_positions);
+}
+
+void ArmsTask::register_arm(unsigned num_servos, unsigned num_positions, unsigned pump_id, const uint16_t* default_positions)
+{
+	uint16_t position_idx_begin=0;
+	uint8_t servo_idx_begin = 0;
+	if(m_num_arms > 0)
+	{
+		auto& last_descr = m_arms_descrs[m_num_arms-1];
+		position_idx_begin = last_descr.positions_idx_begin + last_descr.num_positions * last_descr.num_servos;
+		servo_idx_begin = last_descr.servo_idx_begin + last_descr.num_servos;
+	}
+	m_arms_descrs[m_num_arms] = {servo_idx_begin, num_servos, position_idx_begin, num_positions, pump_id};
+	auto& descr = m_arms_descrs[m_num_arms];
+	m_num_arms++;
+	for(unsigned i=0; i < descr.num_positions; i++)
+	{
+		for(unsigned j=0; j < descr.num_servos; j++)
+		{
+			m_arms_positions[descr.positions_idx_begin + i * descr.num_servos + j] = default_positions[j];
+		}
+	}
 }
 
 const char* ArmsTask::name() const
@@ -132,13 +196,17 @@ void ArmsTask::_execute_command(int arm_id, const ArmCommand& command)
 		break;
 	default:
 		break;
-
 	}
 }
 
 void ArmsTask::go_to_position(uint8_t arm_id, uint8_t pos_id, uint16_t time_ms, int torque_settings)
 {
 	auto& arm_descr = m_arms_descrs[arm_id];
+
+	if(pos_id >= arm_descr.num_positions)
+	{
+		return;
+	}
 
 	int pos_idx = pos_id * arm_descr.num_servos + arm_descr.positions_idx_begin;
 	int prev_pos_idx =  m_arms_current_position[arm_id] * arm_descr.num_servos + arm_descr.positions_idx_begin;
@@ -151,6 +219,7 @@ void ArmsTask::go_to_position(uint8_t arm_id, uint8_t pos_id, uint16_t time_ms, 
 		uint16_t buff[3];
 		uint16_t prev_pos = m_arms_positions[prev_pos_idx+i];
 		buff[0] = m_arms_positions[pos_idx+i];
+		buff[2] = 500; //torque limit, \todo adjust in sequence, and add debug mode limit
 
 		if(servo_descr.servo_type < 2)
 		{
@@ -163,12 +232,12 @@ void ArmsTask::go_to_position(uint8_t arm_id, uint8_t pos_id, uint16_t time_ms, 
 		case 0:
 			//ax 12
 			buff[1] = std::min<uint16_t>((diff_angle*25000)/(time_ms*57), 0x3ff);
-			dynamixels_reg_write(servo_descr.servo_id,0x1E,(unsigned char*)buff, 4);
+			dynamixels_reg_write(servo_descr.servo_id,0x1E,(unsigned char*)buff, 6);
 			break;
 		case 1:
 			//mx28
 			buff[1] = std::min<uint16_t>((diff_angle*128)/(time_ms), 0x3ff);
-			dynamixels_reg_write(servo_descr.servo_id,0x1E,(unsigned char*)buff, 4);
+			dynamixels_reg_write(servo_descr.servo_id,0x1E,(unsigned char*)buff, 6);
 			break;
 		case 2:
 			//goldo servo
