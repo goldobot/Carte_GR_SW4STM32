@@ -612,6 +612,29 @@ void MainTask::process_message(CommMessageType message_type, uint16_t message_si
 			Robot::instance().fpgaTask().goldo_fpga_set_columns_offset(column_id, column_offset);
 		}
 		break;
+	case CommMessageType::FpgaDbgReadReg:
+		{
+			unsigned int apb_data = 0xdeadbeef;
+			unsigned char buff[8];
+			pop_message(buff, 4);
+			uint32_t apb_addr = *(uint32_t*)(buff);
+			if(Robot::instance().fpgaTask().goldo_fpga_master_spi_read_word(apb_addr, &apb_data)!=0)
+			{
+				apb_data = 0xdeadbeef;
+			}
+			std::memcpy(buff+4, (unsigned char *)&apb_data, 4);
+			comm.send_message(CommMessageType::FpgaDbgReadReg, (char *)buff, 8);
+		}
+		break;
+	case CommMessageType::FpgaDbgWriteReg:
+		{
+			unsigned char buff[8];
+			pop_message(buff, 8);
+			uint32_t apb_addr = *(uint32_t*)(buff);
+			uint32_t apb_data = *(uint32_t*)(buff+4);
+			Robot::instance().fpgaTask().goldo_fpga_master_spi_write_word(apb_addr, apb_data);
+		}
+		break;
 	case CommMessageType::DbgArmsSetPose:
 		on_msg_dbg_arms_set_pose();
 		break;

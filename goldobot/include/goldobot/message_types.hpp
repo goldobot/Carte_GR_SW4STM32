@@ -71,6 +71,8 @@ namespace goldobot
 
 		// FPGA
 		FpgaGetVersion=256,
+		FpgaDbgReadReg=257,
+		FpgaDbgWriteReg=258,
 		FpgaCmdServo=272,
 		FpgaCmdDCMotor=288,
 		FpgaCmdPumpR=289,
