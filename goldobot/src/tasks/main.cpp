@@ -588,6 +588,30 @@ void MainTask::process_message(CommMessageType message_type, uint16_t message_si
 			Robot::instance().fpgaTask().goldo_fpga_cmd_servo(motor_id, pwm);
 		}
 		break;
+	case CommMessageType::FpgaColumnsCalib:
+		{
+			unsigned char buff[1];
+			pop_message(buff, 1);
+			Robot::instance().fpgaTask().goldo_fpga_columns_calib();
+		}
+		break;
+	case CommMessageType::FpgaColumnsMove:
+		{
+			unsigned char buff[1];
+			pop_message(buff, 1);
+			int columns_pos = buff[0];
+			Robot::instance().fpgaTask().goldo_fpga_columns_move(columns_pos);
+		}
+		break;
+	case CommMessageType::FpgaColumnsSetOffset:
+		{
+			unsigned char buff[5];
+			pop_message(buff, 5);
+			int column_id = buff[0];
+			int column_offset = *(uint32_t*)(buff+1);
+			Robot::instance().fpgaTask().goldo_fpga_set_columns_offset(column_id, column_offset);
+		}
+		break;
 	case CommMessageType::DbgArmsSetPose:
 		on_msg_dbg_arms_set_pose();
 		break;

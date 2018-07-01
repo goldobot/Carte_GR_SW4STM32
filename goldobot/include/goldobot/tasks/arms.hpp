@@ -71,7 +71,7 @@ namespace goldobot
 		void register_arm(unsigned num_servos, unsigned num_positions, unsigned pump_id, const uint16_t* default_positions);
 		void taskFunction() override;
 
-		static constexpr int c_num_arms = 6;
+		static constexpr int c_num_arms = 7;
 		static constexpr int c_num_servos = 20;
 		static constexpr int c_num_positions = 256;
 

@@ -290,6 +290,8 @@ int FpgaTask::goldo_fpga_get_stepper_pos (int stp_id, unsigned int *new_pos)
   return 0;
 }
 
+#define FPGA_COLUMNS_CALIB_TIMEOUT 8000 /* FIXME : TODO : tune */
+
 int FpgaTask::goldo_fpga_columns_calib (void)
 {
   int result;
@@ -301,15 +303,23 @@ int FpgaTask::goldo_fpga_columns_calib (void)
     return result;
   }
 
-  delay_periodic(10000); /* FIXME : TODO : tune */
+  delay_periodic(FPGA_COLUMNS_CALIB_TIMEOUT);
+
+  goldo_fpga_cmd_stepper (0, 0x4000);
+
+  delay_periodic(FPGA_COLUMNS_CALIB_TIMEOUT);
 
   /* calib left */
-  result = goldo_fpga_master_spi_write_word (apb_addr, 12);
+  result = goldo_fpga_master_spi_write_word (apb_addr, 13);
   if (result!=0) {
     return result;
   }
 
-  delay_periodic(10000); /* FIXME : TODO : tune */
+  delay_periodic(FPGA_COLUMNS_CALIB_TIMEOUT);
+
+  goldo_fpga_columns_move (2);
+
+  delay_periodic(FPGA_COLUMNS_CALIB_TIMEOUT);
 
   return 0;
 }
@@ -330,3 +340,27 @@ int FpgaTask::goldo_fpga_columns_move (int col_id)
 
   return 0;
 }
+
+int FpgaTask::goldo_fpga_set_columns_offset (int col_id, int col_offset)
+{
+  int result;
+
+  if ((col_id<1) || (col_id>3)) {
+    return -1;
+  }
+
+  /* FPGA BAL1 */
+  result = goldo_fpga_master_spi_write_word (0x800084f4, col_offset);
+  if (result!=0) {
+    return result;
+  }
+
+  /* FPGA BAL0 */
+  result = goldo_fpga_master_spi_write_word (0x800084f0, col_id+30);
+  if (result!=0) {
+    return result;
+  }
+
+  return 0;
+}
+

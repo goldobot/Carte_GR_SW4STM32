@@ -80,5 +80,6 @@ namespace goldobot
 		FpgaGetStepperPos=305,
 		FpgaColumnsCalib=320,
 		FpgaColumnsMove=321,
+		FpgaColumnsSetOffset=322,
 	};
 }

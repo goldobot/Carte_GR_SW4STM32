@@ -201,6 +201,19 @@ void ArmsTask::_execute_command(int arm_id, const ArmCommand& command)
 
 void ArmsTask::go_to_position(uint8_t arm_id, uint8_t pos_id, uint16_t time_ms, int torque_settings)
 {
+	if(arm_id == 6) /* GOLDO : support colonnes : cas special */
+	{
+		if(pos_id == 0)
+		{
+			Robot::instance().fpgaTask().goldo_fpga_columns_calib();
+		}
+		else
+		{
+			Robot::instance().fpgaTask().goldo_fpga_columns_move(pos_id);
+		}
+		return;
+	}
+
 	auto& arm_descr = m_arms_descrs[arm_id];
 
 	if(pos_id >= arm_descr.num_positions)

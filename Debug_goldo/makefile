@@ -71,7 +71,6 @@ clean:
 	find . -name "*.d" | xargs rm -f
 	rm -f Carte_GR_SW4STM32.bin
 	rm -f Carte_GR_SW4STM32.elf
-	rm -f objects.list
 	rm -f output.map
 	-@echo ' '
 

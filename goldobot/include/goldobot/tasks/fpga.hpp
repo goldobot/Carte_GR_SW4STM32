@@ -21,6 +21,7 @@ namespace goldobot
 		int goldo_fpga_get_stepper_pos (int stp_id, unsigned int *new_pos);
 		int goldo_fpga_columns_calib (void);
 		int goldo_fpga_columns_move (int col_id);
+		int goldo_fpga_set_columns_offset (int col_id, int col_offset);
 
 	private:
 		unsigned char spi_buf_out[256];
