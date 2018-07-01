@@ -349,6 +349,10 @@ int FpgaTask::goldo_fpga_set_columns_offset (int col_id, int col_offset)
     return -1;
   }
 
+  if ((col_offset<-10000) || (col_id>10000)) {
+    return -1;
+  }
+
   /* FPGA BAL1 */
   result = goldo_fpga_master_spi_write_word (0x800084f4, col_offset);
   if (result!=0) {
