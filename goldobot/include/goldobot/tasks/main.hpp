@@ -158,7 +158,7 @@ namespace goldobot
 
 		Vector2D m_waypoints[128];
 		uint8_t m_trajectory_points[256];
-		Command m_commands[128];
+		Command m_commands[512];
 		Sequence m_sequences[32];
 		SpeedSettings m_speed_settings[8];
 
