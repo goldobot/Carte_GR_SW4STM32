@@ -583,9 +583,9 @@ void PropulsionController::initRotationCommand(float delta_yaw, float speed, flo
 
 bool PropulsionController::reset_pose(float x, float y, float yaw)
 {
-	while(xSemaphoreTake(m_mutex, 1) != pdTRUE)
-		{
-		}
+	//while(xSemaphoreTake(m_mutex, 1) != pdTRUE)
+	//	{
+	//	}
 	if(m_state == State::Inactive || m_state == State::Stopped)
 	{
 		RobotPose pose;
@@ -597,12 +597,12 @@ bool PropulsionController::reset_pose(float x, float y, float yaw)
 		m_odometry->setPose(pose);
 		m_target_position = pose.position;
 		m_target_yaw = yaw;
-		xSemaphoreGive(m_mutex);
-		return true;
+		//xSemaphoreGive(m_mutex);
+	//	return true;
 	} else
 	{
-		xSemaphoreGive(m_mutex);
-		return false;
+	//	xSemaphoreGive(m_mutex);
+	//	return false;
 	}
 }
 bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, float speed, float acceleration, float decceleration)
@@ -619,6 +619,7 @@ bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, f
 	initMoveCommand(speed, acceleration, decceleration);
 	m_state = State::FollowTrajectory;
 	m_translation_pid.set_config(m_config.translation_cruise_pid_config);
+	xSemaphoreGive(m_mutex);
 	return true;
 };
 
@@ -638,6 +639,7 @@ bool PropulsionController::executePointTo(Vector2D point, float speed, float acc
 	initRotationCommand(angleDiff(target_yaw, m_target_yaw), speed, acceleration, decceleration);
 
 	m_state = State::PointTo;
+	xSemaphoreGive(m_mutex);
 	return true;
 };
 
@@ -654,6 +656,7 @@ bool PropulsionController::executeRotation(float delta_yaw, float yaw_rate, floa
 	initRotationCommand(delta_yaw, yaw_rate, accel, deccel);
 
 	m_state = State::PointTo;
+	xSemaphoreGive(m_mutex);
 	return true;
 }
 
