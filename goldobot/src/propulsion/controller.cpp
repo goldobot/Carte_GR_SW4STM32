@@ -245,11 +245,6 @@ void PropulsionController::updateMotorsPwm()
 	// Current robot frame direction
 	float ux = cosf(m_pose.yaw);
 	float uy = sinf(m_pose.yaw);
-
-	if (m_state == State::FollowTrajectory)
-	{
-
-	}
 	
 	// Compute position error
 	float diff_x = (m_pose.position.x - m_target_position.x);
@@ -619,6 +614,12 @@ bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, f
 	initMoveCommand(speed, acceleration, decceleration);
 	m_state = State::FollowTrajectory;
 	m_translation_pid.set_config(m_config.translation_cruise_pid_config);
+
+	m_control_translation = true;
+	m_control_speed = true;
+	m_control_yaw = false;
+	m_control_yaw_rate = true;
+
 	xSemaphoreGive(m_mutex);
 	return true;
 };

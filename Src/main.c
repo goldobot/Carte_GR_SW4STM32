@@ -110,6 +110,39 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
+
+void FPU_IRQHandler(void)
+{
+   while(1){};
+}
+
+void NMI_Handler(void)
+{
+   while(1){};
+}
+
+void HardFault_Handler(void)
+{
+   while(1){};
+}
+
+void MemManage_Handler(void)
+{
+   while(1){};
+}
+
+void BusFault_Handler(void)
+{
+   while(1){};
+}
+
+void UsageFault_Handler(void)
+{
+   while(1){};
+}
+
+
+
 /* USER CODE END 0 */
 
 /**
