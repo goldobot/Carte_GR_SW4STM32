@@ -5,6 +5,7 @@
 #include "goldobot/propulsion/simple_odometry.hpp"
 #include "goldobot/propulsion/controller.hpp"
 #include "goldobot/trajectory_planner.hpp"
+#include "goldobot/debug_types.hpp"
 
 #include <cstdint>
 
@@ -114,6 +115,26 @@ namespace goldobot
 
 		void sequence_step();
 
+		bool get_sequence_active_flag() {return m_sequence_active;};
+		int get_active_state_code() {
+                  switch(m_match_state) {
+                  case State::Idle:
+                    return 0;
+                  case State::Debug:
+                    return 1;
+                  case State::PreMatch:
+                    return 2;
+                  case State::WaitForStartOfMatch:
+                    return 3;
+                  case State::Match:
+                    return 4;
+                  case State::PostMatch:
+                    return 5;
+                  case State::ManualControl:
+                    return 6;
+                  }
+                  return 7;
+                };
 
 
 	private:
@@ -124,7 +145,8 @@ namespace goldobot
 			PreMatch, // Pre match repositioning sequence
 			WaitForStartOfMatch, // Ready for match, waiting for start signal
 			Match, // Match
-			PostMatch // Match finished
+			PostMatch, // Match finished
+			ManualControl // As the name implies.. ;-)
 		};
 
 		void pop_message(unsigned char* buffer, size_t size);
@@ -162,6 +184,7 @@ namespace goldobot
 		Sequence m_sequences[32];
 		SpeedSettings m_speed_settings[8];
 
+		bool m_sequences_initialized;
 		bool m_sequence_active;
 		bool m_wait_current_cmd;
 		uint16_t m_current_sequence_id;

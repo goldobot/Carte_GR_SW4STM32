@@ -127,6 +127,16 @@ bool UARTCommTask::send_message(CommMessageType type, const char* buffer, uint16
 	return false;
 }
 
+bool UARTCommTask::send_debug_event(DbgEventType event_type, uint32_t param1, uint32_t param2, uint32_t param3)
+{
+	DbgEventStruct my_event;
+	my_event.type = event_type;
+	my_event.param1 = param1;
+	my_event.param2 = param2;
+	my_event.param3 = param3;
+	send_message(CommMessageType::DbgEvent, (char*)&my_event, sizeof(my_event));
+}
+
 void UARTCommTask::process_message(uint16_t message_type)
 {
 	uint16_t msg_type = m_deserializer.message_type();

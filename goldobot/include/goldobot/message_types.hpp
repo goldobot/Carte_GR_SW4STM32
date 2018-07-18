@@ -16,6 +16,8 @@ namespace goldobot
 		Reset=2, // Sent once on startup
 		CommStats=3,
 		DbgPrintf=4,
+		DbgGPIO=5, // All the GPIOs connected directly to the ST microcontroler, sampled @ 10Hz
+		DbgEvent=6, // Sent each time a major event occurs
 		// Propulsion telemetry
 		PropulsionTelemetry=8, //
 		PropulsionTelemetryEx=9,
@@ -68,6 +70,9 @@ namespace goldobot
 		DbgRobotSetSequence=178,
 		DbgRobotExecuteSequence=179,
 		DbgRobotSetTrajectoryPoint=180,
+
+		DbgRobotEnterManualMode=192,
+		DbgRobotExitManualMode=193,
 
 		// FPGA
 		FpgaGetVersion=256,

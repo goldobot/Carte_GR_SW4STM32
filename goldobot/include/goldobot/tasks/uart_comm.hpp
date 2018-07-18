@@ -3,6 +3,7 @@
 #include "goldobot/comm_serializer.hpp"
 #include "goldobot/message_types.hpp"
 #include <cstdint>
+#include "goldobot/debug_types.hpp"
 
 #include "FreeRTOS.h"
 #include "semphr.h"
@@ -16,6 +17,7 @@ namespace goldobot
 		const char* name() const override;
 
 		bool send_message(CommMessageType msg_type, const char* buffer, uint16_t size);
+		bool send_debug_event(DbgEventType event_type, uint32_t param1, uint32_t param2, uint32_t param3);
 		void debug_printf(const char* format...);
 	private:
 		static constexpr uint16_t c_printf_buffer_size = 255;

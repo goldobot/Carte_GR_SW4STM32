@@ -20,7 +20,9 @@ using namespace goldobot;
 int g_foo;
 MainTask::MainTask():
     m_match_state(State::Idle),
-	m_dbg_message_queue(m_dbg_message_queue_buffer, 512)
+    m_dbg_message_queue(m_dbg_message_queue_buffer, 512),
+    m_sequences_initialized(false),
+    m_sequence_active(false)
 {
 	m_dbg_message_queue_mutex = xSemaphoreCreateMutex();
 	m_speed_settings[0] = {0.5,1,1,2,1,1,0.2};
@@ -50,6 +52,8 @@ void MainTask::preMatchStep()
 
 void MainTask::matchBegin()
 {
+	if (!m_sequences_initialized) return;
+
 	auto& comm = Robot::instance().comm();
 	uint32_t clock = xTaskGetTickCount();
 	comm.send_message(CommMessageType::StartOfMatch,(char*)&clock,sizeof(clock));
@@ -109,10 +113,12 @@ void MainTask::matchSelectNextObjective()
 
 void MainTask::execute_sequence(int seq_id)
 {
+	auto& comm = Robot::instance().comm();
 	m_current_sequence_id = seq_id;
 	m_current_command_id = m_sequences[m_current_sequence_id].begin_idx;
 	m_sequence_active = true;
 	m_wait_current_cmd = false;
+	comm.send_debug_event(DbgEventType::DbgEventStartSequence, (uint32_t)seq_id, 0, 0);
 }
 void MainTask::sequence_step()
 {
@@ -148,6 +154,8 @@ void MainTask::sequence_step()
 }
 bool MainTask::_execute_command(const Command& cmd)
 {
+	auto& comm = Robot::instance().comm();
+
 	float delta_yaw=0;
 	auto& arms = Robot::instance().arms();
 	auto& propulsion = Robot::instance().propulsion();
@@ -155,63 +163,80 @@ bool MainTask::_execute_command(const Command& cmd)
 	switch(cmd.opcode)
 	{
 	case OpCode::Delay:
+		comm.send_debug_event(DbgEventType::DbgEventExecuteCommand, (uint32_t)cmd.opcode, (uint32_t)cmd.delay_ms, 0);
+
 		m_delay_finished_ts = xTaskGetTickCount() + cmd.delay_ms;
 		return true;
 	case OpCode::SetPose:
+		comm.send_debug_event(DbgEventType::DbgEventExecuteCommand, (uint32_t)cmd.opcode, (uint32_t)(m_waypoints[cmd.set_pose.pose_id].x*1000.0), (uint32_t)(m_waypoints[cmd.set_pose.pose_id].y*1000.0));
+
 		propulsion.reset_pose(m_waypoints[cmd.set_pose.pose_id].x, m_waypoints[cmd.set_pose.pose_id].y, cmd.set_pose.angle_deg * M_PI / 180);
 		return false;
 	case OpCode::Rotation:
 	{
+		comm.send_debug_event(DbgEventType::DbgEventExecuteCommand, (uint32_t)cmd.opcode, (uint32_t)cmd.rotation.angle, 0);
+
 		delta_yaw = cmd.rotation.angle * M_PI / 180;
 		auto& ss = m_speed_settings[cmd.trajectory.speed_settings];
 		propulsion.executeRotation(delta_yaw,ss.yaw_rate,ss.yaw_acceleration, ss.yaw_decceleration);
 		return true;
 	}
 	case OpCode::Reposition:
+	{
+		comm.send_debug_event(DbgEventType::DbgEventExecuteCommand, (uint32_t)cmd.opcode, (uint32_t)cmd.reposition.angle, 0);
+
+		auto dir = PropulsionController::Direction::Forward;
+		float angle_rad = cmd.reposition.angle * M_PI/180;
+		Vector2D normal = {cosf(angle_rad), sinf(angle_rad)};
+		// Check angle of current robot position compared to border
+		auto pose = Robot::instance().odometry().pose();
+		float ux = cos(pose.yaw);
+		float uy = sinf(pose.yaw);
+		float dist_m = cmd.reposition.distance*1e-3;
+
+		if(ux * normal.x + uy * normal.y >= 0)
 		{
-			auto dir = PropulsionController::Direction::Forward;
-			float angle_rad = cmd.reposition.angle * M_PI/180;
-			Vector2D normal = {cosf(angle_rad), sinf(angle_rad)};
-
-			// Check angle of current robot position compared to border
-			auto pose = Robot::instance().odometry().pose();
-			float ux = cos(pose.yaw);
-			float uy = sinf(pose.yaw);
-			float dist_m = cmd.reposition.distance*1e-3;
-
-			if(ux * normal.x + uy * normal.y >= 0)
-			{
-				dir = PropulsionController::Direction::Forward;
-				dist_m -= Robot::instance().robotConfig().front_length;
-			} else
-			{
-				dir = PropulsionController::Direction::Backward;
-				dist_m -= Robot::instance().robotConfig().back_length;
-			}
-
-			propulsion.executeRepositioning(dir, 0.2,normal,dist_m);
-			return true;
+			dir = PropulsionController::Direction::Forward;
+			dist_m -= Robot::instance().robotConfig().front_length;
 		}
+		else
+		{
+			dir = PropulsionController::Direction::Backward;
+			dist_m -= Robot::instance().robotConfig().back_length;
+		}
+
+		propulsion.executeRepositioning(dir, 0.2,normal,dist_m);
+		return true;
+	}
 	case OpCode::Trajectory:
 	{
+		comm.send_debug_event(DbgEventType::DbgEventExecuteCommand, (uint32_t)cmd.opcode, (uint32_t)cmd.trajectory.num_points, 0);
+
 		Vector2D points[16];
 		for(unsigned i=0;i < cmd.trajectory.num_points;i++)
 		{
 			int pt_id = m_trajectory_points[cmd.trajectory.begin_idx + i];
 			points[i] = m_waypoints[pt_id];
+			comm.send_debug_event(DbgEventType::DbgEventGoWaypoint, (uint32_t)(points[i].x*1000.0), (uint32_t)(points[i].y*1000.0), 0);
 		}
 		auto& ss = m_speed_settings[cmd.trajectory.speed_settings];
 		propulsion.executeTrajectory(points,cmd.trajectory.num_points,ss.speed, ss.acceleration, ss.decceleration);
 		return true;
 	}
 	case OpCode::ArmsGoToPosition:
+		comm.send_debug_event(DbgEventType::DbgEventExecuteCommand, (uint32_t)cmd.opcode, (uint32_t)cmd.arms.arm_id, (uint32_t)cmd.arms.seq_or_pos_id);
+
 		arms.go_to_position(cmd.arms.arm_id, cmd.arms.seq_or_pos_id,0);
 		return true;
 		break;
 	case OpCode::ArmsExecuteSequence:
+		comm.send_debug_event(DbgEventType::DbgEventExecuteCommand, (uint32_t)cmd.opcode, (uint32_t)cmd.arms.arm_id, (uint32_t)cmd.arms.seq_or_pos_id);
+
 		arms.execute_sequence(cmd.arms.arm_id, cmd.arms.seq_or_pos_id);
 		return true;
 	default:
+		comm.send_debug_event(DbgEventType::DbgEventExecuteCommand, (uint32_t)cmd.opcode, 0, 0);
+
 		return false;
 	}
 }
@@ -287,7 +312,7 @@ void MainTask::taskFunction()
 		switch(m_match_state)
 		{
 		case State::Idle:
-			if(!Hal::get_gpio(1))
+			if((m_sequences_initialized) && (!Hal::get_gpio(1)))
 			{
 				if( Hal::get_gpio(4))
 				{
@@ -296,6 +321,8 @@ void MainTask::taskFunction()
 				{
 					m_side = Side::Orange;
 				}
+
+				comm.send_debug_event(DbgEventType::DbgEventRobotHoming, (uint32_t)m_side, 0, 0);
 
 				m_match_state = State::WaitForStartOfMatch;
 				Hal::set_motors_enable(true);
@@ -314,7 +341,7 @@ void MainTask::taskFunction()
 			}
 			break;
 		case State::WaitForStartOfMatch:
-			if(Hal::get_gpio(1))
+			if((m_sequences_initialized) && (Hal::get_gpio(1)))
 			{
 				switch(m_side)
 				{
@@ -329,6 +356,8 @@ void MainTask::taskFunction()
 				default:
 					break;
 				}
+
+				comm.send_debug_event(DbgEventType::DbgEventStartMatch, (uint32_t)m_side, 0, 0);
 			}
 			break;
 
@@ -344,6 +373,8 @@ void MainTask::taskFunction()
 			}
 			break;
 		case State::PostMatch:
+			break;
+		case State::ManualControl:
 			break;
 		}
 		vTaskDelay(1);
@@ -665,7 +696,22 @@ void MainTask::process_message(CommMessageType message_type, uint16_t message_si
 	case CommMessageType::DbgRobotSetTrajectoryPoint:
 		on_msg_dbg_robot_set_trajectory_point();
 		break;
-
+	case CommMessageType::DbgRobotEnterManualMode:
+		pop_message(nullptr, 0);
+		m_match_state = State::ManualControl;
+		m_sequence_active = false;
+		m_wait_current_cmd = false;
+		Hal::set_motors_enable(false);
+		Robot::instance().propulsion().disable();
+		break;
+	case CommMessageType::DbgRobotExitManualMode:
+		pop_message(nullptr, 0);
+		m_match_state = State::Idle;
+		m_sequence_active = false;
+		m_wait_current_cmd = false;
+		Hal::set_motors_enable(false);
+		Robot::instance().propulsion().disable();
+		break;
 	default:
 		pop_message(nullptr, 0);
 		break;
@@ -798,6 +844,7 @@ void MainTask::on_msg_dbg_robot_set_sequence()
 	uint16_t buff[3];
 	pop_message((unsigned char*)buff,6);
 	m_sequences[buff[0]] = {buff[1], buff[2]};
+	m_sequences_initialized = true; /* FIXME : TODO : un peu moins brutal.. */
 }
 
 void MainTask::on_msg_dbg_robot_execute_sequence()
@@ -805,10 +852,17 @@ void MainTask::on_msg_dbg_robot_execute_sequence()
 	uint8_t seq_id;
 	pop_message((unsigned char*)&seq_id,1);
 
+	if (!m_sequences_initialized) return;
+
+	if (m_match_state != State::ManualControl) return;
+
 	m_current_sequence_id = seq_id;
 	m_current_command_id = m_sequences[m_current_sequence_id].begin_idx;
 	m_sequence_active = true;
 	m_wait_current_cmd = false;
+
+	Hal::set_motors_enable(true);
+	Robot::instance().propulsion().enable();
 }
 
 
