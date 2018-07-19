@@ -446,6 +446,8 @@ void MainTask::process_message(CommMessageType message_type, uint16_t message_si
 		}
 		break;
 	case CommMessageType::DbgReset:
+		// Reset the FPGA (soft reset, only robot IPs..)
+		Robot::instance().fpgaTask().goldo_fpga_master_spi_write_word (0x800084f0, 42);
 		// Reset the micro
 		NVIC_SystemReset();
 		break;

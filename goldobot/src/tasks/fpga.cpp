@@ -290,7 +290,7 @@ int FpgaTask::goldo_fpga_get_stepper_pos (int stp_id, unsigned int *new_pos)
   return 0;
 }
 
-#define FPGA_COLUMNS_CALIB_TIMEOUT 8000 /* FIXME : TODO : tune */
+#define FPGA_COLUMNS_CALIB_TIMEOUT 5000 /* FIXME : TODO : tune */
 
 int FpgaTask::goldo_fpga_columns_calib (void)
 {
