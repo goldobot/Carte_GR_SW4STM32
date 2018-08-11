@@ -343,6 +343,14 @@ void MainTask::taskFunction()
 		case State::WaitForStartOfMatch:
 			if((m_sequences_initialized) && (Hal::get_gpio(1)))
 			{
+				{
+					auto& comm = Robot::instance().comm();
+					uint32_t clock = xTaskGetTickCount();
+					comm.send_message(CommMessageType::StartOfMatch,(char*)&clock,sizeof(clock));
+					m_start_of_match_time = clock;
+					Hal::set_gpio(0, true);
+				}
+
 				switch(m_side)
 				{
 				case Side::Green:
