@@ -5,6 +5,7 @@
 #include "goldobot/tasks/arms.hpp"
 #include "goldobot/tasks/main.hpp"
 #include "goldobot/tasks/fpga.hpp"
+#include "goldobot/tasks/gyro.hpp"
 #include "goldobot/hal.hpp"
 
 namespace goldobot
@@ -29,6 +30,7 @@ namespace goldobot
 		ArmsTask& arms();
 		MainTask& mainTask();
 		FpgaTask& fpgaTask();
+		GyroTask& gyroTask();
 
 		const RobotConfig& robotConfig() const;
 		OdometryConfig odometryConfig();
@@ -44,6 +46,7 @@ namespace goldobot
 		MainTask m_main_task;
 		ArmsTask m_arms_task;
 		FpgaTask m_fpga_task;
+		GyroTask m_gyro_task;
 		static Robot s_instance;
 	};
 }

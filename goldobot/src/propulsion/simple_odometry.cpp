@@ -2,7 +2,7 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 #include <cstring>
-
+#include <goldobot/robot.hpp>
 using namespace goldobot;
 
 SimpleOdometry::SimpleOdometry() :

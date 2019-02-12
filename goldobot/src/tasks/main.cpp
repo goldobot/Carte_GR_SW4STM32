@@ -676,6 +676,39 @@ void MainTask::process_message(CommMessageType message_type, uint16_t message_si
 			Robot::instance().fpgaTask().goldo_fpga_master_spi_write_word(apb_addr, apb_data);
 		}
 		break;
+	case CommMessageType::GyroDbgReadReg:
+			{
+				unsigned int reg_data = 0xdeadbeef;
+				unsigned char buff[8];
+				pop_message(buff, 4);
+				uint32_t reg_addr = *(uint32_t*)(buff);
+				if(Robot::instance().gyroTask().goldo_gyro_master_spi_read_word(reg_addr, &reg_data)!=0)
+				{
+					reg_data = 0xdeadbeef;
+				}
+				std::memcpy(buff+4, (unsigned char *)&reg_data, 4);
+				comm.send_message(CommMessageType::GyroDbgReadReg, (char *)buff, 8);
+			}
+			break;
+	case CommMessageType::GyroDbgWriteReg:
+		{
+			unsigned char buff[8];
+			pop_message(buff, 8);
+			uint32_t reg_addr = *(uint32_t*)(buff);
+			uint32_t reg_data = *(uint32_t*)(buff+4);
+			Robot::instance().gyroTask().goldo_gyro_master_spi_write_word(reg_addr, reg_data);
+		}
+		break;
+	case CommMessageType::GyroGetAngle:
+		{
+			unsigned char buff[4];
+			float angle;
+			pop_message(buff, 4);
+			angle = Robot::instance().gyroTask().goldo_gyro_get_angle();
+			std::memcpy(buff, (unsigned char *)&angle, 4);
+			comm.send_message(CommMessageType::GyroGetAngle, (char *)buff, 4);
+		}
+		break;
 	case CommMessageType::DbgArmsSetPose:
 		on_msg_dbg_arms_set_pose();
 		break;

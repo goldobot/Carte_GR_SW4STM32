@@ -6,6 +6,7 @@
 CPP_SRCS += \
 ../goldobot/src/tasks/arms.cpp \
 ../goldobot/src/tasks/fpga.cpp \
+../goldobot/src/tasks/gyro.cpp \
 ../goldobot/src/tasks/heartbeat.cpp \
 ../goldobot/src/tasks/main.cpp \
 ../goldobot/src/tasks/propulsion.cpp \
@@ -15,6 +16,7 @@ CPP_SRCS += \
 OBJS += \
 ./goldobot/src/tasks/arms.o \
 ./goldobot/src/tasks/fpga.o \
+./goldobot/src/tasks/gyro.o \
 ./goldobot/src/tasks/heartbeat.o \
 ./goldobot/src/tasks/main.o \
 ./goldobot/src/tasks/propulsion.o \
@@ -24,6 +26,7 @@ OBJS += \
 CPP_DEPS += \
 ./goldobot/src/tasks/arms.d \
 ./goldobot/src/tasks/fpga.d \
+./goldobot/src/tasks/gyro.d \
 ./goldobot/src/tasks/heartbeat.d \
 ./goldobot/src/tasks/main.d \
 ./goldobot/src/tasks/propulsion.d \

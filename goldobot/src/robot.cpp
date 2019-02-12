@@ -23,6 +23,7 @@ void Robot::init()
 	m_propulsion_task.init();
 	m_main_task.init();
 	m_arms_task.init();
+	m_gyro_task.init();
 
 }
 
@@ -59,6 +60,11 @@ ArmsTask& Robot::arms()
 FpgaTask& Robot::fpgaTask()
 {
 	return m_fpga_task;
+}
+
+GyroTask& Robot::gyroTask()
+{
+	return m_gyro_task;
 }
 
 OdometryConfig Robot::defaultOdometryConfig()

@@ -810,7 +810,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, MAXON_EN_Pin|NUCLEO_DYNA_DIR_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, MAXON_EN_Pin|NUCLEO_DYNA_DIR_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(MAXON2_DIR_GPIO_Port, MAXON2_DIR_Pin, GPIO_PIN_RESET);
@@ -831,6 +831,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : GYRO_CS_Pin */
+  GPIO_InitStruct.Pin = GYRO_CS_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  HAL_GPIO_Init(GYRO_CS_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : MAXON_EN_Pin NUCLEO_DYNA_DIR_Pin */
   GPIO_InitStruct.Pin = MAXON_EN_Pin|NUCLEO_DYNA_DIR_Pin;

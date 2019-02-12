@@ -88,5 +88,10 @@ namespace goldobot
 		FpgaColumnsCalib=320,
 		FpgaColumnsMove=321,
 		FpgaColumnsSetOffset=322,
+
+		// Gyro
+		GyroDbgReadReg=342,
+		GyroDbgWriteReg=376,
+		GyroGetAngle=344,
 	};
 }

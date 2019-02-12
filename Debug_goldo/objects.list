@@ -49,6 +49,7 @@
 "goldobot/src/propulsion/trajectory.o"
 "goldobot/src/tasks/arms.o"
 "goldobot/src/tasks/fpga.o"
+"goldobot/src/tasks/gyro.o"
 "goldobot/src/tasks/heartbeat.o"
 "goldobot/src/tasks/main.o"
 "goldobot/src/tasks/propulsion.o"
