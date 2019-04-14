@@ -127,6 +127,23 @@ namespace goldobot
 			PostMatch // Match finished
 		};
 
+		void pop_message(unsigned char* buffer, size_t size);
+		void process_messages();
+		void process_message(CommMessageType message_type, uint16_t message_size);
+
+		void on_msg_dbg_execute_trajectory();
+		void on_msg_dbg_arms_set_pose();
+		void on_msg_dbg_arms_set_command();
+		void on_msg_dbg_arms_set_sequences(uint16_t message_size);
+		void on_msg_dbg_arms_go_to_position();
+		void on_msg_dbg_arms_execute_sequence();
+
+		void on_msg_dbg_robot_set_command();
+		void on_msg_dbg_robot_set_point();
+		void on_msg_dbg_robot_set_sequence();
+		void on_msg_dbg_robot_execute_sequence();
+		void on_msg_dbg_robot_set_trajectory_point();
+
 		void taskFunction() override;
 
 		State m_match_state;
@@ -135,6 +152,9 @@ namespace goldobot
 		TrajectoryPlanner m_trajectory_planner;
 		uint16_t m_current_trajectory_index;
 		uint16_t m_current_objective;
+		SemaphoreHandle_t m_dbg_message_queue_mutex;
+		MessageQueue m_dbg_message_queue;
+		unsigned char m_dbg_message_queue_buffer[512];
 
 		Vector2D m_waypoints[128];
 		uint8_t m_trajectory_points[256];

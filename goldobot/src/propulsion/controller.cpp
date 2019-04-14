@@ -747,3 +747,36 @@ void PropulsionController::executeTest(TestPattern pattern)
 	xSemaphoreGive(m_mutex);
 }
 
+PropulsionTelemetry PropulsionController::getTelemetry() const
+{
+	PropulsionTelemetry msg;
+	msg.x = (int16_t)(m_pose.position.x * 4e3f);
+	msg.y = (int16_t)(m_pose.position.y * 4e3f);
+	msg.yaw = (int16_t)(m_pose.yaw * 32767 / M_PI);
+	msg.speed = (int16_t)(m_pose.speed * 1000);
+	msg.yaw_rate = (int16_t)(m_pose.yaw_rate * 1000);
+	msg.acceleration = (int16_t)(m_pose.acceleration * 1000);
+	msg.angular_acceleration = (int16_t)(m_pose.angular_acceleration * 1000);
+	msg.left_encoder = m_odometry->leftEncoderValue();
+	msg.right_encoder = m_odometry->rightEncoderValue();
+	msg.left_pwm = (int16_t)(m_left_motor_pwm * 100);
+	msg.right_pwm = (int16_t)(m_right_motor_pwm * 100);
+	msg.state = (uint8_t)(state());
+	msg.error = (uint8_t)(error());
+	return msg;
+}
+
+PropulsionTelemetryEx PropulsionController::getTelemetryEx() const
+{
+	PropulsionTelemetryEx msg;
+	msg.target_x = (int16_t)(m_target_position.x * 4e3f);
+	msg.target_y = (int16_t)(m_target_position.y * 4e3f);
+	msg.target_yaw = (int16_t)(m_target_yaw * 32767 / M_PI);
+	msg.target_speed = (int16_t)(m_target_speed * 1000);
+	msg.target_yaw_rate = (int16_t)(m_target_yaw_rate * 1000);
+	msg.longitudinal_error = (int16_t)(m_longitudinal_error * 4e3f);
+	msg.lateral_error = (int16_t)(m_lateral_error * 4e3f);
+	msg.left_acc = m_odometry->m_left_accumulator;
+	msg.right_acc = m_odometry->m_right_accumulator;
+}
+

@@ -53,6 +53,8 @@ namespace goldobot
 		DbgPropulsionExecuteTrajectory=85,
 		DbgPropulsionExecuteRotation=86,
 		DbgPropulsionExecuteReposition=87,
+
+
 		DbgMiscRepositionStartGreen=100,
 		DbgReset=127,
 
