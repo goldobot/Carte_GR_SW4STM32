@@ -11,28 +11,16 @@ using namespace goldobot;
 CommManager::CommManager() :
 	m_dbg_message_queue(m_dbg_message_queue_buffer, 512)
 {
-	m_dbg_message_queue_mutex = xSemaphoreCreateMutex();
 }
 
 bool CommManager::push_message(uint16_t message_type, const unsigned char* buffer, size_t size)
 {
-	bool retval = false;
-	if(xSemaphoreTake(m_dbg_message_queue_mutex, portMAX_DELAY) == pdTRUE)
-	{
-		retval = m_dbg_message_queue.push_message(message_type, buffer, size);
-		xSemaphoreGive(m_dbg_message_queue_mutex);
-	}
-
-	return retval;
+	return m_dbg_message_queue.push_message(message_type, buffer, size);
 }
 
 void CommManager::pop_message(unsigned char* buffer, size_t size)
 {
-	if(xSemaphoreTake(m_dbg_message_queue_mutex, portMAX_DELAY) == pdTRUE)
-	{
-		m_dbg_message_queue.pop_message(buffer, size);
-		xSemaphoreGive(m_dbg_message_queue_mutex);
-	}
+	m_dbg_message_queue.pop_message(buffer, size);
 }
 
 void CommManager::process_messages()
@@ -50,69 +38,12 @@ void CommManager::process_message(CommMessageType message_type, uint16_t message
 
 	switch(message_type)
 	{
-	case CommMessageType::DbgGetOdometryConfig:
-		{
-			auto config = Robot::instance().odometry().config();
-			comm.send_message(CommMessageType::DbgGetOdometryConfig, (char*)&config, sizeof(config));
-			pop_message(nullptr, 0);
-		}
-		break;
-	case CommMessageType::DbgSetOdometryConfig:
-			{
-				OdometryConfig config;
-				pop_message((unsigned char*)&config, sizeof(config));
-				Robot::instance().odometry().setConfig(config);
-			}
-			break;
-	case CommMessageType::DbgGetPropulsionConfig:
-		{
-			auto config = Robot::instance().propulsion().config();
-			comm.send_message(CommMessageType::DbgGetPropulsionConfig, (char*)&config, sizeof(config));
-			pop_message(nullptr, 0);
-		}
-		break;
-	case CommMessageType::DbgSetPropulsionConfig:
-		{
-			PropulsionControllerConfig config;
-			pop_message((unsigned char*)&config, sizeof(config));
-			propulsion->set_config(config);
-		}
-		break;
+
 	case CommMessageType::DbgReset:
 		// Reset the micro
 		NVIC_SystemReset();
 		break;
-	case CommMessageType::CmdEmergencyStop:
-		propulsion->emergency_stop();
-		pop_message(nullptr, 0);
-		break;
-	case CommMessageType::DbgSetPropulsionEnable:
-		{
-			uint8_t enabled;
-			pop_message((unsigned char*)&enabled, 1);
-			if(enabled)
-			{
-				propulsion->enable();
-			} else
-			{
-				propulsion->disable();
-			}
-		}
-		break;
-	case CommMessageType::DbgSetMotorsEnable:
-		{
-			uint8_t enabled;
-			pop_message((unsigned char*)&enabled, 1);
-			Hal::set_motors_enable(enabled);
-		}
-		break;
-	case CommMessageType::DbgSetMotorsPwm:
-		{
-			float pwm[2];
-			pop_message((unsigned char*)&pwm, 8);
-			Hal::set_motors_pwm(pwm[0], pwm[1]);
-		}
-		break;
+
 	case CommMessageType::DbgPropulsionTest:
 		{
 			uint8_t id;
@@ -137,7 +68,7 @@ void CommManager::process_message(CommMessageType message_type, uint16_t message
 			}
 			while(propulsion->state() == PropulsionController::State::Test)
 			{
-				delay(1);
+				//delay(1);
 			}
 			status = 1;
 			comm.send_message(CommMessageType::DbgPropulsionExecuteTrajectory, (char*)&status, 1);
@@ -231,9 +162,7 @@ void CommManager::process_message(CommMessageType message_type, uint16_t message
 
 		}
 		break;
-	case CommMessageType::DbgPropulsionExecuteTrajectory:
-		on_msg_dbg_execute_trajectory();
-		break;
+
 	case CommMessageType::FpgaCmdDCMotor:
 		{
 			unsigned char buff[3];
@@ -336,63 +265,6 @@ void CommManager::process_message(CommMessageType message_type, uint16_t message
 	}
 }
 
-void CommManager::on_msg_dbg_execute_trajectory()
-{
-	auto& comm = Robot::instance().comm();
-	auto& propulsion = Robot::instance().propulsion();
-
-	unsigned char buff[14];
-	pop_message(buff,14);
-	uint8_t pattern = buff[0];
-	int8_t direction = buff[0];
-	float speed = *(float*)(buff+2);
-	float accel = *(float*)(buff+6);
-	float deccel = *(float*)(buff+10);
-	propulsion.reset_pose(0, 0, 0);
-	uint8_t status = 0;
-	comm.send_message(CommMessageType::DbgPropulsionExecuteTrajectory, (char*)&status, 1);
-
-	switch(pattern)
-	{
-	case 0:
-		{
-			Vector2D points[2] = {{0,0}, {0.5,0}};
-			propulsion.executeTrajectory(points,2,speed, accel, deccel);
-		}
-		break;
-	case 1:
-		{
-			Vector2D points[2] = {{0,0}, {-0.5,0}};
-			propulsion.executeTrajectory(points,2,speed, accel, deccel);
-		}
-		break;
-	case 2:
-		{
-			Vector2D points[3] = {{0,0}, {0.5,0}, {0.5,0.5}};
-			propulsion.executeTrajectory(points,3,speed, accel, deccel);
-		}
-		break;
-	case 3:
-		{
-			Vector2D points[3] = {{0,0}, {-0.5,0}, {-0.5,-0.5}};
-			propulsion.executeTrajectory(points,3,speed, accel, deccel);
-		}
-		break;
-	case 4:
-		{
-			Vector2D points[4] = {{0,0}, {0.5,0}, {0.5,0.5}, {1,0.5} };
-			propulsion.executeTrajectory(points,4,speed, accel, deccel);
-		}
-		break;
-	}
-	while(propulsion.state() == PropulsionController::State::FollowTrajectory)
-	{
-		delay(1);
-	}
-	status = 1;
-	comm.send_message(CommMessageType::DbgPropulsionExecuteTrajectory, (char*)&status, 1);
-}
-
 void CommManager::on_msg_dbg_arms_set_pose()
 {
 	auto& arms = Robot::instance().arms();
@@ -439,7 +311,7 @@ void CommManager::on_msg_dbg_robot_set_command()
 	unsigned char buff[12];
 	pop_message(buff,12);
 	uint16_t id = *(uint16_t*)(buff);
-	m_commands[id] = *(Command*)(buff+2);
+	//m_commands[id] = *(Command*)(buff+2);
 }
 
 void CommManager::on_msg_dbg_robot_set_point()
@@ -447,21 +319,21 @@ void CommManager::on_msg_dbg_robot_set_point()
 	unsigned char buff[10];
 	pop_message(buff,10);
 	uint16_t id = *(uint16_t*)(buff);
-	m_waypoints[id] = *(Vector2D*)(buff+2);
+	//m_waypoints[id] = *(Vector2D*)(buff+2);
 }
 
 void CommManager::on_msg_dbg_robot_set_trajectory_point()
 {
 	unsigned char buff[2];
 	pop_message(buff,2);
-	m_trajectory_points[buff[0]] = buff[1];
+	//m_trajectory_points[buff[0]] = buff[1];
 }
 
 void CommManager::on_msg_dbg_robot_set_sequence()
 {
 	uint16_t buff[3];
 	pop_message((unsigned char*)buff,6);
-	m_sequences[buff[0]] = {buff[1], buff[2]};
+	//m_sequences[buff[0]] = {buff[1], buff[2]};
 }
 
 void CommManager::on_msg_dbg_robot_execute_sequence()
@@ -469,10 +341,10 @@ void CommManager::on_msg_dbg_robot_execute_sequence()
 	uint8_t seq_id;
 	pop_message((unsigned char*)&seq_id,1);
 
-	m_current_sequence_id = seq_id;
-	m_current_command_id = m_sequences[m_current_sequence_id].begin_idx;
-	m_sequence_active = true;
-	m_wait_current_cmd = false;
+	//m_current_sequence_id = seq_id;
+	//m_current_command_id = m_sequences[m_current_sequence_id].begin_idx;
+	//m_sequence_active = true;
+	//m_wait_current_cmd = false;
 }
 
 

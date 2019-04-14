@@ -10,14 +10,19 @@ MessageQueue::MessageQueue(unsigned char* buffer, size_t size):
     m_end_index(0),
 	m_message_ready(false)
 {
-
+	m_mutex = xSemaphoreCreateMutex();
 }
 
 bool MessageQueue::push_message(uint16_t message_type, const unsigned char* buffer, size_t msg_size)
 {
+	while(xSemaphoreTake(m_mutex, portMAX_DELAY) != pdTRUE)
+	{
+	};
+
 	// Reject message if buffer is full
 	if(msg_size > available_capacity())
 	{
+		xSemaphoreGive(m_mutex);
 		return false;
 	}
 
@@ -33,7 +38,8 @@ bool MessageQueue::push_message(uint16_t message_type, const unsigned char* buff
 		push_data((unsigned char*)header, 4);
 	}
 
-    push_data(buffer, msg_size);
+	push_data(buffer, msg_size);
+	xSemaphoreGive(m_mutex);
     return true;
 }
 
@@ -95,8 +101,13 @@ void MessageQueue::pop_data(size_t size)
 
 void MessageQueue::pop_message(unsigned char* buffer, size_t size)
 {
+	while(xSemaphoreTake(m_mutex, portMAX_DELAY) != pdTRUE)
+	{
+	};
+
 	if(!m_message_ready)
 	{
+		xSemaphoreGive(m_mutex);
 		return;
 	}
 	if(buffer)
@@ -117,11 +128,17 @@ void MessageQueue::pop_message(unsigned char* buffer, size_t size)
 		m_message_size = 0;
 		m_message_type = 0;
 	}
+	xSemaphoreGive(m_mutex);
 }
 
 
 size_t MessageQueue::available_capacity() const
 {
+	while(xSemaphoreTake(m_mutex, portMAX_DELAY) != pdTRUE)
+	{
+	};
 	size_t size =  m_end_index >= m_begin_index ? m_end_index - m_begin_index : m_end_index - m_begin_index + m_buffer_size;
-	return m_buffer_size > size + 4 ? m_buffer_size - size - 4 : 0;
+	auto retval = m_buffer_size > size + 4 ? m_buffer_size - size - 4 : 0;
+	xSemaphoreGive(m_mutex);
+	return retval;
 }

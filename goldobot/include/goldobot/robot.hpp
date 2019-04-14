@@ -1,4 +1,5 @@
 #pragma once
+#include "goldobot/core/message_exchange.hpp"
 #include "goldobot/tasks/propulsion.hpp"
 #include "goldobot/tasks/uart_comm.hpp"
 #include "goldobot/tasks/heartbeat.hpp"
@@ -30,6 +31,8 @@ namespace goldobot
 		MainTask& mainTask();
 		FpgaTask& fpgaTask();
 
+		MessageExchange& mainExchange() { return m_main_exchange; };
+
 		const RobotConfig& robotConfig() const;
 		OdometryConfig odometryConfig();
 		OdometryConfig defaultOdometryConfig();
@@ -44,6 +47,9 @@ namespace goldobot
 		MainTask m_main_task;
 		ArmsTask m_arms_task;
 		FpgaTask m_fpga_task;
+
+		MessageExchange m_main_exchange;
+
 		static Robot s_instance;
 	};
 }

@@ -2,6 +2,7 @@
 #include "goldobot/tasks/task.hpp"
 #include "goldobot/propulsion/simple_odometry.hpp"
 #include "goldobot/propulsion/controller.hpp"
+#include "goldobot/core/message_queue.hpp"
 
 #include <cstdint>
 
@@ -23,7 +24,13 @@ namespace goldobot
 		uint16_t m_encoders_right;
 		uint16_t m_telemetry_counter;
 
+		MessageQueue m_message_queue;
+		unsigned char m_message_queue_buffer[512];
+
 		void doStep();
+		void processMessage();
 		void taskFunction() override;
+
+		void onMsgExecuteTrajectory();
 	};
 }

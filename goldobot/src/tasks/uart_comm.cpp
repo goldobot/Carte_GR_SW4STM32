@@ -132,5 +132,5 @@ void UARTCommTask::process_message(uint16_t message_type)
 	uint16_t msg_type = m_deserializer.message_type();
 	size_t msg_size = m_deserializer.message_size();
 	m_deserializer.pop_message(m_tmp_buffer, msg_size);
-	Robot::instance().mainTask().push_message(msg_type, m_tmp_buffer, msg_size);
+	Robot::instance().mainExchange().pushMessage(msg_type, m_tmp_buffer, msg_size);
 }
