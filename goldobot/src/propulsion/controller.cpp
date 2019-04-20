@@ -778,5 +778,6 @@ PropulsionTelemetryEx PropulsionController::getTelemetryEx() const
 	msg.lateral_error = (int16_t)(m_lateral_error * 4e3f);
 	msg.left_acc = m_odometry->m_left_accumulator;
 	msg.right_acc = m_odometry->m_right_accumulator;
+	return msg;
 }
 

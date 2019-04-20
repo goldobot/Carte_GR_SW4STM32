@@ -10,7 +10,8 @@ using namespace goldobot;
 
 PropulsionTask::PropulsionTask():
 		m_controller(&m_odometry),
-		m_message_queue(m_message_queue_buffer, 512)
+		m_message_queue(m_message_queue_buffer, 512),
+		m_telemetry_counter(0)
 {
 }
 

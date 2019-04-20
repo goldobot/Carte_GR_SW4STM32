@@ -9,6 +9,10 @@ MessageExchange::MessageExchange()
 
 bool MessageExchange::pushMessage(uint16_t message_type, const unsigned char* buffer, size_t size)
 {
+	while(xSemaphoreTake(m_mutex, portMAX_DELAY) != pdTRUE)
+	{
+	};
+
 	for(int i=0; i < m_num_subscriptions; i++)
 	{
 		auto& sub = m_subscriptions[i];
@@ -17,6 +21,7 @@ bool MessageExchange::pushMessage(uint16_t message_type, const unsigned char* bu
 			sub.queue->push_message(message_type, buffer, size);
 		}
 	}
+	xSemaphoreGive(m_mutex);
 }
 
 void MessageExchange::subscribe(const Subscription& sub)
@@ -28,6 +33,5 @@ void MessageExchange::subscribe(const Subscription& sub)
 	m_subscriptions[m_num_subscriptions] = sub;
 	m_num_subscriptions++;
 	xSemaphoreGive(m_mutex);
-
 }
 

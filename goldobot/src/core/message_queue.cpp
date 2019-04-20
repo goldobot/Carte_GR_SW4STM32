@@ -15,16 +15,15 @@ MessageQueue::MessageQueue(unsigned char* buffer, size_t size):
 
 bool MessageQueue::push_message(uint16_t message_type, const unsigned char* buffer, size_t msg_size)
 {
-	while(xSemaphoreTake(m_mutex, portMAX_DELAY) != pdTRUE)
-	{
-	};
-
 	// Reject message if buffer is full
 	if(msg_size > available_capacity())
 	{
-		xSemaphoreGive(m_mutex);
 		return false;
 	}
+
+	while(xSemaphoreTake(m_mutex, portMAX_DELAY) != pdTRUE)
+	{
+	};
 
 	// Set current message type if empty
 	if(m_begin_index == m_end_index)

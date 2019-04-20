@@ -64,8 +64,8 @@ FpgaTask& Robot::fpgaTask()
 OdometryConfig Robot::defaultOdometryConfig()
 {
 	OdometryConfig config;
-	config.dist_per_count_left = 1.513409e-05;
-	config.dist_per_count_right = 1.510209e-05;
+	config.dist_per_count_left = -1.966033264580682e-05;
+	config.dist_per_count_right = -1.9621583742116328e-05;
 	config.wheel_spacing = 2.852931e-01;
 	config.encoder_period = 8192;
 	config.update_period = 1e-3;
