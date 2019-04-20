@@ -60,9 +60,9 @@ bool MessageQueue::message_ready() const
 	return m_message_ready;
 }
 
-uint16_t MessageQueue::message_type() const
+CommMessageType MessageQueue::message_type() const
 {
-	return m_message_type;
+	return (CommMessageType)m_message_type;
 }
 size_t MessageQueue::message_size() const
 {

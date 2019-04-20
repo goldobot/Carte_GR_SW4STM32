@@ -1,7 +1,8 @@
 #pragma once
 #include "goldobot/tasks/task.hpp"
 #include "goldobot/comm_serializer.hpp"
-#include "goldobot/message_types.hpp"
+#include "goldobot/comm_deserializer.hpp"
+#include "goldobot/core/message_queue.hpp"
 #include <cstdint>
 
 #include "FreeRTOS.h"
@@ -15,15 +16,11 @@ namespace goldobot
 		UARTCommTask();
 		const char* name() const override;
 
-		bool send_message(CommMessageType msg_type, const char* buffer, uint16_t size);
-		void debug_printf(const char* format...);
 	private:
-		static constexpr uint16_t c_printf_buffer_size = 255;
 		void taskFunction() override;
 
-
 		void process_message(uint16_t message_type);
-
+		bool send_message(CommMessageType msg_type, const char* buffer, uint16_t size);
 
 		uint32_t m_last_timestamp;
 		uint16_t m_bytes_sent;
@@ -33,12 +30,11 @@ namespace goldobot
 		char m_recv_buffer[128];
 		unsigned char m_tmp_buffer[512];
 
-		char m_printf_buffer[c_printf_buffer_size+1];
-
-		unsigned char m_serialize_buffer[2048];
+		unsigned char m_serialize_buffer[1024];
 		unsigned char m_deserialize_buffer[1024];
+		unsigned char m_out_buffer[1024];
 		CommSerializer m_serializer;
 		CommDeserializer m_deserializer;
-		SemaphoreHandle_t m_serializer_mutex;
+		MessageQueue m_out_queue;
 	};
 }

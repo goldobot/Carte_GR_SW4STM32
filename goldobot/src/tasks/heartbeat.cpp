@@ -21,9 +21,9 @@ void HeartbeatTask::taskFunction()
 	while(1)
 	{
 		uint32_t clock = xTaskGetTickCount();
-		auto& comm = Robot::instance().comm();
-		comm.send_message(CommMessageType::Sync,"goldobot",8);
-		comm.send_message(CommMessageType::Heartbeat,(char*)&clock,sizeof(clock));
+		auto& exchange = Robot::instance().mainExchangeOut();
+		exchange.pushMessage(CommMessageType::Sync,(unsigned char*)"goldobot",8);
+		exchange.pushMessage(CommMessageType::Heartbeat,(unsigned char*)&clock,sizeof(clock));
 		delay_periodic(1000);
 	}
 }

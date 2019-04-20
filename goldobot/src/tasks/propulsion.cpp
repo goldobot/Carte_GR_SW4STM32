@@ -48,16 +48,18 @@ void PropulsionTask::doStep()
 	m_telemetry_counter++;
 	if(m_telemetry_counter == 50)
 	{
-		auto& comm = Robot::instance().comm();
 		auto msg = m_controller.getTelemetryEx();
-		comm.send_message(CommMessageType::PropulsionTelemetryEx,(const char*)&msg, sizeof(msg));
+		Robot::instance().mainExchangeOut().pushMessage(
+				CommMessageType::PropulsionTelemetryEx,
+				(unsigned char*)&msg, sizeof(msg));
 		m_telemetry_counter = 0;
 	}
 	if(m_telemetry_counter % 5 == 0)
 	{
-		auto& comm = Robot::instance().comm();
 		auto msg = m_controller.getTelemetry();
-		comm.send_message(CommMessageType::PropulsionTelemetry,(const char*)&msg, sizeof(msg));
+		Robot::instance().mainExchangeOut().pushMessage(
+				CommMessageType::PropulsionTelemetry,
+				(unsigned char*)&msg, sizeof(msg));
 	}
 }
 
@@ -65,14 +67,15 @@ void PropulsionTask::processMessage()
 {
 	auto message_type = (CommMessageType)m_message_queue.message_type();
 	auto message_size = m_message_queue.message_size();
-	auto& comm = Robot::instance().comm();
 
 	switch(message_type)
 	{
 	case CommMessageType::DbgGetOdometryConfig:
 		{
 			auto config = m_odometry.config();
-			comm.send_message(CommMessageType::DbgGetOdometryConfig, (char*)&config, sizeof(config));
+			Robot::instance().mainExchangeOut().pushMessage(
+					CommMessageType::DbgGetOdometryConfig,
+					(unsigned char*)&config, sizeof(config));
 			m_message_queue.pop_message(nullptr, 0);
 		}
 		break;
@@ -86,7 +89,9 @@ void PropulsionTask::processMessage()
 	case CommMessageType::DbgGetPropulsionConfig:
 		{
 			auto config = m_controller.config();
-			comm.send_message(CommMessageType::DbgGetPropulsionConfig, (char*)&config, sizeof(config));
+			Robot::instance().mainExchangeOut().pushMessage(
+					CommMessageType::DbgGetPropulsionConfig,
+					(unsigned char*)&config, sizeof(config));
 			m_message_queue.pop_message(nullptr, 0);
 		}
 		break;
@@ -139,8 +144,6 @@ void PropulsionTask::processMessage()
 
 void PropulsionTask::onMsgExecuteTrajectory()
 {
-	auto& comm = Robot::instance().comm();
-
 	unsigned char buff[14];
 	m_message_queue.pop_message(buff,14);
 	uint8_t pattern = buff[0];
@@ -150,7 +153,7 @@ void PropulsionTask::onMsgExecuteTrajectory()
 	float deccel = *(float*)(buff+10);
 	m_controller.reset_pose(0, 0, 0);
 	uint8_t status = 0;
-	comm.send_message(CommMessageType::DbgPropulsionExecuteTrajectory, (char*)&status, 1);
+	//comm.send_message(CommMessageType::DbgPropulsionExecuteTrajectory, (char*)&status, 1);
 
 	switch(pattern)
 	{
@@ -190,7 +193,7 @@ void PropulsionTask::onMsgExecuteTrajectory()
 		delay(1);
 	}
 	status = 1;
-	comm.send_message(CommMessageType::DbgPropulsionExecuteTrajectory, (char*)&status, 1);
+	//comm.send_message(CommMessageType::DbgPropulsionExecuteTrajectory, (char*)&status, 1);
 }
 
 SimpleOdometry& PropulsionTask::odometry()
@@ -207,7 +210,7 @@ PropulsionController& PropulsionTask::controller()
 void PropulsionTask::taskFunction()
 {
 	// Register for messages
-	Robot::instance().mainExchange().subscribe({0,1000, &m_message_queue});
+	Robot::instance().mainExchangeIn().subscribe({0,1000, &m_message_queue});
 	// Set task to high
 	set_priority(6);
 

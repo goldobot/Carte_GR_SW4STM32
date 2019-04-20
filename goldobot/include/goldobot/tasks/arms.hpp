@@ -73,7 +73,7 @@ namespace goldobot
 
 		static constexpr int c_num_arms = 7;
 		static constexpr int c_num_servos = 20;
-		static constexpr int c_num_positions = 256;
+		static constexpr int c_num_positions = 128;
 
 		unsigned char m_dynamixels_buffer[256];
 		bool m_dynamixels_receive_ok;
@@ -84,10 +84,10 @@ namespace goldobot
 
 		ArmDescr m_arms_descrs[c_num_arms];
 		ServoDescr m_servo_descrs[c_num_servos];
-		uint16_t m_arms_positions[1024];
+		uint16_t m_arms_positions[512];
 		uint16_t m_arms_torque_settings[8*5];
 
-		ArmCommand m_arms_commands[128];
+		ArmCommand m_arms_commands[64];
 		ArmSequence m_arms_sequences[32];
 
 		bool m_arms_moving[c_num_arms];

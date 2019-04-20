@@ -33,9 +33,8 @@ void CommManager::process_messages()
 
 void CommManager::process_message(CommMessageType message_type, uint16_t message_size)
 {
-	auto& comm = Robot::instance().comm();
-	goldobot::PropulsionController* propulsion = &(Robot::instance().propulsion());
-
+	//auto& comm = Robot::instance().comm();
+	/*
 	switch(message_type)
 	{
 
@@ -346,6 +345,6 @@ void CommManager::on_msg_dbg_robot_execute_sequence()
 	//m_sequence_active = true;
 	//m_wait_current_cmd = false;
 }
-
-
+*/
+}
 

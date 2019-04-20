@@ -91,7 +91,7 @@ size_t CommSerializer::pop_data(unsigned char* buffer, size_t size)
 	return i;
 }
 
-size_t CommSerializer::size()
+size_t CommSerializer::size() const
 {
     if(m_end_index >= m_begin_index)
     {
@@ -100,4 +100,9 @@ size_t CommSerializer::size()
     {
         return m_end_index - m_begin_index + m_buffer_size;
     }
+}
+
+size_t CommSerializer::availableSize() const
+{
+	return m_buffer_size - (size() + 10);
 }

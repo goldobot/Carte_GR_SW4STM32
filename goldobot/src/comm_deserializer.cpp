@@ -1,4 +1,4 @@
-#include "goldobot/comm_serializer.hpp"
+#include "goldobot/comm_deserializer.hpp"
 
 using namespace goldobot;
 

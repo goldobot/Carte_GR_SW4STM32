@@ -26,12 +26,12 @@ namespace goldobot
 		void start();
 		SimpleOdometry& odometry();
 		PropulsionController& propulsion();
-		UARTCommTask& comm();
 		ArmsTask& arms();
 		MainTask& mainTask();
 		FpgaTask& fpgaTask();
 
-		MessageExchange& mainExchange() { return m_main_exchange; };
+		MessageExchange& mainExchangeIn() { return m_main_exchange_in; };
+		MessageExchange& mainExchangeOut() { return m_main_exchange_out; };
 
 		const RobotConfig& robotConfig() const;
 		OdometryConfig odometryConfig();
@@ -48,7 +48,8 @@ namespace goldobot
 		ArmsTask m_arms_task;
 		FpgaTask m_fpga_task;
 
-		MessageExchange m_main_exchange;
+		MessageExchange m_main_exchange_in;
+		MessageExchange m_main_exchange_out;
 
 		static Robot s_instance;
 	};

@@ -25,7 +25,7 @@ namespace goldobot
 	public:
 		MessageExchange();
 
-		bool pushMessage(uint16_t message_type, const unsigned char* buffer, size_t size);
+		bool pushMessage(CommMessageType message_type, const unsigned char* buffer, size_t size);
 		void subscribe(const Subscription& sub);
 
 	private:

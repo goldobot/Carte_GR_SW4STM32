@@ -47,9 +47,9 @@ void MainTask::preMatchStep()
 
 void MainTask::matchBegin()
 {
-	auto& comm = Robot::instance().comm();
+	auto& exchange = Robot::instance().mainExchangeOut();
 	uint32_t clock = xTaskGetTickCount();
-	comm.send_message(CommMessageType::StartOfMatch,(char*)&clock,sizeof(clock));
+	exchange.pushMessage(CommMessageType::StartOfMatch,(unsigned char*)&clock,sizeof(clock));
 	m_match_state = State::Match;
 	m_start_of_match_time = clock;
 	Hal::set_gpio(0, true);
@@ -271,7 +271,7 @@ void MainTask::taskFunction()
 	m_trajectory_planner.add_edge(2,4);
 	m_trajectory_planner.compile();
 
-	auto& comm = Robot::instance().comm();
+	//auto& comm = Robot::instance().comm();
 
 
 	while(1)
@@ -334,7 +334,7 @@ void MainTask::taskFunction()
 				{
 					Hal::set_gpio(0, false);
 					m_match_state = State::PostMatch;
-					comm.send_message(CommMessageType::EndOfMatch,(char*)&clock,sizeof(clock));
+					//comm.send_message(CommMessageType::EndOfMatch,(char*)&clock,sizeof(clock));
 					Hal::set_motors_enable(false);
 				}
 			}

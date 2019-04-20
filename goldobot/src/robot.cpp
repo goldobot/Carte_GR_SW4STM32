@@ -15,7 +15,7 @@ void Robot::init()
 	m_robot_config.back_length = 0.135;
 
 	m_comm_task.init();
-	m_comm_task.send_message(CommMessageType::Reset,nullptr, 0);
+	m_main_exchange_out.pushMessage(CommMessageType::Reset,nullptr, 0);
 	m_heartbeat_task.init();
 
 	setOdometryConfig(defaultOdometryConfig());
@@ -41,10 +41,6 @@ PropulsionController& Robot::propulsion()
 	return m_propulsion_task.controller();
 }
 
-UARTCommTask& Robot::comm()
-{
-	return m_comm_task;
-}
 
 MainTask& Robot::mainTask()
 {

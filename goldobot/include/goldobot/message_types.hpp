@@ -1,10 +1,6 @@
 #pragma once
-#include "goldobot/tasks/task.hpp"
-#include "goldobot/comm_serializer.hpp"
 #include <cstdint>
 
-#include "FreeRTOS.h"
-#include "semphr.h"
 
 namespace goldobot
 {
@@ -21,6 +17,7 @@ namespace goldobot
 		PropulsionTelemetryEx=9,
 		PropulsionStateChange=10,
 		// Match events
+		StartOfPreMatch=15,
 		StartOfMatch=16,
 		EndOfMatch=17,
 		// Commands

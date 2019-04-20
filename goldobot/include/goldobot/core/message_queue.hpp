@@ -1,5 +1,5 @@
 #pragma once
-#include <cstdint>
+#include "goldobot/message_types.hpp"
 #include <cstddef>
 
 #include "FreeRTOS.h"
@@ -13,7 +13,7 @@ namespace goldobot
 		MessageQueue(unsigned char* buffer, size_t size);
 
 		bool message_ready() const;
-		uint16_t message_type() const;
+		CommMessageType message_type() const;
 		size_t message_size() const;
 
 		bool push_message(uint16_t message_type, const unsigned char* buffer, size_t size);
