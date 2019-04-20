@@ -1,6 +1,6 @@
 #pragma once
-
 #include "goldobot/tasks/task.hpp"
+#include "goldobot/core/message_queue.hpp"
 #include <cstdint>
 
 namespace goldobot
@@ -27,5 +27,9 @@ namespace goldobot
 		unsigned char spi_buf_out[256];
 		unsigned char spi_buf_in[256];
 		int goldo_fpga_send_spi_frame(void);
+		void process_message();
+
+		MessageQueue m_message_queue;
+		unsigned char m_message_queue_buffer[256];
 	};
 }

@@ -23,6 +23,7 @@ void Robot::init()
 	m_propulsion_task.init();
 	m_main_task.init();
 	m_arms_task.init();
+	m_fpga_task.init();
 
 }
 

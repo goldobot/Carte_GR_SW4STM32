@@ -8,8 +8,10 @@
 #include "goldobot/tasks/fpga.hpp"
 #include "goldobot/hal.hpp"
 #include "goldobot/robot.hpp"
+#include "goldobot/core/message_exchange.hpp"
 #include "FreeRTOS.h"
 #include "stm32f3xx_hal.h"
+#include <cstring>
 
 #define SPI_FRAME_SZ 6
 #define POOL_MAX_CNT 100000
@@ -21,7 +23,8 @@ extern "C"
 	extern SPI_HandleTypeDef hspi1;
 }
 
-FpgaTask::FpgaTask() {
+FpgaTask::FpgaTask():
+	m_message_queue(m_message_queue_buffer, sizeof(m_message_queue_buffer)){
 }
 
 const char* FpgaTask::name() const
@@ -30,9 +33,16 @@ const char* FpgaTask::name() const
 }
 void FpgaTask::taskFunction()
 {
+	Robot::instance().mainExchangeIn().subscribe({256,322,&m_message_queue});
+
 	while(1)
 	{
+		while(m_message_queue.message_ready())
+		{
+			process_message();
+		}
 		delay(1);
+
 	}
 }
 
@@ -366,5 +376,38 @@ int FpgaTask::goldo_fpga_set_columns_offset (int col_id, int col_offset)
   }
 
   return 0;
+}
+
+void FpgaTask::process_message()
+{
+	auto message_type = (CommMessageType)m_message_queue.message_type();
+	auto message_size = m_message_queue.message_size();
+
+	switch(message_type)
+	{
+	case CommMessageType::FpgaDbgReadReg:
+		{
+			unsigned int apb_data = 0xdeadbeef;
+			unsigned char buff[8];
+			m_message_queue.pop_message(buff, 4);
+			uint32_t apb_addr = *(uint32_t*)(buff);
+			if(Robot::instance().fpgaTask().goldo_fpga_master_spi_read_word(apb_addr, &apb_data)!=0)
+			{
+				apb_data = 0xdeadbeef;
+			}
+			std::memcpy(buff+4, (unsigned char *)&apb_data, 4);
+			Robot::instance().mainExchangeOut().pushMessage(CommMessageType::FpgaDbgReadReg, (unsigned char *)buff, 8);
+		}
+		break;
+	case CommMessageType::FpgaDbgWriteReg:
+		{
+			unsigned char buff[8];
+			m_message_queue.pop_message(buff, 8);
+			uint32_t apb_addr = *(uint32_t*)(buff);
+			uint32_t apb_data = *(uint32_t*)(buff+4);
+			Robot::instance().fpgaTask().goldo_fpga_master_spi_write_word(apb_addr, apb_data);
+		}
+		break;
+	};
 }
 
