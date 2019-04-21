@@ -381,7 +381,7 @@ int FpgaTask::goldo_fpga_set_columns_offset (int col_id, int col_offset)
 void FpgaTask::process_message()
 {
 	auto message_type = (CommMessageType)m_message_queue.message_type();
-	auto message_size = m_message_queue.message_size();
+	//auto message_size = m_message_queue.message_size();
 
 	switch(message_type)
 	{
@@ -407,6 +407,8 @@ void FpgaTask::process_message()
 			uint32_t apb_data = *(uint32_t*)(buff+4);
 			Robot::instance().fpgaTask().goldo_fpga_master_spi_write_word(apb_addr, apb_data);
 		}
+		break;
+	default:
 		break;
 	};
 }

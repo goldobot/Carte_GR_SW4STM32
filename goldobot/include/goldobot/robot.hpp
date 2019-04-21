@@ -18,16 +18,39 @@ namespace goldobot
 		float back_length;
 	};
 
+	enum class Side : uint8_t
+	{
+		Unknown=0,
+		Green=1,
+		Orange=2
+	};
+
+	enum class MatchState : uint8_t
+	{
+		Idle, // Initial state
+		Debug, // Debug mode
+		PreMatch, // Pre match repositioning sequence
+		WaitForStartOfMatch, // Ready for match, waiting for start signal
+		Match, // Match
+		PostMatch // Match finished
+	};
+
 	class Robot
 	{
 	public:
 		static Robot& instance();
 		void init();
 		void start();
+
+		Side side() const noexcept { return m_side;};
+		void setSide(Side side) noexcept {m_side = side;};
+		MatchState matchState() const noexcept { return m_match_state;};
+		void setMatchState(MatchState state) noexcept {m_match_state = state;};
+		void setStartMatchTime(uint32_t time) {m_start_match_time = time;};
+
 		SimpleOdometry& odometry();
 		PropulsionController& propulsion();
 		ArmsTask& arms();
-		MainTask& mainTask();
 		FpgaTask& fpgaTask();
 
 		MessageExchange& mainExchangeIn() { return m_main_exchange_in; };
@@ -39,6 +62,11 @@ namespace goldobot
 		PropulsionControllerConfig defaultPropulsionControllerConfig();
 		void setOdometryConfig(const OdometryConfig& config);
 	private:
+		Side m_side{Side::Unknown};
+		MatchState m_match_state{MatchState::Idle};
+
+		std::atomic<int> m_start_match_time{0};
+
 		PropulsionTask m_propulsion_task;
 		UARTCommTask m_comm_task;
 		HeartbeatTask m_heartbeat_task;

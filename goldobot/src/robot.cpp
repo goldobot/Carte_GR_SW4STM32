@@ -42,12 +42,6 @@ PropulsionController& Robot::propulsion()
 	return m_propulsion_task.controller();
 }
 
-
-MainTask& Robot::mainTask()
-{
-	return m_main_task;
-}
-
 ArmsTask& Robot::arms()
 {
 	return m_arms_task;
