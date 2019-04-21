@@ -73,66 +73,7 @@ void CommManager::process_message(CommMessageType message_type, uint16_t message
 			comm.send_message(CommMessageType::DbgPropulsionExecuteTrajectory, (char*)&status, 1);
 		}
 		break;
-	case CommMessageType::DbgDynamixelsList:
-		{
-			pop_message(nullptr, 0);
-			uint8_t buff[4] = {25,1};
-			for(unsigned id = 0; id < 0xFE; id++)
-			{
-				if(Robot::instance().arms().dynamixels_read_data(id,0 , buff, 4))
-				{
-					comm.send_message(CommMessageType::DbgDynamixelDescr, (char*)buff, 4);
-				}
-			}
-		}
-		break;
-	case CommMessageType::DbgDynamixelSetTorqueEnable:
-		{
-			unsigned char buff[2];
-			pop_message(buff, 2);
-			// Torque enable
-			Robot::instance().arms().dynamixels_write_data(buff[0], 0x18, buff+1, 1);
-		}
-		break;
-	case CommMessageType::DbgDynamixelSetGoalPosition:
-		{
-			unsigned char buff[3];
-			pop_message(buff, 3);
-			// Goal position
-			Robot::instance().arms().dynamixels_write_data(buff[0], 0x1E, buff+1, 2);
-		}
-		break;
-	case CommMessageType::DbgDynamixelSetTorqueLimit:
-		{
-			unsigned char buff[3];
-			pop_message(buff, 3);
-			// Goal position
-			Robot::instance().arms().dynamixels_write_data(buff[0], 0x22, buff+1, 2);
-		}
-		break;
-	case CommMessageType::DbgDynamixelGetRegisters:
-			{
-				unsigned char buff[3];
-				unsigned char data_read[64];
 
-				pop_message(buff, 3);
-				std::memcpy(data_read, buff, 2);
-				if(Robot::instance().arms().dynamixels_read_data(buff[0], buff[1], data_read+2, buff[2]))
-				{
-					comm.send_message(CommMessageType::DbgDynamixelGetRegisters, (char*)data_read, buff[2]+2);
-				}
-			}
-			break;
-	case CommMessageType::DbgDynamixelSetRegisters:
-		{
-			unsigned char buff[128];
-			uint16_t size = message_size;
-			pop_message(buff, 128);
-			//id, addr, data
-			if(Robot::instance().arms().dynamixels_write_data(buff[0], buff[1], buff+2, size-2));
-
-		}
-		break;
 	case CommMessageType::DbgPropulsionSetPose:
 		{
 			float pose[3];
@@ -202,29 +143,6 @@ void CommManager::process_message(CommMessageType message_type, uint16_t message
 			int column_id = buff[0];
 			int column_offset = *(uint32_t*)(buff+1);
 			Robot::instance().fpgaTask().goldo_fpga_set_columns_offset(column_id, column_offset);
-		}
-		break;
-	case CommMessageType::FpgaDbgReadReg:
-		{
-			unsigned int apb_data = 0xdeadbeef;
-			unsigned char buff[8];
-			pop_message(buff, 4);
-			uint32_t apb_addr = *(uint32_t*)(buff);
-			if(Robot::instance().fpgaTask().goldo_fpga_master_spi_read_word(apb_addr, &apb_data)!=0)
-			{
-				apb_data = 0xdeadbeef;
-			}
-			std::memcpy(buff+4, (unsigned char *)&apb_data, 4);
-			comm.send_message(CommMessageType::FpgaDbgReadReg, (char *)buff, 8);
-		}
-		break;
-	case CommMessageType::FpgaDbgWriteReg:
-		{
-			unsigned char buff[8];
-			pop_message(buff, 8);
-			uint32_t apb_addr = *(uint32_t*)(buff);
-			uint32_t apb_data = *(uint32_t*)(buff+4);
-			Robot::instance().fpgaTask().goldo_fpga_master_spi_write_word(apb_addr, apb_data);
 		}
 		break;
 	case CommMessageType::DbgArmsSetPose:

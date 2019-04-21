@@ -19,7 +19,7 @@ void Robot::init()
 	m_heartbeat_task.init();
 
 	setOdometryConfig(defaultOdometryConfig());
-	propulsion().set_config(defaultPropulsionControllerConfig());
+	m_propulsion_task.controller().set_config(defaultPropulsionControllerConfig());
 	m_propulsion_task.init();
 	m_main_task.init();
 	m_arms_task.init();
@@ -35,21 +35,6 @@ void Robot::start()
 SimpleOdometry& Robot::odometry()
 {
 	return m_propulsion_task.odometry();
-}
-
-PropulsionController& Robot::propulsion()
-{
-	return m_propulsion_task.controller();
-}
-
-ArmsTask& Robot::arms()
-{
-	return m_arms_task;
-}
-
-FpgaTask& Robot::fpgaTask()
-{
-	return m_fpga_task;
 }
 
 OdometryConfig Robot::defaultOdometryConfig()

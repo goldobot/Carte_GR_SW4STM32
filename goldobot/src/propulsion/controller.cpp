@@ -747,9 +747,9 @@ void PropulsionController::executeTest(TestPattern pattern)
 	xSemaphoreGive(m_mutex);
 }
 
-PropulsionTelemetry PropulsionController::getTelemetry() const
+messages::PropulsionTelemetry PropulsionController::getTelemetry() const
 {
-	PropulsionTelemetry msg;
+	messages::PropulsionTelemetry msg;
 	msg.x = (int16_t)(m_pose.position.x * 4e3f);
 	msg.y = (int16_t)(m_pose.position.y * 4e3f);
 	msg.yaw = (int16_t)(m_pose.yaw * 32767 / M_PI);
@@ -766,9 +766,9 @@ PropulsionTelemetry PropulsionController::getTelemetry() const
 	return msg;
 }
 
-PropulsionTelemetryEx PropulsionController::getTelemetryEx() const
+messages::PropulsionTelemetryEx PropulsionController::getTelemetryEx() const
 {
-	PropulsionTelemetryEx msg;
+	messages::PropulsionTelemetryEx msg;
 	msg.target_x = (int16_t)(m_target_position.x * 4e3f);
 	msg.target_y = (int16_t)(m_target_position.y * 4e3f);
 	msg.target_yaw = (int16_t)(m_target_yaw * 32767 / M_PI);

@@ -24,12 +24,14 @@ namespace goldobot
 		int goldo_fpga_set_columns_offset (int col_id, int col_offset);
 
 	private:
-		unsigned char spi_buf_out[256];
-		unsigned char spi_buf_in[256];
+		unsigned char spi_buf_out[64];
+		unsigned char spi_buf_in[64];
 		int goldo_fpga_send_spi_frame(void);
 		void process_message();
 
 		MessageQueue m_message_queue;
-		unsigned char m_message_queue_buffer[256];
+		unsigned char m_message_queue_buffer[128];
+
+		uint32_t m_sensors_state{0};
 	};
 }

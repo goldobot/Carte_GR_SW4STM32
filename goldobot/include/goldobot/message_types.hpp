@@ -18,6 +18,7 @@ namespace goldobot
 		PropulsionStateChange=10,
 		// Match events
 		MatchStateChange=15,
+		SensorsChange=20,
 		// Commands
 		CmdEmergencyStop=32, // Order an emergency stop
 		CmdSelectSide=33, // Select side. payload is an unsigned byte, 0=green, 1=orange

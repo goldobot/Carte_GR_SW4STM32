@@ -73,10 +73,7 @@ void MessageQueue::read_data(size_t start_index, unsigned char* buffer, size_t s
 {
 	size_t i = 0;
 	size_t idx = start_index;
-	if(idx > m_buffer_size)
-	{
-		idx -= m_buffer_size;
-	}
+
 	while (i < size)
 	{
 		buffer[i] = m_buffer[idx];

@@ -41,6 +41,19 @@ void FpgaTask::taskFunction()
 		{
 			process_message();
 		}
+		// Read sensors
+		unsigned int apb_data = 0;
+		uint32_t apb_addr = 0x800084e4; // gpio register
+		if(goldo_fpga_master_spi_read_word(apb_addr, &apb_data)!=0)
+		{
+			apb_data = 0xdeadbeef;
+		}
+		if(apb_data != m_sensors_state)
+		{
+			m_sensors_state = apb_data;
+			Robot::instance().mainExchangeOut().pushMessage(CommMessageType::SensorsChange, (unsigned char *)&m_sensors_state, 4);
+		}
+
 		delay(1);
 
 	}
@@ -391,7 +404,7 @@ void FpgaTask::process_message()
 			unsigned char buff[8];
 			m_message_queue.pop_message(buff, 4);
 			uint32_t apb_addr = *(uint32_t*)(buff);
-			if(Robot::instance().fpgaTask().goldo_fpga_master_spi_read_word(apb_addr, &apb_data)!=0)
+			if(goldo_fpga_master_spi_read_word(apb_addr, &apb_data)!=0)
 			{
 				apb_data = 0xdeadbeef;
 			}
@@ -405,10 +418,11 @@ void FpgaTask::process_message()
 			m_message_queue.pop_message(buff, 8);
 			uint32_t apb_addr = *(uint32_t*)(buff);
 			uint32_t apb_data = *(uint32_t*)(buff+4);
-			Robot::instance().fpgaTask().goldo_fpga_master_spi_write_word(apb_addr, apb_data);
+			goldo_fpga_master_spi_write_word(apb_addr, apb_data);
 		}
 		break;
 	default:
+		m_message_queue.pop_message(nullptr, 0);
 		break;
 	};
 }

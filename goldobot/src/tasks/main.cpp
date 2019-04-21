@@ -33,15 +33,6 @@ int MainTask::remainingMatchTime()
 	return elapsed_time < 90 ? 90 - elapsed_time : 0;
 }
 
-void MainTask::preMatchBegin()
-{
-
-}
-
-void MainTask::preMatchStep()
-{
-
-}
 
 struct MsgMatchStateChange
 {
@@ -67,7 +58,7 @@ void MainTask::taskFunction()
 					Robot::instance().setSide(Side::Orange);
 				}
 				Hal::set_motors_enable(true);
-				Robot::instance().propulsion().enable();
+				// send message to enable propulsion
 				Robot::instance().setMatchState(MatchState::PreMatch);
 				MsgMatchStateChange msg{Robot::instance().matchState(), Robot::instance().side()};
 				Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&msg, sizeof(msg));
@@ -95,7 +86,6 @@ void MainTask::taskFunction()
 					MsgMatchStateChange msg{Robot::instance().matchState(), Robot::instance().side()};
 					Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&msg, sizeof(msg));
 					Robot::instance().mainExchangeOut().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&msg, sizeof(msg));
-					//comm.send_message(CommMessageType::EndOfMatch,(char*)&clock,sizeof(clock));
 					Hal::set_motors_enable(false);
 				}
 			}
