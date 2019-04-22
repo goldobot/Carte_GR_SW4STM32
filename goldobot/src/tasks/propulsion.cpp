@@ -162,12 +162,13 @@ void PropulsionTask::processMessage()
 void PropulsionTask::onMsgExecuteTrajectory()
 {
 	unsigned char buff[76];//12 for traj params and 8*8 for points
+	auto msg_size = m_message_queue.message_size();
 	m_message_queue.pop_message(buff,76);
 	float speed = *(float*)(buff);
 	float accel = *(float*)(buff+4);
 	float deccel = *(float*)(buff+8);
 	Vector2D* points = (Vector2D*)(buff+12);
-	int num_points = (m_message_queue.message_size()-12)/sizeof(Vector2D);
+	int num_points = (msg_size-12)/sizeof(Vector2D);
 	m_controller.executeTrajectory(points,num_points,speed, accel, deccel);
 }
 

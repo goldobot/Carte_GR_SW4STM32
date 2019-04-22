@@ -41,6 +41,8 @@ const char* ArmsTask::name() const
 void ArmsTask::taskFunction()
 {
 	Robot::instance().mainExchangeIn().subscribe({72,78,&m_message_queue});
+	Robot::instance().mainExchangeIn().subscribe({160,165,&m_message_queue});
+
 	while(1)
 	{
 		while(m_message_queue.message_ready())
@@ -90,6 +92,46 @@ void ArmsTask::dynamixels_action()
 	dynamixels_transmit_packet(0xFE, AX_ACTION, nullptr, 0);
 }
 
+void ArmsTask::go_to_position(uint8_t pos_id, uint16_t time_ms, int torque_settings)
+{
+	int pos_idx = pos_id * 3;
+
+	// Launch dynamixels
+	uint8_t servo_ids[] = {81,82,1};
+	uint8_t servo_types[3] = {1,1,0};
+
+	//get previous positions
+
+	for(int i=0; i< 3;i++)
+	{
+		uint16_t buff[3];
+		uint16_t prev_pos = m_current_position[i];
+		buff[0] = m_config.m_positions[pos_idx+i]; // position setpoint
+		buff[2] = m_config.m_torque_settings[3*torque_settings+i]; // torque limit
+
+		dynamixels_read_data(servo_ids[i],0x24,(unsigned char*)&prev_pos, 2);
+
+		int diff_angle = abs(buff[0] - prev_pos);
+
+		switch(servo_types[i])
+		{
+		case 0:
+			//ax 12
+			buff[1] = std::min<uint16_t>((diff_angle*25000)/(time_ms*57), 0x3ff);
+			break;
+		case 1:
+			//mx28
+			buff[1] = std::min<uint16_t>((diff_angle*128)/(time_ms), 0x3ff);
+			break;
+		default:
+			break;
+		}
+		// write new register values
+		dynamixels_reg_write(servo_ids[i],0x1E,(unsigned char*)buff, 6);
+	}
+	dynamixels_action();
+}
+
 void ArmsTask::process_message()
 {
 	switch(m_message_queue.message_type())
@@ -133,18 +175,18 @@ void ArmsTask::process_message()
 		}
 		break;
 	case CommMessageType::DbgDynamixelGetRegisters:
-			{
-				unsigned char buff[3];
-				unsigned char data_read[64];
+		{
+			unsigned char buff[3];
+			unsigned char data_read[64];
 
-				m_message_queue.pop_message(buff, 3);
-				memcpy(data_read, buff, 2);
-				if(dynamixels_read_data(buff[0], buff[1], data_read+2, buff[2]))
-				{
-					Robot::instance().mainExchangeOut().pushMessage(CommMessageType::DbgDynamixelGetRegisters, (unsigned char*)data_read, buff[2]+2);
-				}
+			m_message_queue.pop_message(buff, 3);
+			memcpy(data_read, buff, 2);
+			if(dynamixels_read_data(buff[0], buff[1], data_read+2, buff[2]))
+			{
+				Robot::instance().mainExchangeOut().pushMessage(CommMessageType::DbgDynamixelGetRegisters, (unsigned char*)data_read, buff[2]+2);
 			}
-			break;
+		}
+		break;
 	case CommMessageType::DbgDynamixelSetRegisters:
 		{
 			unsigned char buff[128];
@@ -154,6 +196,30 @@ void ArmsTask::process_message()
 			if(dynamixels_write_data(buff[0], buff[1], buff+2, size-2));
 		}
 		break;
+	case CommMessageType::DbgArmsSetPose:
+		{
+			uint16_t buff[4];
+			m_message_queue.pop_message((unsigned char*)buff,8);
+			uint16_t* ptr = m_config.m_positions + 3*buff[0];
+			memcpy(ptr, (unsigned char*)(buff+1), 6);
+		}
+		break;
+	case CommMessageType::DbgArmsSetTorques:
+		{
+			uint16_t buff[4];
+			m_message_queue.pop_message((unsigned char*)buff,8);
+			uint16_t* ptr = m_config.m_torque_settings + 3*buff[0];
+			memcpy(ptr, (unsigned char*)(buff+1), 6);
+		}
+		break;
+	case CommMessageType::DbgArmsGoToPosition:
+		{
+			unsigned char buff[4];
+			m_message_queue.pop_message((unsigned char*)buff,4);
+			go_to_position(buff[0], *(uint16_t*)(buff+2), buff[1]);
+		}
+		break;
+
 	default:
 		m_message_queue.pop_message(nullptr, 0);
 		break;
