@@ -38,6 +38,7 @@ void PropulsionTask::doStep()
 	{
 		m_controller.emergency_stop();
 	}
+
 	m_controller.update();
 	if(m_controller.state() != PropulsionController::State::Inactive)
 	{
@@ -46,7 +47,7 @@ void PropulsionTask::doStep()
 
 	// Send periodic telemetry messages
 	m_telemetry_counter++;
-	if(m_telemetry_counter == 50)
+	if(m_telemetry_counter == 20)
 	{
 		auto msg = m_controller.getTelemetryEx();
 		Robot::instance().mainExchangeOut().pushMessage(
@@ -54,6 +55,7 @@ void PropulsionTask::doStep()
 				(unsigned char*)&msg, sizeof(msg));
 		m_telemetry_counter = 0;
 	}
+
 	if(m_telemetry_counter % 5 == 0)
 	{
 		auto msg = m_controller.getTelemetry();
@@ -61,6 +63,7 @@ void PropulsionTask::doStep()
 				CommMessageType::PropulsionTelemetry,
 				(unsigned char*)&msg, sizeof(msg));
 	}
+
 }
 
 void PropulsionTask::processMessage()
@@ -136,6 +139,20 @@ void PropulsionTask::processMessage()
 	case CommMessageType::DbgPropulsionExecuteTrajectory:
 		onMsgExecuteTrajectory();
 		break;
+	case CommMessageType::DbgPropulsionExecuteRotation:
+			{
+				float params[4];
+				m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
+				m_controller.executeRotation(params[0], params[1], params[2], params[3]);
+			}
+			break;
+	case CommMessageType::DbgPropulsionSetPose:
+		{
+			float pose[3];
+			m_message_queue.pop_message((unsigned char*)&pose, 12);
+			m_controller.reset_pose(pose[0], pose[1], pose[2]);
+		}
+		break;
 	default:
 		m_message_queue.pop_message(nullptr, 0);
 		break;
@@ -144,57 +161,16 @@ void PropulsionTask::processMessage()
 
 void PropulsionTask::onMsgExecuteTrajectory()
 {
-	unsigned char buff[14];
-	m_message_queue.pop_message(buff,14);
-	uint8_t pattern = buff[0];
-	int8_t direction = buff[0];
-	float speed = *(float*)(buff+2);
-	float accel = *(float*)(buff+6);
-	float deccel = *(float*)(buff+10);
-	m_controller.reset_pose(0, 0, 0);
-	uint8_t status = 0;
-	//comm.send_message(CommMessageType::DbgPropulsionExecuteTrajectory, (char*)&status, 1);
-
-	switch(pattern)
-	{
-	case 0:
-		{
-			Vector2D points[2] = {{0,0}, {0.5,0}};
-			m_controller.executeTrajectory(points,2,speed, accel, deccel);
-		}
-		break;
-	case 1:
-		{
-			Vector2D points[2] = {{0,0}, {-0.5,0}};
-			m_controller.executeTrajectory(points,2,speed, accel, deccel);
-		}
-		break;
-	case 2:
-		{
-			Vector2D points[3] = {{0,0}, {0.5,0}, {0.5,0.5}};
-			m_controller.executeTrajectory(points,3,speed, accel, deccel);
-		}
-		break;
-	case 3:
-		{
-			Vector2D points[3] = {{0,0}, {-0.5,0}, {-0.5,-0.5}};
-			m_controller.executeTrajectory(points,3,speed, accel, deccel);
-		}
-		break;
-	case 4:
-		{
-			Vector2D points[4] = {{0,0}, {0.5,0}, {0.5,0.5}, {1,0.5} };
-			m_controller.executeTrajectory(points,4,speed, accel, deccel);
-		}
-		break;
-	}
-	while(m_controller.state() == PropulsionController::State::FollowTrajectory)
-	{
-		delay(1);
-	}
-	status = 1;
-	//comm.send_message(CommMessageType::DbgPropulsionExecuteTrajectory, (char*)&status, 1);
+	unsigned char buff[76];//12 for traj params and 8*8 for points
+	m_message_queue.pop_message(buff,76);
+	float speed = *(float*)(buff);
+	float accel = *(float*)(buff+4);
+	float deccel = *(float*)(buff+8);
+	Vector2D* points = (Vector2D*)(buff+12);
+	int num_points = (m_message_queue.message_size()-12)/sizeof(Vector2D);
+	m_controller.executeTrajectory(points,num_points,speed, accel, deccel);
 }
+
 
 SimpleOdometry& PropulsionTask::odometry()
 {

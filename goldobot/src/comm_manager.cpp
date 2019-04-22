@@ -74,13 +74,7 @@ void CommManager::process_message(CommMessageType message_type, uint16_t message
 		}
 		break;
 
-	case CommMessageType::DbgPropulsionSetPose:
-		{
-			float pose[3];
-			pop_message((unsigned char*)&pose, 12);
-			Robot::instance().propulsion().reset_pose(pose[0], pose[1], pose[2]);
-		}
-		break;
+
 	case CommMessageType::DbgPropulsionExecuteReposition:
 		{
 			unsigned char buff[17];

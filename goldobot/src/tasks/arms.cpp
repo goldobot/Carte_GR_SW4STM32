@@ -9,44 +9,6 @@
 
 using namespace goldobot;
 
-const uint16_t c_left_arm_default_positions[5]={
-	780,
-	2100,
-	1320,
-	760,
-	355
-};
-
-const uint16_t c_right_arm_default_positions[5]={
-	244,
-	1996,
-	2776,
-	264,
-	669
-};
-
-const uint16_t c_grabber_default_positions[2]={
-		95,
-		34500
-};
-
-const uint16_t c_bascule_default_positions[2]={
-		767,
-		295
-};
-
-const uint16_t c_columns_default_positions[4]={
-	21000,
-	21000,
-	46500,
-	49500
-};
-
-const uint16_t c_cubibox_default_positions[2]={
-		21000,
-		21000
-};
-
 /** Defines         **/
 /** Instruction Set **/
 #define AX_PING                     1
@@ -190,7 +152,6 @@ void ArmsTask::process_message()
 			m_message_queue.pop_message(buff, 128);
 			//id, addr, data
 			if(dynamixels_write_data(buff[0], buff[1], buff+2, size-2));
-
 		}
 		break;
 	default:
