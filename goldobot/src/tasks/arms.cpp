@@ -94,6 +94,7 @@ void ArmsTask::dynamixels_action()
 
 void ArmsTask::go_to_position(uint8_t pos_id, uint16_t time_ms, int torque_settings)
 {
+	time_ms = 1000;
 	int pos_idx = pos_id * 3;
 
 	// Launch dynamixels
@@ -107,7 +108,7 @@ void ArmsTask::go_to_position(uint8_t pos_id, uint16_t time_ms, int torque_setti
 		uint16_t buff[3];
 		uint16_t prev_pos = m_current_position[i];
 		buff[0] = m_config.m_positions[pos_idx+i]; // position setpoint
-		buff[2] = m_config.m_torque_settings[3*torque_settings+i]; // torque limit
+		buff[2] = 1023;//m_config.m_torque_settings[3*torque_settings+i]; // torque limit
 
 		dynamixels_read_data(servo_ids[i],0x24,(unsigned char*)&prev_pos, 2);
 
@@ -198,10 +199,10 @@ void ArmsTask::process_message()
 		break;
 	case CommMessageType::DbgArmsSetPose:
 		{
-			uint16_t buff[4];
+			unsigned char buff[8];
 			m_message_queue.pop_message((unsigned char*)buff,8);
 			uint16_t* ptr = m_config.m_positions + 3*buff[0];
-			memcpy(ptr, (unsigned char*)(buff+1), 6);
+			memcpy(ptr, (unsigned char*)(buff+2), 6);
 		}
 		break;
 	case CommMessageType::DbgArmsSetTorques:

@@ -11,6 +11,7 @@ struct DynamixelsConfig
 	uint16_t m_positions[3*32];
 	uint16_t m_torque_settings[3*8];
 };
+
 class ArmsTask : public Task
 {
 public:
