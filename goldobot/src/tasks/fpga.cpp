@@ -48,6 +48,13 @@ void FpgaTask::taskFunction()
 		{
 			apb_data = 0xdeadbeef;
 		}
+
+        /* Little workaround to filter out bad data due to spi bus glitches */
+		if ((apb_data & 0xffffffc0) != 0x00000000) {
+			delay(1);
+			continue;
+		}
+
 		if(apb_data != m_sensors_state)
 		{
 			m_sensors_state = apb_data;
