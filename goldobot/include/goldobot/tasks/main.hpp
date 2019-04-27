@@ -5,6 +5,7 @@
 #include "goldobot/propulsion/simple_odometry.hpp"
 #include "goldobot/propulsion/controller.hpp"
 #include "goldobot/trajectory_planner.hpp"
+#include "goldobot/sequence_engine.hpp"
 
 #include <cstdint>
 
@@ -29,8 +30,12 @@ namespace goldobot
 	private:
 
 		void taskFunction() override;
-
+		void process_message();
 
 		uint32_t m_start_of_match_time;
+		MessageQueue m_message_queue;
+		unsigned char m_message_queue_buffer[128];
+
+		SequenceEngine m_sequence_engine;
 	};
 }

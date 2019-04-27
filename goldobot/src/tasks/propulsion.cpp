@@ -40,6 +40,17 @@ void PropulsionTask::doStep()
 	}
 
 	m_controller.update();
+
+	// Check state change
+	if(m_controller.state() != m_previous_state)
+	{
+		uint8_t buff[2];
+		buff[0] = (uint8_t)m_controller.state();
+		buff[1] = (uint8_t)m_previous_state;
+		m_previous_state = m_controller.state();
+		Robot::instance().mainExchangeIn().pushMessage(CommMessageType::PropulsionStateChanged,(unsigned char*)buff,2);
+		Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionStateChanged,(unsigned char*)buff,2);
+	}
 	if(m_controller.state() != PropulsionController::State::Inactive)
 	{
 		Hal::set_motors_pwm(m_controller.leftMotorPwm(), m_controller.rightMotorPwm());
@@ -140,10 +151,24 @@ void PropulsionTask::processMessage()
 		onMsgExecuteTrajectory();
 		break;
 	case CommMessageType::DbgPropulsionExecuteRotation:
+		{
+			float params[4];
+			m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
+			m_controller.executeRotation(params[0], params[1], params[2], params[3]);
+		}
+		break;
+	case CommMessageType::DbgPropulsionExecutePointTo:
+		{
+			float params[5];
+			m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
+			m_controller.executePointTo(*(Vector2D*)(params), params[2], params[3], params[4]);
+		}
+		break;
+	case CommMessageType::DbgPropulsionExecuteMoveTo:
 			{
-				float params[4];
+				float params[5];
 				m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
-				m_controller.executeRotation(params[0], params[1], params[2], params[3]);
+				m_controller.executeMoveTo(*(Vector2D*)(params), params[2], params[3], params[4]);
 			}
 			break;
 	case CommMessageType::DbgPropulsionSetPose:

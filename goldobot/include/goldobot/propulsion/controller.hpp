@@ -30,7 +30,7 @@ namespace goldobot
 	class PropulsionController
 	{
 	public:
-		enum class State
+		enum class State : uint8_t
 		{
 			Inactive,
 			Stopped,
@@ -68,7 +68,7 @@ namespace goldobot
 	public:
 		PropulsionController(SimpleOdometry* odometry);
 
-		bool test;
+		bool test{true};
 
 		//! \brief Change state from Inactive to Stopped
 		void enable();
@@ -95,6 +95,7 @@ namespace goldobot
 		bool executeTrajectory(Vector2D* points, int num_points, float speed, float acceleration, float decceleration);
 		bool executeRepositioning(Direction direction, float speed, Vector2D normal, float distance_to_center);
 		bool executePointTo(Vector2D target, float yaw_rate, float accel, float deccel);
+		bool executeMoveTo(Vector2D target, float yaw_rate, float accel, float deccel);
 		bool executeRotation(float delta_yaw, float yaw_rate, float accel, float deccel);
 
 		//! \brief Emergency stop. Abort current PointTo of FollowTrajectory command and bring the robot to a stop.

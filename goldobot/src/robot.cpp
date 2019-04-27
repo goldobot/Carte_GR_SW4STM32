@@ -104,3 +104,8 @@ void Robot::setOdometryConfig(const OdometryConfig& config)
 	m_odometry_config = config;
 	odometry().setConfig(config);
 }
+
+PropulsionController::State Robot::propulsionState()
+{
+	return m_propulsion_task.controller().state();
+}

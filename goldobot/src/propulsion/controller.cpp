@@ -118,10 +118,6 @@ void PropulsionController::clear_error()
 
 void PropulsionController::emergency_stop()
 {
-	if(!test)
-	{
-		return;
-	}
 	if(m_state == State::FollowTrajectory || m_state == State::PointTo)
 	{
 		m_state = State::EmergencyStop;
@@ -301,109 +297,6 @@ void PropulsionController::updateMotorsPwm()
 
 void PropulsionController::update_test()
 {
-	// Current robot frame direction
-
-	int step_time = 500;
-	switch(m_test_pattern)
-	{
-	case TestPattern::SpeedSteps:
-		step_time = 500;
-		break;
-	case TestPattern::YawSteps:
-		step_time = 1000;
-		break;
-	case TestPattern::PositionStaticSteps:
-			step_time = 1000;
-			break;
-
-	}
-
-	int step_index = (m_time_base_ms - m_command_begin_time)/step_time;
-	if(step_index < 0)
-	{
-		step_index = 0;
-	}
-	if(step_index > 8)
-	{
-		step_index = 8;
-	}
-
-	switch(m_test_pattern)
-	{
-	case TestPattern::SpeedSteps:
-	{
-		float speed_steps[] = {
-				0.0,
-				0.1,
-				0.3,
-				0.6,
-				0,
-				-0.1,
-				-0.3,
-				-0.6,
-				0
-				};
-
-				m_target_speed = speed_steps[step_index];
-	}
-	break;
-	case TestPattern::YawRateSteps:
-	{
-		float speed_steps[] = {
-				0.0,
-				0.2,
-				0.6,
-				2,
-				0,
-				-0.2,
-				-0.6,
-				-2,
-				0
-				};
-
-				m_target_yaw_rate = speed_steps[step_index];
-	}
-	break;
-	case TestPattern::YawSteps:
-		{
-			float speed_steps[] = {
-					0.0,
-					0.1,
-					0.3,
-					0.6,
-					0,
-					-0.1,
-					-0.3,
-					-0.6,
-					0
-					};
-
-					m_target_yaw = speed_steps[step_index];
-					m_target_yaw_rate = 0;
-		}
-		break;
-	case TestPattern::PositionStaticSteps:
-			{
-				float speed_steps[] = {
-						0.0,
-						0.05,
-						0.15,
-						0.30,
-						0.30,
-						0.50,
-						0.50,
-						0.25,
-						0
-						};
-					float ux = cosf(m_test_initial_yaw);
-					float uy = sinf(m_test_initial_yaw);
-					m_target_position.x = m_test_initial_position.x+ux*speed_steps[step_index];
-					m_target_position.y = m_test_initial_position.y+uy*speed_steps[step_index];
-					m_target_speed = 0;
-			}
-	default:
-		break;
-	}
 }
 
 void PropulsionController::updateTargetPositions()
@@ -578,9 +471,7 @@ void PropulsionController::initRotationCommand(float delta_yaw, float speed, flo
 
 bool PropulsionController::reset_pose(float x, float y, float yaw)
 {
-	//while(xSemaphoreTake(m_mutex, 1) != pdTRUE)
-	//	{
-	//	}
+
 	if(m_state == State::Inactive || m_state == State::Stopped)
 	{
 		RobotPose pose;
@@ -594,10 +485,6 @@ bool PropulsionController::reset_pose(float x, float y, float yaw)
 		m_target_yaw = yaw;
 		//xSemaphoreGive(m_mutex);
 	//	return true;
-	} else
-	{
-	//	xSemaphoreGive(m_mutex);
-	//	return false;
 	}
 }
 bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, float speed, float acceleration, float decceleration)
@@ -641,6 +528,15 @@ bool PropulsionController::executePointTo(Vector2D point, float speed, float acc
 
 	m_state = State::PointTo;
 	xSemaphoreGive(m_mutex);
+	return true;
+};
+
+bool PropulsionController::executeMoveTo(Vector2D point, float speed, float acceleration, float decceleration)
+{
+	Vector2D traj[2];
+	traj[0] = m_target_position;
+	traj[1] = point;
+	executeTrajectory(traj,2,speed, acceleration, decceleration);
 	return true;
 };
 

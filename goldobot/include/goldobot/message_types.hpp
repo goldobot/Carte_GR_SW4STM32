@@ -24,6 +24,10 @@ namespace goldobot
 		CmdSelectSide=33, // Select side. payload is an unsigned byte, 0=green, 1=orange
 		CmdEnterDebugMode=34,
 		CmdExitDebugMode=35,
+		MainSequenceBeginLoad=40,
+		MainSequenceEndLoad=41,
+		MainSequenceLoadData=42,
+		MainSequenceStartSequence=43,
 		// Debug mode messages
 		// Robot configuration
 		DbgGetOdometryConfig=64,
@@ -49,6 +53,9 @@ namespace goldobot
 		DbgPropulsionExecuteTrajectory=85,
 		DbgPropulsionExecuteRotation=86,
 		DbgPropulsionExecuteReposition=87,
+		DbgPropulsionExecutePointTo=88,
+		DbgPropulsionExecuteMoveTo=89,
+		PropulsionStateChanged=90,
 
 
 		DbgMiscRepositionStartGreen=100,

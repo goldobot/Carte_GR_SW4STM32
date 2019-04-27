@@ -23,6 +23,7 @@ namespace goldobot
 		uint16_t m_encoder_left;
 		uint16_t m_encoders_right;
 		uint16_t m_telemetry_counter;
+		PropulsionController::State m_previous_state{PropulsionController::State::Inactive};
 
 		MessageQueue m_message_queue;
 		unsigned char m_message_queue_buffer[512];

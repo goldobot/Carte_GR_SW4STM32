@@ -272,132 +272,6 @@ int FpgaTask::goldo_fpga_cmd_motor (int motor_id, int new_val)
   return 0;
 }
 
-unsigned int goldo_fpga_stp_addr[] = {
-  0x800084c4,
-  0x800084cc,
-};
-
-/* robot 2018 :
-   stp_id = [0..1]
-   new_pos  = [0..0x10000]
-*/
-int FpgaTask::goldo_fpga_cmd_stepper (int stp_id, unsigned int new_pos)
-{
-  int result;
-  unsigned int apb_addr = 0x80008008;
-
-  if ((stp_id<0) || (stp_id>1) || (new_pos>0x00010000)) {
-    return -1;
-  }
-
-  apb_addr = goldo_fpga_stp_addr[stp_id];
-
-  result = goldo_fpga_master_spi_write_word (apb_addr, new_pos);
-  if (result!=0) {
-    return result;
-  }
-
-  return 0;
-}
-
-int FpgaTask::goldo_fpga_get_stepper_pos (int stp_id, unsigned int *new_pos)
-{
-  int result;
-  unsigned int apb_addr = 0x80008008;
-
-  if ((stp_id<0) || (stp_id>1) || (new_pos==0)) {
-    return -1;
-  }
-
-  apb_addr = goldo_fpga_stp_addr[stp_id];
-
-  result = goldo_fpga_master_spi_read_word (apb_addr, new_pos);
-  if (result!=0) {
-    return result;
-  }
-  *new_pos = (*new_pos)>>16;
-
-  return 0;
-}
-
-#define FPGA_COLUMNS_CALIB_TIMEOUT 8000 /* FIXME : TODO : tune */
-
-int FpgaTask::goldo_fpga_columns_calib (void)
-{
-  int result;
-  unsigned int apb_addr = 0x800084f0;
-
-  /* calib right */
-  result = goldo_fpga_master_spi_write_word (apb_addr, 11);
-  if (result!=0) {
-    return result;
-  }
-
-  delay_periodic(FPGA_COLUMNS_CALIB_TIMEOUT);
-
-  goldo_fpga_cmd_stepper (0, 0x4000);
-
-  delay_periodic(FPGA_COLUMNS_CALIB_TIMEOUT);
-
-  /* calib left */
-  result = goldo_fpga_master_spi_write_word (apb_addr, 13);
-  if (result!=0) {
-    return result;
-  }
-
-  delay_periodic(FPGA_COLUMNS_CALIB_TIMEOUT);
-
-  goldo_fpga_columns_move (2);
-
-  delay_periodic(FPGA_COLUMNS_CALIB_TIMEOUT);
-
-  return 0;
-}
-
-int FpgaTask::goldo_fpga_columns_move (int col_id)
-{
-  int result;
-  unsigned int apb_addr = 0x800084f0;
-
-  if ((col_id<1) || (col_id>3)) {
-    return -1;
-  }
-
-  result = goldo_fpga_master_spi_write_word (apb_addr, col_id);
-  if (result!=0) {
-    return result;
-  }
-
-  return 0;
-}
-
-int FpgaTask::goldo_fpga_set_columns_offset (int col_id, int col_offset)
-{
-  int result;
-
-  if ((col_id<1) || (col_id>3)) {
-    return -1;
-  }
-
-  if ((col_offset<-10000) || (col_id>10000)) {
-    return -1;
-  }
-
-  /* FPGA BAL1 */
-  result = goldo_fpga_master_spi_write_word (0x800084f4, col_offset);
-  if (result!=0) {
-    return result;
-  }
-
-  /* FPGA BAL0 */
-  result = goldo_fpga_master_spi_write_word (0x800084f0, col_id+30);
-  if (result!=0) {
-    return result;
-  }
-
-  return 0;
-}
-
 void FpgaTask::process_message()
 {
 	auto message_type = (CommMessageType)m_message_queue.message_type();
@@ -428,6 +302,15 @@ void FpgaTask::process_message()
 			goldo_fpga_master_spi_write_word(apb_addr, apb_data);
 		}
 		break;
+	case CommMessageType::FpgaCmdDCMotor:
+	{
+		unsigned char buff[3];
+		m_message_queue.pop_message(buff, 3);
+		int motor_id = buff[0];
+		int pwm = *(int16_t*)(buff+1);
+		goldo_fpga_cmd_motor(motor_id, pwm);
+	}
+	break;
 	default:
 		m_message_queue.pop_message(nullptr, 0);
 		break;

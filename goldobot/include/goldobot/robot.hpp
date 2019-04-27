@@ -47,6 +47,8 @@ namespace goldobot
 		PropulsionControllerConfig defaultPropulsionControllerConfig();
 		void setOdometryConfig(const OdometryConfig& config);
 
+		PropulsionController::State propulsionState();
+
 	private:
 		Side m_side{Side::Unknown};
 		MatchState m_match_state{MatchState::Idle};
