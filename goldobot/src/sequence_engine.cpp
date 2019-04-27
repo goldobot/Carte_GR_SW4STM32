@@ -2,6 +2,9 @@
 #include "goldobot/message_types.hpp"
 #include "goldobot/robot.hpp"
 
+#include "FreeRTOS.h"
+#include "task.h"
+
 #include <cstring>
 namespace goldobot
 {
@@ -28,6 +31,19 @@ bool SequenceEngine::execOp(const Op& op)
 {
 	switch(op.opcode)
 	{
+	case 32:
+		if(m_end_delay == 0)
+		{
+			m_end_delay = xTaskGetTickCount() + *(int*)(m_vars + 4 * op.arg1);
+			return false;
+		}
+		if(xTaskGetTickCount() >= m_end_delay)
+		{
+			m_end_delay = 0;
+			m_pc++;
+			return true;
+		}
+		return false;
 	case 126:
 		if(m_moving == false)
 			{
@@ -74,21 +90,48 @@ bool SequenceEngine::execOp(const Op& op)
 		m_pc++;
 		return false;
 		break;
-	case 130:
-		m_state = SequenceState::Idle;
-		return false;
+	case 30:
+		if(m_stack_level == 0)
+		{
+			m_state = SequenceState::Idle;
+			return false;
+		} else
+		{
+			m_stack_level--;
+			m_pc = m_call_stack[m_stack_level]+1;
+		}
+		return true;
+	case 31:
+		m_call_stack[m_stack_level] = m_pc;
+		m_stack_level++;
+		m_pc = m_sequence_offsets[op.arg1];
+		return true;
+
 	case 140:
-	{
-		unsigned char buff[3];
-		buff[0] = 0;
-		*(int16_t*)(buff+1) = *(int*)(m_vars + 4 * op.arg1);
-		Robot::instance().mainExchangeIn().pushMessage(
-				CommMessageType::FpgaCmdDCMotor,
-				buff,
-				3);
-	}
-	m_pc++;
-	return true;
+		{
+			unsigned char buff[3];
+			buff[0] = 0;
+			*(int16_t*)(buff+1) = *(int*)(m_vars + 4 * op.arg1);
+			Robot::instance().mainExchangeIn().pushMessage(
+					CommMessageType::FpgaCmdDCMotor,
+					buff,
+					3);
+		}
+		m_pc++;
+		return true;
+	case 141:
+		{
+			unsigned char buff[4];
+			buff[0] = op.arg1;
+			buff[1] = op.arg2;
+			*(uint16_t*)(buff+2) = 1000;
+			Robot::instance().mainExchangeIn().pushMessage(
+					CommMessageType::DbgArmsGoToPosition,
+					buff,
+					4);
+		}
+		m_pc++;
+		return true;
 	default:
 		m_pc++;
 		return false;

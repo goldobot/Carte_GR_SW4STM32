@@ -49,8 +49,11 @@ private:
 	uint8_t m_num_seqs;
 
 	uint16_t m_pc{0};
+	uint16_t m_call_stack[8];
+	int m_stack_level{0};
 
 	bool m_moving{false};
+	uint32_t m_end_delay{0};
 
 	bool execOp(const Op& op);
 

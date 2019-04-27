@@ -201,7 +201,7 @@ void ArmsTask::process_message()
 		{
 			unsigned char buff[8];
 			m_message_queue.pop_message((unsigned char*)buff,8);
-			uint16_t* ptr = m_config.m_positions + 3*buff[0];
+			uint16_t* ptr = m_config.m_positions + 3*buff[1];
 			memcpy(ptr, (unsigned char*)(buff+2), 6);
 		}
 		break;

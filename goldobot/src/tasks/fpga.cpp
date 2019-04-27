@@ -311,6 +311,15 @@ void FpgaTask::process_message()
 		goldo_fpga_cmd_motor(motor_id, pwm);
 	}
 	break;
+	case CommMessageType::FpgaCmdServo:
+	{
+		unsigned char buff[3];
+		m_message_queue.pop_message(buff, 3);
+		int motor_id = buff[0];
+		int pwm = *(uint16_t*)(buff+1);
+		goldo_fpga_cmd_servo(motor_id, pwm);
+	}
+	break;
 	default:
 		m_message_queue.pop_message(nullptr, 0);
 		break;
