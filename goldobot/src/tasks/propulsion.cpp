@@ -65,6 +65,16 @@ void PropulsionTask::doStep()
 				CommMessageType::PropulsionTelemetryEx,
 				(unsigned char*)&msg, sizeof(msg));
 		m_telemetry_counter = 0;
+
+		//gpio debug
+		uint32_t gpio = 0;
+		for(int i=0; i<5; i++)
+		{
+			if(Hal::get_gpio(i)) gpio |= (1 << i);
+		}
+		Robot::instance().mainExchangeOut().pushMessage(
+						CommMessageType::GPIODebug,
+						(unsigned char*)&gpio, sizeof(gpio));
 	}
 
 	if(m_telemetry_counter % 5 == 0)

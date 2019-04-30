@@ -42,15 +42,6 @@ namespace goldobot
 			Test
 		};
 
-		enum TestPattern
-		{
-			SpeedSteps,
-			YawRateSteps,
-			PositionStaticSteps,
-			YawSteps,
-			PositionMovingSteps
-		};
-
 		enum class Error
 		{
 			None,
@@ -101,31 +92,12 @@ namespace goldobot
 		//! \brief Emergency stop. Abort current PointTo of FollowTrajectory command and bring the robot to a stop.
 		void emergency_stop();
 
-		void executeTest(TestPattern patern);
-
 		const PropulsionControllerConfig& config() const;
 		void set_config(const PropulsionControllerConfig& config);
 
 		messages::PropulsionTelemetry getTelemetry() const;
 		/*< */
 		messages::PropulsionTelemetryEx getTelemetryEx() const;
-
-
-	//private:
-		enum class CommandType : uint8_t
-		{
-			Trajectory,
-			PointTo
-		};
-		struct Command
-		{
-			CommandType type;
-			uint8_t num_points;
-			Vector2D control_points[16];
-			float speed;
-			float acceleration;
-			float decceleration;
-		};
 
 	private:
 		PropulsionControllerConfig m_config;
@@ -137,7 +109,6 @@ namespace goldobot
 		bool m_control_speed;
 		bool m_control_yaw_rate;
 		Error m_error;
-		TestPattern m_test_pattern;
 		Vector2D m_test_initial_position;
 		float m_test_initial_yaw;
 
@@ -188,9 +159,6 @@ namespace goldobot
 		// Should take into account robot size in config
 		Vector2D m_reposition_border_normal;
 		float m_reposition_border_distance;
-
-		SemaphoreHandle_t m_mutex;
-
 
 		//! \brief compute motors pwm values when the robot is static. Use PID controllers on yaw and longitudinal position
 		void updateMotorsPwm();

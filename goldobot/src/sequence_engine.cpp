@@ -132,6 +132,18 @@ bool SequenceEngine::execOp(const Op& op)
 		}
 		m_pc++;
 		return true;
+	case 142:
+		{
+			unsigned char buff[3];
+			buff[0] = op.arg1;
+			*(uint16_t*)(buff+1) = *(int*)(m_vars + 4 * op.arg2);
+			Robot::instance().mainExchangeIn().pushMessage(
+					CommMessageType::FpgaCmdServo,
+					buff,
+					4);
+		}
+		m_pc++;
+		return true;
 	default:
 		m_pc++;
 		return false;

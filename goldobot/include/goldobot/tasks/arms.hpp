@@ -51,6 +51,9 @@ public:
 	MessageQueue m_message_queue;
 	unsigned char m_message_queue_buffer[256];
 
+	uint16_t m_dynamixels_positions[3];
+	uint16_t m_dynamixels_loads[3];
+
 	void process_message();
 };
 }

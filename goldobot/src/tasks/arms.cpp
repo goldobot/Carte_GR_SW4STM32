@@ -27,6 +27,7 @@ struct DynamixelPacketHeader
     uint8_t length;
     uint8_t command;
 };
+
 ArmsTask::ArmsTask():
 	m_message_queue(m_message_queue_buffer, sizeof(m_message_queue_buffer))
 {
@@ -48,6 +49,8 @@ void ArmsTask::taskFunction()
 		while(m_message_queue.message_ready())
 		{
 			process_message();
+
+			// Periodically check servo positions and torques
 		}
 		delay_periodic(1);
 	}
@@ -101,8 +104,34 @@ void ArmsTask::go_to_position(uint8_t pos_id, uint16_t time_ms, int torque_setti
 	uint8_t servo_ids[] = {81,82,1};
 	uint8_t servo_types[3] = {1,1,0};
 
-	//get previous positions
+	//get previous positions and compute move timing based on limiting speed
+	uint16_t prev_posa[3];
 
+	uint16_t tim = 1;
+
+	for(int i=0; i< 3;i++)
+	{
+		uint16_t prev_pos = m_current_position[i];
+		uint16_t tar_pos = m_config.m_positions[pos_idx+i];
+		dynamixels_read_data(servo_ids[i],0x24,(unsigned char*)&prev_pos, 2);
+		prev_posa[i] = prev_pos;
+		int diff_angle = abs(tar_pos - prev_pos);
+		switch(servo_types[i])
+		{
+		case 0:
+			//ax 12
+			tim = std::max<uint16_t>((diff_angle*25000)/(57 * 0x3ff), tim);
+			break;
+		case 1:
+			//mx28
+			tim = std::max<uint16_t>((diff_angle*128)/0x3ff, tim);
+			break;
+		default:
+			break;
+		}
+	}
+
+	time_ms = tim*2;
 	for(int i=0; i< 3;i++)
 	{
 		uint16_t buff[3];
@@ -110,7 +139,7 @@ void ArmsTask::go_to_position(uint8_t pos_id, uint16_t time_ms, int torque_setti
 		buff[0] = m_config.m_positions[pos_idx+i]; // position setpoint
 		buff[2] = 1023;//m_config.m_torque_settings[3*torque_settings+i]; // torque limit
 
-		dynamixels_read_data(servo_ids[i],0x24,(unsigned char*)&prev_pos, 2);
+		prev_pos = prev_posa[i];
 
 		int diff_angle = abs(buff[0] - prev_pos);
 

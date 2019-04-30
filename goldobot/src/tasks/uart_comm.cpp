@@ -112,20 +112,6 @@ void UARTCommTask::taskFunction()
 	}
 }
 
-/*
-void UARTCommTask::debug_printf(const char* format, ...)
-{
-	// Format string
-	va_list args;
-	va_start(args, format);
-	int num_chars = vsnprintf(m_printf_buffer, c_printf_buffer_size, format, args);
-	va_end(args);
-	if(num_chars > 0)
-	{
-		send_message(CommMessageType::DbgPrintf, m_printf_buffer, num_chars);
-	}
-}*/
-
 bool UARTCommTask::send_message(CommMessageType type, const char* buffer, uint16_t size)
 {
 	m_serializer.push_message((uint16_t)type, (const unsigned char*)(buffer), size);

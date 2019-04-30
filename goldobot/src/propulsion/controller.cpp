@@ -64,7 +64,6 @@ PropulsionController::PropulsionController(SimpleOdometry* odometry):
 		m_pwm_limit(1)
 {
 	test = false;
-	m_mutex = xSemaphoreCreateMutex();
 }
 
 void PropulsionController::enable()
@@ -126,9 +125,6 @@ void PropulsionController::emergency_stop()
 
 void PropulsionController::update()
 {
-	while(xSemaphoreTake(m_mutex, 1) != pdTRUE)
-	{
-	}
 	m_pose = m_odometry->pose();
 	switch(m_state)
 	{
@@ -213,7 +209,6 @@ void PropulsionController::update()
 	// Clamp outputs
 	m_left_motor_pwm = clamp(m_left_motor_pwm, -m_pwm_limit, m_pwm_limit);
 	m_right_motor_pwm = clamp(m_right_motor_pwm, -m_pwm_limit, m_pwm_limit);
-	xSemaphoreGive(m_mutex);
 }
 
 
@@ -489,12 +484,8 @@ bool PropulsionController::reset_pose(float x, float y, float yaw)
 }
 bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, float speed, float acceleration, float decceleration)
 {
-	while(xSemaphoreTake(m_mutex, 1) != pdTRUE)
-		{
-		}
 	if(m_state != State::Stopped)
 	{
-		xSemaphoreGive(m_mutex);
 		return false;
 	}
 	m_trajectory_buffer.push_segment(points, num_points);
@@ -507,18 +498,13 @@ bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, f
 	m_control_yaw = false;
 	m_control_yaw_rate = true;
 
-	xSemaphoreGive(m_mutex);
 	return true;
 };
 
 bool PropulsionController::executePointTo(Vector2D point, float speed, float acceleration, float decceleration)
 {
-	while(xSemaphoreTake(m_mutex, 1) != pdTRUE)
-		{
-		}
 	if(m_state != State::Stopped)
 	{
-		xSemaphoreGive(m_mutex);
 		return false;
 	}
 	float diff_x = (point.x - m_pose.position.x);
@@ -527,7 +513,6 @@ bool PropulsionController::executePointTo(Vector2D point, float speed, float acc
 	initRotationCommand(angleDiff(target_yaw, m_target_yaw), speed, acceleration, decceleration);
 
 	m_state = State::PointTo;
-	xSemaphoreGive(m_mutex);
 	return true;
 };
 
@@ -542,29 +527,20 @@ bool PropulsionController::executeMoveTo(Vector2D point, float speed, float acce
 
 bool PropulsionController::executeRotation(float delta_yaw, float yaw_rate, float accel, float deccel)
 {
-	while(xSemaphoreTake(m_mutex, 1) != pdTRUE)
-		{
-		}
 	if(m_state != State::Stopped)
 	{
-		xSemaphoreGive(m_mutex);
 		return false;
 	}
 	initRotationCommand(delta_yaw, yaw_rate, accel, deccel);
 
 	m_state = State::PointTo;
-	xSemaphoreGive(m_mutex);
 	return true;
 }
 
 bool PropulsionController::executeRepositioning(Direction direction, float speed, Vector2D normal, float distance_to_center)
 {
-	while(xSemaphoreTake(m_mutex, 1) != pdTRUE)
-		{
-		}
 	if(m_state != State::Stopped)
 	{
-		xSemaphoreGive(m_mutex);
 		return false;
 	}
 	m_target_speed = direction == Direction::Forward ? speed : -speed;
@@ -585,63 +561,9 @@ bool PropulsionController::executeRepositioning(Direction direction, float speed
 
 	m_state = State::Reposition;
 
-	xSemaphoreGive(m_mutex);
 	return true;
 }
 
-void PropulsionController::executeTest(TestPattern pattern)
-{
-	while(xSemaphoreTake(m_mutex, 1) != pdTRUE)
-		{
-		}
-	if(m_state != State::Stopped)
-		{
-		xSemaphoreGive(m_mutex);
-			return;
-		}
-	m_test_pattern = pattern;
-	m_test_initial_position = m_target_position;
-	m_test_initial_yaw = m_target_yaw;
-
-	m_command_begin_time = m_time_base_ms;
-	m_command_end_time = m_command_begin_time + 4000;
-	m_state = State::Test;
-
-	switch(m_test_pattern)
-	{
-	case TestPattern::SpeedSteps:
-		m_control_translation = false;
-		m_control_speed = true;
-		m_control_yaw = false;
-		m_control_yaw_rate = false;
-		m_command_end_time = m_command_begin_time + 4500;
-		break;
-	case TestPattern::PositionStaticSteps:
-		m_control_translation = true;
-		m_control_speed = true;
-		m_control_yaw = false;
-		m_control_yaw_rate = false;
-		m_command_end_time = m_command_begin_time + 9000;
-		break;
-	case TestPattern::YawRateSteps:
-		m_control_translation = false;
-		m_control_speed = false;
-		m_control_yaw = false;
-		m_control_yaw_rate = true;
-		m_command_end_time = m_command_begin_time + 4500;
-		break;
-	case TestPattern::YawSteps:
-		m_control_translation = false;
-		m_control_speed = false;
-		m_control_yaw = true;
-		m_control_yaw_rate = true;
-		m_command_end_time = m_command_begin_time + 9000;
-		break;
-	default:
-		break;
-	}
-	xSemaphoreGive(m_mutex);
-}
 
 messages::PropulsionTelemetry PropulsionController::getTelemetry() const
 {
