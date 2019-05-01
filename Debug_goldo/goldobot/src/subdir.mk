@@ -11,6 +11,7 @@ CPP_SRCS += \
 ../goldobot/src/goldobot_main.cpp \
 ../goldobot/src/robot.cpp \
 ../goldobot/src/robot_simulator.cpp \
+../goldobot/src/sequence_engine.cpp \
 ../goldobot/src/trajectory_planner.cpp 
 
 OBJS += \
@@ -19,6 +20,7 @@ OBJS += \
 ./goldobot/src/goldobot_main.o \
 ./goldobot/src/robot.o \
 ./goldobot/src/robot_simulator.o \
+./goldobot/src/sequence_engine.o \
 ./goldobot/src/trajectory_planner.o 
 
 CPP_DEPS += \
@@ -27,6 +29,7 @@ CPP_DEPS += \
 ./goldobot/src/goldobot_main.d \
 ./goldobot/src/robot.d \
 ./goldobot/src/robot_simulator.d \
+./goldobot/src/sequence_engine.d \
 ./goldobot/src/trajectory_planner.d 
 
 

@@ -7,16 +7,19 @@ PREFIX_GOLDO = /home/jlouis/src/robotik/coupe2019/goldorak/soft/thomas/Carte_GR_
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \
 ../goldobot/src/propulsion/controller.cpp \
+../goldobot/src/propulsion/low_level_controller.cpp \
 ../goldobot/src/propulsion/simple_odometry.cpp \
 ../goldobot/src/propulsion/trajectory.cpp 
 
 OBJS += \
 ./goldobot/src/propulsion/controller.o \
+./goldobot/src/propulsion/low_level_controller.o \
 ./goldobot/src/propulsion/simple_odometry.o \
 ./goldobot/src/propulsion/trajectory.o 
 
 CPP_DEPS += \
 ./goldobot/src/propulsion/controller.d \
+./goldobot/src/propulsion/low_level_controller.d \
 ./goldobot/src/propulsion/simple_odometry.d \
 ./goldobot/src/propulsion/trajectory.d 
 
