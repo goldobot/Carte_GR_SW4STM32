@@ -7,6 +7,8 @@
 #include "goldobot/core/circular_buffer.hpp"
 #include "goldobot/messages.hpp"
 
+#include "goldobot/propulsion/low_level_controller.hpp"
+
 #include <cstdint>
 
 #include "FreeRTOS.h"
@@ -24,9 +26,6 @@ namespace goldobot
 		float lookahead_time;
 	};
 
-
-
-
 	class PropulsionController
 	{
 	public:
@@ -35,11 +34,12 @@ namespace goldobot
 			Inactive,
 			Stopped,
 			FollowTrajectory,
-			PointTo,
+			Rotate,
 			Reposition,
+			ManualControl,
 			EmergencyStop,
 			Error,
-			Test
+			LowLevelTest
 		};
 
 		enum class Error
@@ -72,8 +72,8 @@ namespace goldobot
 
 		//! \brief Get current controller error code
 		Error error() const;
-		void clear_error();
-		RobotPose target_pose() const;
+		void clearError();
+		RobotPose targetPose() const;
 
 		void update();
 
@@ -81,52 +81,40 @@ namespace goldobot
 		float rightMotorPwm();
 
 		//! \brief reset robot pose. Only works if state is Inactive or Stopped. Also change odometry.
-		bool reset_pose(float x, float y, float yaw);
+		bool resetPose(float x, float y, float yaw);
 
 		bool executeTrajectory(Vector2D* points, int num_points, float speed, float acceleration, float decceleration);
 		bool executeRepositioning(Direction direction, float speed, Vector2D normal, float distance_to_center);
 		bool executePointTo(Vector2D target, float yaw_rate, float accel, float deccel);
 		bool executeMoveTo(Vector2D target, float yaw_rate, float accel, float deccel);
 		bool executeRotation(float delta_yaw, float yaw_rate, float accel, float deccel);
+		bool executeTranslation(float distance, float speed, float accel, float deccel);
 
 		//! \brief Emergency stop. Abort current PointTo of FollowTrajectory command and bring the robot to a stop.
-		void emergency_stop();
+		void emergencyStop();
 
 		const PropulsionControllerConfig& config() const;
-		void set_config(const PropulsionControllerConfig& config);
+		void setConfig(const PropulsionControllerConfig& config);
 
 		messages::PropulsionTelemetry getTelemetry() const;
 		/*< */
 		messages::PropulsionTelemetryEx getTelemetryEx() const;
 
+
 	private:
-		PropulsionControllerConfig m_config;
 		SimpleOdometry* m_odometry;
-		RobotPose m_pose;
-		State m_state;
-		bool m_control_translation;
-		bool m_control_yaw;
-		bool m_control_speed;
-		bool m_control_yaw_rate;
-		Error m_error;
-		Vector2D m_test_initial_position;
-		float m_test_initial_yaw;
+		PropulsionControllerConfig m_config;
+		LowLevelController m_low_level_controller;
+		RobotPose m_current_pose;
+		RobotPose m_target_pose;
 
-		float m_left_motor_pwm;
-		float m_right_motor_pwm;
-		float m_pwm_limit;
 
-		
+		State m_state{State::Inactive};
+		Error m_error{Error::None};
 
-		// PID controllers
-		// Inner loop speed control PIDs
-		PIDController m_yaw_rate_pid;
-		PIDController m_speed_pid;
-
-		// Outer loop position control PIDs
-		PIDController m_translation_pid;
-		PIDController m_yaw_pid;
-
+		float m_left_motor_pwm{0};
+		float m_right_motor_pwm{0};
+		float m_pwm_limit{1.0f};
 
 		TrajectoryBuffer m_trajectory_buffer;
 		float m_begin_yaw; // yaw at beginning of current PointTo command
@@ -138,21 +126,10 @@ namespace goldobot
 		uint32_t m_command_end_time;
 		Direction m_direction;
 
-		uint32_t m_time_base_ms;
+		uint32_t m_time_base_ms{0};
 
-		// Targets
-		Vector2D m_target_position;
-		float m_target_yaw;
-		float m_target_speed;
-		float m_target_yaw_rate;
+
 		Vector2D m_lookahead_position;
-
-		// Errors
-		float m_lateral_error;
-		float m_longitudinal_error;
-		float m_yaw_error;
-		float m_speed_error;
-		float m_yaw_rate_error;
 
 		bool m_reposition_hit;
 		// Line equation for border on which to reposition
@@ -162,9 +139,6 @@ namespace goldobot
 
 		//! \brief compute motors pwm values when the robot is static. Use PID controllers on yaw and longitudinal position
 		void updateMotorsPwm();
-
-		//! \brief compute motors pwm in test mode
-		void updateMotorsPwmTest();
 
 		//! \brief Update current and lookahead positions in TrajectoryFollowing mode
 		void updateTargetPositions();

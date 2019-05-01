@@ -2,31 +2,12 @@
 
 using namespace goldobot;
 
-PIDConfig::PIDConfig():
-	kp(0),
-	kd(0),
-	ki(0),
-	feed_forward(0),
-	lim_iterm(0),
-	lim_dterm(0),
-	min_output(0),
-	max_output(0),
-	period(0)
-
+PIDController::PIDController()
 {
-
-}
-PIDController::PIDController():
-	m_first_run(true),
-	m_integral_term(0)
-{
-
 }
 
 PIDController::PIDController(const PIDConfig& config):
-	m_config(config),
-	m_first_run(true),
-	m_integral_term(0)
+	m_config(config)
 {
 
 }
@@ -123,7 +104,7 @@ float PIDController::update(float current_value)
 	}
 	else
 	{
-		m_output = prop_term + m_integral_term + derivative_term, m_config.min_output, m_config.max_output;
+		m_output = clamp(prop_term + m_integral_term + derivative_term, m_config.min_output, m_config.max_output);
 	}
 	
 

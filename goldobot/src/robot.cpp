@@ -19,7 +19,7 @@ void Robot::init()
 	m_heartbeat_task.init();
 
 	setOdometryConfig(defaultOdometryConfig());
-	m_propulsion_task.controller().set_config(defaultPropulsionControllerConfig());
+	m_propulsion_task.controller().setConfig(defaultPropulsionControllerConfig());
 	m_propulsion_task.init();
 	m_main_task.init();
 	m_arms_task.init();
@@ -53,39 +53,151 @@ PropulsionControllerConfig Robot::defaultPropulsionControllerConfig()
 {
 	PropulsionControllerConfig config;
 
-	config.speed_pid_config.period = 1e-3f;
-	config.yaw_rate_pid_config.period = 1e-3f;
-	config.translation_pid_config.period = 1e-3f;
-	config.translation_cruise_pid_config.period = 1e-3f;
-	config.yaw_pid_config.period = 1e-3f;
+	// Longi
+	config.low_level_config_static.longi_pid_config = {
+		1e-3f,  //period
+		5,      //kp
+		10,		//ki
+		0,		//kd
+		0,      //feedforward
+		0.2,    //lim_iterm
+		0,      //lim_dterm
+		-1,     //min output
+		1	    //max_output
+	};
+	config.low_level_config_cruise.longi_pid_config = {
+		1e-3f,  //period
+		5,      //kp
+		15,		//ki
+		0,		//kd
+		0,      //feedforward
+		0.2,    //lim_iterm
+		0,      //lim_dterm
+		-1,     //min output
+		1	    //max_output
+	};
 
-	config.translation_pid_config.kp = 5;
-	config.translation_pid_config.ki = 10;
-	config.translation_pid_config.lim_iterm = 0.2;
+	config.low_level_config_rotate.longi_pid_config = {
+		1e-3f,  //period
+		5,      //kp
+		10,		//ki
+		0,		//kd
+		0,      //feedforward
+		0.2,    //lim_iterm
+		0,      //lim_dterm
+		-1,     //min output
+		1	    //max_output
+	};
+	// Speed
+	config.low_level_config_static.speed_pid_config = {
+		1e-3f,  //period
+		1,      //kp
+		0,		//ki
+		0,		//kd
+		0.64f,      //feedforward
+		0.2,    //lim_iterm
+		0,      //lim_dterm
+		-1,     //min output
+		1	    //max_output
+	};
+	config.low_level_config_cruise.speed_pid_config = {
+		1e-3f,  //period
+		1,      //kp
+		0,		//ki
+		0,		//kd
+		0.64f,      //feedforward
+		0.2,    //lim_iterm
+		0,      //lim_dterm
+		-1,     //min output
+		1	    //max_output
+	};
+config.low_level_config_rotate.speed_pid_config = {
+		1e-3f,  //period
+		1,      //kp
+		0,		//ki
+		0,		//kd
+		0.64f,      //feedforward
+		0.2,    //lim_iterm
+		0,      //lim_dterm
+		-1,     //min output
+		1	    //max_output
+	};
+	// Yaw
+	config.low_level_config_static.yaw_pid_config = {
+			1e-3f,  //period
+			5,      //kp
+			20,		//ki
+			0,		//kd
+			0,      //feedforward
+			0.2,    //lim_iterm
+			0,      //lim_dterm
+			-1,     //min output
+			1	    //max_output
+		};
+	config.low_level_config_static.yaw_pid_config = {
+			1e-3f,  //period
+			5,      //kp
+			20,		//ki
+			0,		//kd
+			0,      //feedforward
+			0.2,    //lim_iterm
+			0,      //lim_dterm
+			-1,     //min output
+			1	    //max_output
+		};
+	config.low_level_config_rotate.yaw_pid_config = {
+			1e-3f,  //period
+			5,      //kp
+			20,		//ki
+			0,		//kd
+			0,      //feedforward
+			0.2,    //lim_iterm
+			0,      //lim_dterm
+			-1,     //min output
+			1	    //max_output
+		};
+	// Yaw rate
+	config.low_level_config_static.yaw_rate_pid_config = {
+			1e-3f,  //period
+			0.2,      //kp
+			0,		//ki
+			0,		//kd
+			0.12f,      //feedforward
+			0.2,    //lim_iterm
+			0,      //lim_dterm
+			-1,     //min output
+			1	    //max_output
+		};
+	config.low_level_config_cruise.yaw_rate_pid_config = {
+			1e-3f,  //period
+			0.2,      //kp
+			0,		//ki
+			0,		//kd
+			0.12f,      //feedforward
+			0.2,    //lim_iterm
+			0,      //lim_dterm
+			-1,     //min output
+			1	    //max_output
+		};
+	config.low_level_config_rotate.yaw_rate_pid_config = {
+			1e-3f,  //period
+			0.2,      //kp
+			0,		//ki
+			0,		//kd
+			0.12f,      //feedforward
+			0.2,    //lim_iterm
+			0,      //lim_dterm
+			-1,     //min output
+			1	    //max_output
+		};
 
-	config.translation_cruise_pid_config.kp = 5;
-	config.translation_cruise_pid_config.ki = 15;
-	config.translation_cruise_pid_config.lim_iterm = 0.1;
 
-	config.yaw_pid_config.kp = 5;
-	config.yaw_pid_config.ki = 20;
-	config.yaw_pid_config.lim_iterm = 0.2;
-
-
-	// Configure speed pid
-	config.speed_pid_config.feed_forward = 0.64f;
-	config.speed_pid_config.kp = 1.0f;
-	config.speed_pid_config.lim_iterm = 0.2;
-
-	// Configure yaw rate pid
-	config.yaw_rate_pid_config.feed_forward = 0.12f;
-	config.yaw_rate_pid_config.kp = 0.2;
 
 	config.lookahead_distance = 0.15f;
 	config.lookahead_time = 0;
 	config.static_pwm_limit = 0.3;
-	config.moving_pwm_limit = 1;
-	config.repositioning_pwm_limit = 0.25;
+	config.cruise_pwm_limit = 1;
+	config.reposition_pwm_limit = 0.25;
 
 	return config;
 }

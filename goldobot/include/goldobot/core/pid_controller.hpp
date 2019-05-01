@@ -4,16 +4,15 @@ namespace goldobot
 {
 	struct PIDConfig
 	{
-		PIDConfig();
-		float period;
-		float kp;
-		float kd;
-		float ki;
-		float feed_forward;
-		float lim_iterm;
-		float lim_dterm;
-		float min_output;
-		float max_output;
+		float period{1};
+		float kp{0};
+		float ki{0};
+		float kd{0};
+		float feed_forward{0};
+		float lim_iterm{0};
+		float lim_dterm{0};
+		float min_output{0};
+		float max_output{0};
 	};
 
 	class PIDController
@@ -25,10 +24,10 @@ namespace goldobot
 		const PIDConfig& config() const;
 		void set_config(const PIDConfig& config);
 
-
 		void set_kp(float kp);
-		void set_kd(float kd);
 		void set_ki(float ki);
+		void set_kd(float kd);
+
 		void set_feedforward(float feedforward);
 
 		float output() const;
@@ -42,11 +41,11 @@ namespace goldobot
 
 		PIDConfig m_config;
 
-		float m_target;
-		float m_target_derivative;
-		float m_previous_value;
-		float m_integral_term;
-		float m_output;
-		bool m_first_run;
+		float m_target{0};
+		float m_target_derivative{0};
+		float m_previous_value{0};
+		float m_integral_term{0};
+		float m_output{0};
+		bool m_first_run{true};
 	};
 }

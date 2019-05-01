@@ -10,8 +10,9 @@ using namespace goldobot;
 
 PropulsionTask::PropulsionTask():
 		m_controller(&m_odometry),
-		m_message_queue(m_message_queue_buffer, 512),
-		m_telemetry_counter(0)
+		m_message_queue(m_message_queue_buffer, sizeof(m_message_queue_buffer)),
+		m_urgent_message_queue(m_urgent_message_queue_buffer, sizeof(m_urgent_message_queue_buffer))
+
 {
 }
 
@@ -36,7 +37,7 @@ void PropulsionTask::doStep()
 	// Test emergency stop
 	if(Hal::get_gpio(2))
 	{
-		m_controller.emergency_stop();
+		m_controller.emergencyStop();
 	}
 
 	m_controller.update();
@@ -90,7 +91,6 @@ void PropulsionTask::doStep()
 void PropulsionTask::processMessage()
 {
 	auto message_type = (CommMessageType)m_message_queue.message_type();
-	auto message_size = m_message_queue.message_size();
 
 	switch(message_type)
 	{
@@ -123,11 +123,11 @@ void PropulsionTask::processMessage()
 		{
 			PropulsionControllerConfig config;
 			m_message_queue.pop_message((unsigned char*)&config, sizeof(config));
-			m_controller.set_config(config);
+			m_controller.setConfig(config);
 		}
 		break;
 	case CommMessageType::CmdEmergencyStop:
-		m_controller.emergency_stop();
+		m_controller.emergencyStop();
 		m_message_queue.pop_message(nullptr, 0);
 		break;
 	case CommMessageType::DbgSetPropulsionEnable:
@@ -185,7 +185,7 @@ void PropulsionTask::processMessage()
 		{
 			float pose[3];
 			m_message_queue.pop_message((unsigned char*)&pose, 12);
-			m_controller.reset_pose(pose[0], pose[1], pose[2]);
+			m_controller.resetPose(pose[0], pose[1], pose[2]);
 		}
 		break;
 	default:
