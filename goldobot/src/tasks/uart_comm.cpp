@@ -29,10 +29,15 @@ const char* UARTCommTask::name() const
 	return "uart_comm";
 }
 
+void UARTCommTask::init()
+{
+	Robot::instance().mainExchangeOut().subscribe({0,1000, &m_out_queue});
+	Task::init();
+}
+
 void UARTCommTask::taskFunction()
 {
 	set_priority(5);
-	Robot::instance().mainExchangeOut().subscribe({0,1000, &m_out_queue});
 
 	m_last_timestamp = xTaskGetTickCount();
 	m_bytes_sent = 0;

@@ -67,6 +67,7 @@ namespace goldobot
 		MessageExchange m_main_exchange_in;
 		MessageExchange m_main_exchange_out;
 
+		static unsigned char s_config_area[4096];
 		static Robot s_instance;
 	};
 }

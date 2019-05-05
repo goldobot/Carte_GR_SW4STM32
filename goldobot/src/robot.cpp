@@ -3,6 +3,7 @@
 using namespace goldobot;
 
 Robot Robot::s_instance;
+unsigned char Robot::s_config_area[4096];
 
 Robot& Robot::instance()
 {
@@ -15,6 +16,12 @@ void Robot::init()
 	m_robot_config.back_length = 0.135;
 
 	m_comm_task.init();
+	//First send some sync messages to ensure the reset is well received
+	m_main_exchange_out.pushMessage(CommMessageType::Sync,(unsigned char*)"goldobot",8);
+	m_main_exchange_out.pushMessage(CommMessageType::Sync,(unsigned char*)"goldobot",8);
+	m_main_exchange_out.pushMessage(CommMessageType::Sync,(unsigned char*)"goldobot",8);
+	m_main_exchange_out.pushMessage(CommMessageType::Sync,(unsigned char*)"goldobot",8);
+
 	m_main_exchange_out.pushMessage(CommMessageType::Reset,nullptr, 0);
 	m_heartbeat_task.init();
 

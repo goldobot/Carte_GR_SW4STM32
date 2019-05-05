@@ -15,6 +15,7 @@ namespace goldobot
 	public:
 		UARTCommTask();
 		const char* name() const override;
+		void init();
 
 	private:
 		void taskFunction() override;

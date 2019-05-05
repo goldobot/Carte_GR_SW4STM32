@@ -6,13 +6,9 @@
 #include "goldobot/propulsion/controller_config.hpp"
 #include "goldobot/core/circular_buffer.hpp"
 #include "goldobot/messages.hpp"
-
 #include "goldobot/propulsion/low_level_controller.hpp"
 
 #include <cstdint>
-
-#include "FreeRTOS.h"
-#include "semphr.h"
 
 
 namespace goldobot
