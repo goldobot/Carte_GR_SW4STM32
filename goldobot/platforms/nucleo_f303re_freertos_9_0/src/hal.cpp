@@ -34,6 +34,7 @@ static GPIODescriptor s_gpio_descriptors[] ={
 	{GPIOA, GPIO_PIN_5},//green led
 	{GPIOC, GPIO_PIN_9},//match start //tmp: blue button on nucleo. //C9 in robot
 	{GPIOC, GPIO_PIN_8}, // adversary detection on C8
+//	{GPIOC, GPIO_PIN_14}, // adversary detection on C14
 	{GPIOC, GPIO_PIN_5}, //dynamixels direction
 	{GPIOC, GPIO_PIN_6} //side selection
 };
@@ -45,6 +46,7 @@ extern "C"
 {
 	extern UART_HandleTypeDef huart1;
 	extern UART_HandleTypeDef huart2;
+	extern UART_HandleTypeDef huart3;
 
 	extern TIM_HandleTypeDef htim1;
 	extern TIM_HandleTypeDef htim2;
@@ -69,7 +71,8 @@ extern "C"
 
 UART_HandleTypeDef* g_uart_handles[] ={
 		&huart2,
-		&huart1
+		&huart1,
+		&huart3,
 };
 
 #ifdef SIMULATE_ROBOT
@@ -129,8 +132,16 @@ void Hal::set_servo_pwm(uint16_t pwm)
 {
 	__HAL_TIM_SET_COMPARE(&htim16, TIM_CHANNEL_1, pwm);
 }
+
+extern bool g_goldo_megakill_switch;
+
 void Hal::set_motors_pwm(float left, float right)
 {
+    if (g_goldo_megakill_switch) {
+        disable_motors_pwm();
+        return;
+    }
+
 #ifdef SIMULATE_ROBOT
 	s_robot_simulator.m_left_pwm = left;
 	s_robot_simulator.m_right_pwm = right;
@@ -169,6 +180,13 @@ void Hal::set_motors_pwm(float left, float right)
 	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, left_pwm);
 	__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, right_pwm);
 }
+void Hal::disable_motors_pwm()
+{
+	HAL_GPIO_WritePin(MAXON1_DIR_GPIO_Port, MAXON1_DIR_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(MAXON2_DIR_GPIO_Port, MAXON2_DIR_Pin, GPIO_PIN_RESET);
+	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 0);
+	__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);
+}
 
 bool Hal::uart_transmit(int uart_index, const char* buffer, uint16_t size, bool blocking)
 {
@@ -180,6 +198,16 @@ bool Hal::uart_transmit(int uart_index, const char* buffer, uint16_t size, bool 
 	if(blocking)
 	{
 		Hal::uart_wait_for_transmit(uart_index);
+	}
+	return true;
+}
+
+bool Hal::uart_transmit_dma(int uart_index, const char* buffer, uint16_t size)
+{
+	auto huart_ptr = g_uart_handles[uart_index];
+	if(HAL_UART_Transmit_DMA(huart_ptr, (uint8_t*)buffer, size)!= HAL_OK)
+	{
+		return false;
 	}
 	return true;
 }

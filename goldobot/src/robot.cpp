@@ -64,12 +64,24 @@ FpgaTask& Robot::fpgaTask()
 OdometryConfig Robot::defaultOdometryConfig()
 {
 	OdometryConfig config;
+/* FIXME : DEBUG */
+/* 0=PR 2019 */
+/* 1=GR 2018 */
+#if 1
 	config.dist_per_count_left = 1.513409e-05;
 	config.dist_per_count_right = 1.510209e-05;
 	config.wheel_spacing = 2.852931e-01;
 	config.encoder_period = 8192;
 	config.update_period = 1e-3;
 	config.speed_filter_period = 0.005f;
+#else
+	config.dist_per_count_left = -1.966033264580682e-05;
+	config.dist_per_count_right = -1.9621583742116328e-05;
+	config.wheel_spacing = 187.8e-3;
+	config.encoder_period = 8192;
+	config.update_period = 1e-3;
+	config.speed_filter_period = 0.005f;
+#endif
 	return config;
 }
 

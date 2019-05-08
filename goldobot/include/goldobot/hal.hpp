@@ -30,10 +30,16 @@ namespace goldobot
 		void set_motors_pwm(float left, float right);
 
 		static
+        void disable_motors_pwm();
+
+		static
 		bool uart_read_char(int uart_index, char* c, bool blocking);
 
 		static
 		bool uart_transmit(int uart_index, const char* buffer, uint16_t size, bool blocking = true);
+
+		static
+		bool uart_transmit_dma(int uart_index, const char* buffer, uint16_t size);
 
 		static
 		bool uart_transmit_finished(int uart_index);
