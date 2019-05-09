@@ -9,12 +9,15 @@
 #include "goldobot/tasks/fpga.hpp"
 #include "goldobot/hal.hpp"
 
+#include <cstdint>
+
 namespace goldobot
 {
 	struct RobotConfig
 	{
 		//! \brief distance from wheels axis to front of the robot
 		float front_length;
+
 		//! \brief distance from wheels axis to back of the robot
 		float back_length;
 	};
@@ -41,13 +44,20 @@ namespace goldobot
 		MessageExchange& mainExchangeIn() { return m_main_exchange_in; };
 		MessageExchange& mainExchangeOut() { return m_main_exchange_out; };
 
+
 		const RobotConfig& robotConfig() const;
+
 		OdometryConfig odometryConfig();
 		OdometryConfig defaultOdometryConfig();
 		PropulsionControllerConfig defaultPropulsionControllerConfig();
 		void setOdometryConfig(const OdometryConfig& config);
 
 		PropulsionController::State propulsionState();
+
+		// Synopsis: beginLoad, multiple calls to loadConfig to write config buffer, endLoadConfig to check
+		void beginLoadConfig();
+		void loadConfig(char* buffer, size_t size);
+		bool endLoadConfig(uint16_t crc);
 
 	private:
 		Side m_side{Side::Unknown};
@@ -58,8 +68,12 @@ namespace goldobot
 		PropulsionTask m_propulsion_task;
 		UARTCommTask m_comm_task;
 		HeartbeatTask m_heartbeat_task;
+
+
 		OdometryConfig m_odometry_config;
 		RobotConfig m_robot_config;
+
+
 		MainTask m_main_task;
 		ArmsTask m_arms_task;
 		FpgaTask m_fpga_task;
@@ -67,7 +81,7 @@ namespace goldobot
 		MessageExchange m_main_exchange_in;
 		MessageExchange m_main_exchange_out;
 
-		static unsigned char s_config_area[4096];
+		//static unsigned char s_config_area[4096];
 		static Robot s_instance;
 	};
 }

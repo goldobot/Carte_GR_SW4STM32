@@ -23,11 +23,18 @@ const char* PropulsionTask::name() const
 
 void PropulsionTask::doStep()
 {
+	// Process urgent messages
+	while(m_urgent_message_queue.message_ready())
+	{
+		processUrgentMessage();
+	}
+
 	// Process messages
-	while(m_message_queue.message_ready())
+	while(m_message_queue.message_ready() && m_controller.state() == PropulsionController::State::Stopped)
 	{
 		processMessage();
 	}
+
 	// Update odometry
 	uint16_t left;
 	uint16_t right;
@@ -94,69 +101,6 @@ void PropulsionTask::processMessage()
 
 	switch(message_type)
 	{
-	case CommMessageType::DbgGetOdometryConfig:
-		{
-			auto config = m_odometry.config();
-			Robot::instance().mainExchangeOut().pushMessage(
-					CommMessageType::DbgGetOdometryConfig,
-					(unsigned char*)&config, sizeof(config));
-			m_message_queue.pop_message(nullptr, 0);
-		}
-		break;
-	case CommMessageType::DbgSetOdometryConfig:
-		{
-			OdometryConfig config;
-			m_message_queue.pop_message((unsigned char*)&config, sizeof(config));
-			m_odometry.setConfig(config);
-		}
-		break;
-	case CommMessageType::DbgGetPropulsionConfig:
-		{
-			auto config = m_controller.config();
-			Robot::instance().mainExchangeOut().pushMessage(
-					CommMessageType::DbgGetPropulsionConfig,
-					(unsigned char*)&config, sizeof(config));
-			m_message_queue.pop_message(nullptr, 0);
-		}
-		break;
-	case CommMessageType::DbgSetPropulsionConfig:
-		{
-			PropulsionControllerConfig config;
-			m_message_queue.pop_message((unsigned char*)&config, sizeof(config));
-			m_controller.setConfig(config);
-		}
-		break;
-	case CommMessageType::CmdEmergencyStop:
-		m_controller.emergencyStop();
-		m_message_queue.pop_message(nullptr, 0);
-		break;
-	case CommMessageType::DbgSetPropulsionEnable:
-		{
-			uint8_t enabled;
-			m_message_queue.pop_message((unsigned char*)&enabled, 1);
-			if(enabled)
-			{
-				m_controller.enable();
-			} else
-			{
-				m_controller.disable();
-			}
-		}
-		break;
-	case CommMessageType::DbgSetMotorsEnable:
-		{
-			uint8_t enabled;
-			m_message_queue.pop_message((unsigned char*)&enabled, 1);
-			Hal::set_motors_enable(enabled);
-		}
-		break;
-	case CommMessageType::DbgSetMotorsPwm:
-		{
-			float pwm[2];
-			m_message_queue.pop_message((unsigned char*)&pwm, 8);
-			Hal::set_motors_pwm(pwm[0], pwm[1]);
-		}
-		break;
 	case CommMessageType::DbgPropulsionExecuteTrajectory:
 		onMsgExecuteTrajectory();
 		break;
@@ -194,6 +138,74 @@ void PropulsionTask::processMessage()
 	}
 }
 
+void PropulsionTask::processUrgentMessage()
+{
+	auto message_type = (CommMessageType)m_urgent_message_queue.message_type();
+
+	switch(message_type)
+	{
+	case CommMessageType::DbgGetOdometryConfig:
+		{
+			auto config = m_odometry.config();
+			Robot::instance().mainExchangeOut().pushMessage(
+					CommMessageType::DbgGetOdometryConfig,
+					(unsigned char*)&config, sizeof(config));
+			m_urgent_message_queue.pop_message(nullptr, 0);
+		}
+		break;
+	case CommMessageType::DbgSetOdometryConfig:
+		{
+			OdometryConfig config;
+			m_urgent_message_queue.pop_message((unsigned char*)&config, sizeof(config));
+			m_odometry.setConfig(config);
+		}
+		break;
+	case CommMessageType::DbgGetPropulsionConfig:
+		{
+			auto config = m_controller.config();
+			Robot::instance().mainExchangeOut().pushMessage(
+					CommMessageType::DbgGetPropulsionConfig,
+					(unsigned char*)&config, sizeof(config));
+			m_urgent_message_queue.pop_message(nullptr, 0);
+		}
+		break;
+	case CommMessageType::DbgSetPropulsionConfig:
+		{
+			PropulsionControllerConfig config;
+			m_urgent_message_queue.pop_message((unsigned char*)&config, sizeof(config));
+			m_controller.setConfig(config);
+		}
+		break;
+	case CommMessageType::CmdEmergencyStop:
+		m_controller.emergencyStop();
+		m_urgent_message_queue.pop_message(nullptr, 0);
+		break;
+	case CommMessageType::DbgSetPropulsionEnable:
+		{
+			uint8_t enabled;
+			m_urgent_message_queue.pop_message((unsigned char*)&enabled, 1);
+			if(enabled)
+			{
+				m_controller.enable();
+			} else
+			{
+				m_controller.disable();
+			}
+		}
+		break;
+	case CommMessageType::DbgSetMotorsEnable:
+		{
+			uint8_t enabled;
+			m_urgent_message_queue.pop_message((unsigned char*)&enabled, 1);
+			Hal::set_motors_enable(enabled);
+		}
+		break;
+	default:
+		m_urgent_message_queue.pop_message(nullptr, 0);
+		break;
+	}
+}
+
 void PropulsionTask::onMsgExecuteTrajectory()
 {
 	unsigned char buff[76];//12 for traj params and 8*8 for points
@@ -222,7 +234,10 @@ PropulsionController& PropulsionTask::controller()
 void PropulsionTask::taskFunction()
 {
 	// Register for messages
-	Robot::instance().mainExchangeIn().subscribe({0,1000, &m_message_queue});
+	Robot::instance().mainExchangeIn().subscribe({83,95, &m_message_queue});
+	Robot::instance().mainExchangeIn().subscribe({64,67, &m_urgent_message_queue});
+	Robot::instance().mainExchangeIn().subscribe({80,82, &m_urgent_message_queue});
+
 	// Set task to high
 	set_priority(6);
 

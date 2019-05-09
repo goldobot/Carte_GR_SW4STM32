@@ -10,9 +10,9 @@ enum class Side : uint8_t
 
 enum class MatchState : uint8_t
 {
-	Idle, // Initial state
-	Debug, // Debug mode
-	PreMatch, // Pre match repositioning sequence
+	Unconfigured, // Initial state
+	Idle, // Initial state after configuration
+	PreMatch, // Prematch sequence
 	WaitForStartOfMatch, // Ready for match, waiting for start signal
 	Match, // Match
 	PostMatch // Match finished

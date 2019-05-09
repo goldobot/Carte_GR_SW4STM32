@@ -9,6 +9,12 @@
 namespace goldobot
 {
 
+enum Opcode
+{
+	Propulsion_MoveTo = 129,
+};
+
+
 SequenceEngine::SequenceEngine()
 {
 

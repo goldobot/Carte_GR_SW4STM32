@@ -37,6 +37,7 @@ namespace goldobot
 
 		void doStep();
 		void processMessage();
+		void processUrgentMessage();
 		void taskFunction() override;
 
 		void onMsgExecuteTrajectory();
