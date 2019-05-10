@@ -37,6 +37,24 @@ bool SequenceEngine::execOp(const Op& op)
 {
 	switch(op.opcode)
 	{
+	case 0:
+		m_pc++;
+		break;
+	case 1:
+		*(int32_t*)(m_vars + 4 * op.arg1) = *(int32_t*)(m_vars + 4 * op.arg2);
+		m_pc++;
+		break;
+	case 2:
+		*(int32_t*)(m_vars + 4 * op.arg1) = *(int32_t*)(m_vars + 4 * op.arg2);
+		*(int32_t*)(m_vars + 4 * (op.arg1 + 1)) = *(int32_t*)(m_vars + 4 * (op.arg2 + 1));
+		m_pc++;
+		break;
+	case 3:
+		*(int32_t*)(m_vars + 4 * op.arg1) = *(int32_t*)(m_vars + 4 * op.arg2);
+		*(int32_t*)(m_vars + 4 * (op.arg1 + 1)) = *(int32_t*)(m_vars + 4 * (op.arg2 + 1));
+		*(int32_t*)(m_vars + 4 * (op.arg1 + 2)) = *(int32_t*)(m_vars + 4 * (op.arg2 + 2));
+		m_pc++;
+		break;
 	case 32:
 		if(m_end_delay == 0)
 		{
@@ -70,9 +88,9 @@ bool SequenceEngine::execOp(const Op& op)
 		float params[5];
 		params[0] = *(float*)(m_vars + 4 * op.arg1);
 		params[1] = *(float*)(m_vars + 4 * (op.arg1+1));
-		params[2] = 0.5;
-		params[3] = 0.5;
-		params[4] = 0.5;
+		params[2] = *(float*)(m_vars + 4 * (op.arg2));
+		params[3] = *(float*)(m_vars + 4 * (op.arg2+1));
+		params[4] = *(float*)(m_vars + 4 * (op.arg2+2));
 		Robot::instance().mainExchangeIn().pushMessage(
 				CommMessageType::DbgPropulsionExecutePointTo,
 				(unsigned char*) params, sizeof(params));
@@ -85,17 +103,49 @@ bool SequenceEngine::execOp(const Op& op)
 		float params[5];
 		params[0] = *(float*)(m_vars + 4 * op.arg1);
 		params[1] = *(float*)(m_vars + 4 * (op.arg1+1));
-		params[2] = 0.5;
-		params[3] = 0.5;
-		params[4] = 0.5;
+		params[2] = *(float*)(m_vars + 4 * (op.arg2));
+		params[3] = *(float*)(m_vars + 4 * (op.arg2+1));
+		params[4] = *(float*)(m_vars + 4 * (op.arg2+2));
+
 		Robot::instance().mainExchangeIn().pushMessage(
 				CommMessageType::DbgPropulsionExecuteMoveTo,
 				(unsigned char*) params, sizeof(params));
-		}
 		m_moving = true;
 		m_pc++;
 		return false;
-		break;
+	}
+	case 130://propulsion.rotate
+	{
+		float params[4];
+		params[0] = *(float*)(m_vars + 4 * op.arg1);
+		params[1] = *(float*)(m_vars + 4 * (op.arg2));
+		params[2] = *(float*)(m_vars + 4 * (op.arg2+1));
+		params[3] = *(float*)(m_vars + 4 * (op.arg2+2));
+
+		Robot::instance().mainExchangeIn().pushMessage(
+				CommMessageType::DbgPropulsionExecuteRotation,
+				(unsigned char*) params, sizeof(params));
+		m_moving = true;
+		m_pc++;
+		return false;
+	}
+	case 131://propulsion.translate
+		{
+			float params[4];
+			params[0] = *(float*)(m_vars + 4 * op.arg1);
+			params[1] = *(float*)(m_vars + 4 * (op.arg2));
+			params[2] = *(float*)(m_vars + 4 * (op.arg2+1));
+			params[3] = *(float*)(m_vars + 4 * (op.arg2+2));
+			Robot::instance().mainExchangeIn().pushMessage(
+					CommMessageType::PropulsionExecuteTranslation,
+					(unsigned char*) params, sizeof(params));
+			m_moving = true;
+			m_pc++;
+			return false;
+		}
+
+
+
 	case 30:
 		if(m_stack_level == 0)
 		{

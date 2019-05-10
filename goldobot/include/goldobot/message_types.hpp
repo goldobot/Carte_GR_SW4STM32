@@ -16,6 +16,7 @@ namespace goldobot
 		PropulsionTelemetry=8, //
 		PropulsionTelemetryEx=9,
 		PropulsionStateChange=10,
+		PropulsionPose=11,
 		// Match events
 		MatchStateChange=15,
 		SensorsChange=20,
@@ -57,6 +58,7 @@ namespace goldobot
 		DbgPropulsionExecutePointTo=88,
 		DbgPropulsionExecuteMoveTo=89,
 		PropulsionStateChanged=90,
+		PropulsionExecuteTranslation=91,
 
 
 		DbgMiscRepositionStartGreen=100,

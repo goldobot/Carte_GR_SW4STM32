@@ -44,7 +44,7 @@ void PropulsionTask::doStep()
 	// Test emergency stop
 	if(Hal::get_gpio(2))
 	{
-		m_controller.emergencyStop();
+		//m_controller.emergencyStop();
 	}
 
 	m_controller.update();
@@ -66,23 +66,25 @@ void PropulsionTask::doStep()
 
 	// Send periodic telemetry messages
 	m_telemetry_counter++;
-	if(m_telemetry_counter == 20)
+	if(m_telemetry_counter % 20)
 	{
 		auto msg = m_controller.getTelemetryEx();
 		Robot::instance().mainExchangeOut().pushMessage(
 				CommMessageType::PropulsionTelemetryEx,
 				(unsigned char*)&msg, sizeof(msg));
-		m_telemetry_counter = 0;
+	}
 
-		//gpio debug
-		uint32_t gpio = 0;
-		for(int i=0; i<5; i++)
-		{
-			if(Hal::get_gpio(i)) gpio |= (1 << i);
-		}
+	if(m_telemetry_counter == 40)
+	{
+		float msg[3];
+		msg[0] = m_odometry.pose().position.x;
+		msg[1] = m_odometry.pose().position.y;
+		msg[2] = m_odometry.pose().yaw;
+
 		Robot::instance().mainExchangeOut().pushMessage(
-						CommMessageType::GPIODebug,
-						(unsigned char*)&gpio, sizeof(gpio));
+				CommMessageType::PropulsionPose,
+				(unsigned char*)&msg, sizeof(msg));
+		m_telemetry_counter = 0;
 	}
 
 	if(m_telemetry_counter % 5 == 0)
@@ -111,6 +113,13 @@ void PropulsionTask::processMessage()
 			m_controller.executeRotation(params[0], params[1], params[2], params[3]);
 		}
 		break;
+	case CommMessageType::PropulsionExecuteTranslation:
+			{
+				float params[4];
+				m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
+				m_controller.executeTranslation(params[0], params[1], params[2], params[3]);
+			}
+			break;
 	case CommMessageType::DbgPropulsionExecutePointTo:
 		{
 			float params[5];
