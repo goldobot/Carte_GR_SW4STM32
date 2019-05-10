@@ -66,12 +66,13 @@ void PropulsionTask::doStep()
 
 	// Send periodic telemetry messages
 	m_telemetry_counter++;
-	if(m_telemetry_counter % 20)
+	if(m_telemetry_counter == 20)
 	{
 		auto msg = m_controller.getTelemetryEx();
 		Robot::instance().mainExchangeOut().pushMessage(
 				CommMessageType::PropulsionTelemetryEx,
 				(unsigned char*)&msg, sizeof(msg));
+		m_telemetry_counter = 0;
 	}
 
 	if(m_telemetry_counter == 40)
@@ -207,6 +208,13 @@ void PropulsionTask::processUrgentMessage()
 			uint8_t enabled;
 			m_urgent_message_queue.pop_message((unsigned char*)&enabled, 1);
 			Hal::set_motors_enable(enabled);
+		}
+		break;
+	case CommMessageType::DbgSetMotorsPwm:
+		{
+			float pwm[2];
+			m_urgent_message_queue.pop_message((unsigned char*)&pwm, 8);
+			Hal::set_motors_pwm(pwm[0], pwm[1]);
 		}
 		break;
 	default:

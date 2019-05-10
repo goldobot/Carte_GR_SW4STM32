@@ -194,8 +194,6 @@ config.low_level_config_rotate.speed_pid_config = {
 			1	    //max_output
 		};
 
-
-
 	config.lookahead_distance = 0.15f;
 	config.lookahead_time = 0;
 	config.static_pwm_limit = 0.3;

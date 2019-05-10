@@ -44,9 +44,24 @@ void ArmsTask::taskFunction()
 	Robot::instance().mainExchangeIn().subscribe({72,78,&m_message_queue});
 	Robot::instance().mainExchangeIn().subscribe({160,165,&m_message_queue});
 
+	m_arm_state = ArmState::Inactive;
+	unsigned char buff[2];
+	buff[0] = 0;
+	buff[1] = (unsigned char)m_arm_state;
+	Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ArmsStateChange, buff, 2);
+
 	while(1)
 	{
-		while(m_message_queue.message_ready())
+		uint32_t clock = xTaskGetTickCount();
+		if(m_arm_state == ArmState::Moving && clock >= m_end_move_timestamp )
+		{
+			m_arm_state = ArmState::Idle;
+			unsigned char buff[2];
+			buff[0] = 0;
+			buff[1] = (unsigned char)m_arm_state;
+			Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ArmsStateChange, buff, 2);
+		}
+		while(m_message_queue.message_ready() && m_arm_state != ArmState::Moving)
 		{
 			process_message();
 
@@ -160,6 +175,18 @@ void ArmsTask::go_to_position(uint8_t pos_id, uint16_t time_ms, int torque_setti
 		dynamixels_reg_write(servo_ids[i],0x1E,(unsigned char*)buff, 6);
 	}
 	dynamixels_action();
+
+	// Set time of end
+
+
+	m_arm_state = ArmState::Moving;
+	unsigned char buff[2];
+	buff[0] = 0;
+	buff[1] = (unsigned char)m_arm_state;
+	Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ArmsStateChange, buff, 2);
+
+	m_end_move_timestamp = xTaskGetTickCount() + (uint32_t)time_ms;
+
 }
 
 void ArmsTask::process_message()

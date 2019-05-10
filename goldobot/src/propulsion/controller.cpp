@@ -260,13 +260,13 @@ void PropulsionController::updateReposition()
 void PropulsionController::on_stopped_enter()
 {
 	m_state = State::Stopped;
+	m_low_level_controller.setConfig(m_config.low_level_config_static);
 	m_low_level_controller.m_longi_control_level = 2;
 	m_low_level_controller.m_yaw_control_level = 2;
 
 	m_target_pose.speed = 0;
 	m_target_pose.yaw_rate = 0;
 
-	//m_translation_pid.set_config(m_config.translation_pid_config);
 	m_pwm_limit = m_config.static_pwm_limit;
 }
 
@@ -342,6 +342,11 @@ void PropulsionController::initRotationCommand(float delta_yaw, float speed, flo
 	m_speed_profile.update(delta_yaw, speed, accel, deccel);
 	m_command_begin_time = m_time_base_ms;
 	m_command_end_time = m_time_base_ms + static_cast<uint32_t>(ceilf(1000 * m_speed_profile.end_time()));
+
+	// Configure low level controller
+	m_low_level_controller.setConfig(m_config.low_level_config_static);
+	m_low_level_controller.m_longi_control_level = 2;
+	m_low_level_controller.m_yaw_control_level = 2;
 }
 
 bool PropulsionController::resetPose(float x, float y, float yaw)
@@ -374,7 +379,7 @@ bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, f
 	initMoveCommand(speed, acceleration, decceleration);
 	m_state = State::FollowTrajectory;
 	//m_translation_pid.set_config(m_config.translation_cruise_pid_config);
-	m_low_level_controller.setConfig(m_config.low_level_config_cruise);
+	m_low_level_controller.setConfig(m_config.low_level_config_static);
 	m_low_level_controller.m_longi_control_level = 2;
 	m_low_level_controller.m_yaw_control_level = 1;
 

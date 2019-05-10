@@ -70,6 +70,7 @@ namespace goldobot
 		DbgArmsSetSequences=163,
 		DbgArmsExecuteSequence=164,
 		DbgArmsGoToPosition=165,
+		ArmsStateChange=166,
 
 		DbgRobotSetCommand=176,
 		DbgRobotSetPoint=177,
