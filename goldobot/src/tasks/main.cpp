@@ -285,7 +285,7 @@ bool MainTask::_current_command_finished(const Command& cmd)
 
 void MainTask::taskFunction()
 {
-	m_trajectory_planner.add_point(0.24, -1.28);// 1: green starting position
+#if 0 /* FIXME : TODO : remove (old 2018) */
 	m_trajectory_planner.add_point(0.24, -0.65);
 	m_trajectory_planner.add_point(0.3, -0.65);
 	m_trajectory_planner.add_point(0.338, -0.65);// cube pos
@@ -298,9 +298,16 @@ void MainTask::taskFunction()
 
 	m_trajectory_planner.add_edge(2,4);
 	m_trajectory_planner.compile();
+#endif
+
+	Robot::instance().propulsion().reset_pose(0.75, -1.22, M_PI/2);
+
+	m_trajectory_planner.add_point(0.75, -1.22);
+	m_trajectory_planner.add_point(0.75, -1.0);
+	m_trajectory_planner.add_edge(0,1);
+	m_trajectory_planner.compile();
 
 	auto& comm = Robot::instance().comm();
-
 
 	while(1)
 	{
@@ -312,7 +319,7 @@ void MainTask::taskFunction()
 		switch(m_match_state)
 		{
 		case State::Idle:
-			if((m_sequences_initialized) && (!Hal::get_gpio(1)))
+			if((m_sequences_initialized) && (Hal::get_gpio(1)))
 			{
 				if( Hal::get_gpio(4))
 				{
@@ -341,7 +348,7 @@ void MainTask::taskFunction()
 			}
 			break;
 		case State::WaitForStartOfMatch:
-			if((m_sequences_initialized) && (Hal::get_gpio(1)))
+			if((m_sequences_initialized) && (!Hal::get_gpio(1)))
 			{
 				{
 					auto& comm = Robot::instance().comm();
@@ -355,10 +362,12 @@ void MainTask::taskFunction()
 				{
 				case Side::Green:
 					execute_sequence(2);
+					//Robot::instance().fpgaTask().goldo_fpga_cmd_servo(10, 32000);
 					m_match_state = State::Match;
 					break;
 				case Side::Orange:
 					execute_sequence(3);
+					//Robot::instance().fpgaTask().goldo_fpga_cmd_servo(10, 45000);
 					m_match_state = State::Match;
 					break;
 				default:
@@ -371,6 +380,21 @@ void MainTask::taskFunction()
 
 		case State::Match:
 			{
+				if(remainingMatchTime() == 80)
+				{
+					switch(m_side)
+					{
+						case Side::Green:
+							Robot::instance().fpgaTask().goldo_fpga_cmd_servo(10, 45000);
+							break;
+						case Side::Orange:
+							Robot::instance().fpgaTask().goldo_fpga_cmd_servo(10, 32000);
+							break;
+						default:
+							break;
+					}
+				}
+
 				if(remainingMatchTime() == 0)
 				{
 					Hal::set_gpio(0, false);
@@ -713,6 +737,7 @@ void MainTask::process_message(CommMessageType message_type, uint16_t message_si
 		m_wait_current_cmd = false;
 		Hal::set_motors_enable(false);
 		Robot::instance().propulsion().disable();
+		Robot::instance().propulsion().reset_pose(0.75, -1.22, M_PI/2);
 		break;
 	case CommMessageType::DbgRobotExitManualMode:
 		pop_message(nullptr, 0);

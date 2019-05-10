@@ -67,7 +67,7 @@ OdometryConfig Robot::defaultOdometryConfig()
 /* FIXME : DEBUG */
 /* 0=PR 2019 */
 /* 1=GR 2018 */
-#if 1
+#if 0 /* PR */
 	config.dist_per_count_left = 1.513409e-05;
 	config.dist_per_count_right = 1.510209e-05;
 	config.wheel_spacing = 2.852931e-01;

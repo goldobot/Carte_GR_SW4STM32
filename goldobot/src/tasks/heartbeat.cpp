@@ -106,7 +106,7 @@ void HeartbeatTask::taskFunction()
 			comm.send_message(CommMessageType::DbgGPIO,(char*)&gpio_mask,sizeof(gpio_mask));
 		}
 
-#if 0 /* FIXME : DEBUG */
+#if 1 /* FIXME : DEBUG */
         g_goldo_megakill_switch = (Hal::get_gpio(2)!=0);
         if (g_goldo_megakill_switch) {
             Hal::disable_motors_pwm();
