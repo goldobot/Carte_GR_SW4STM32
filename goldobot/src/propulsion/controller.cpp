@@ -5,33 +5,26 @@ using namespace goldobot;
 #include <algorithm>
 
 
-
-
-
-
-
 PropulsionController::PropulsionController(SimpleOdometry* odometry):
 		m_odometry(odometry)
 {
 }
 
-void PropulsionController::enable()
+void PropulsionController::setEnable(bool enable)
 {
-	if(m_state != State::Inactive)
+	if(enable && m_state == State::Inactive)
 	{
-		return;
+		m_current_pose = m_odometry->pose();
+		m_target_pose = m_current_pose;
+		on_stopped_enter();
 	}
-	m_current_pose = m_odometry->pose();
-	m_target_pose = m_current_pose;
-	on_stopped_enter();
-}
-
-void PropulsionController::disable()
-{
-	m_error = Error::None;
-	m_state = State::Inactive;
-	m_left_motor_pwm = 0;
-	m_right_motor_pwm = 0;
+	if(!enable && m_state != State::Inactive)
+	{
+		m_error = Error::None;
+		m_state = State::Inactive;
+		m_left_motor_pwm = 0;
+		m_right_motor_pwm = 0;
+	}
 }
 
 PropulsionController::State PropulsionController::state() const
@@ -59,6 +52,7 @@ void PropulsionController::clearError()
 	m_state = State::Stopped;
 	m_error = Error::None;
 	m_target_pose = m_current_pose;
+	on_stopped_enter();
 }
 
 void PropulsionController::emergencyStop()
@@ -88,7 +82,7 @@ void PropulsionController::update()
 			updateTargetPositions();
 			if(m_time_base_ms >= m_command_end_time)
 			{
-				on_trajectory_exit();
+				m_target_pose = m_final_pose;
 				on_stopped_enter();
 			}
 		}
@@ -98,7 +92,7 @@ void PropulsionController::update()
 			updateTargetYaw();
 			if (m_time_base_ms >= m_command_end_time)
 			{
-				on_rotation_exit();
+				m_target_pose = m_final_pose;
 				on_stopped_enter();
 			}
 		}
@@ -130,16 +124,7 @@ void PropulsionController::update()
 		m_left_motor_pwm = 0;
 		m_right_motor_pwm = 0;
 		break;
-	case State::LowLevelTest:
-		{
-			m_pwm_limit = 1;
-			update_test();
-
-			if (m_time_base_ms >= m_command_end_time)
-			{
-				on_test_exit();
-			}
-		}
+	default:
 		break;
 	}
 
@@ -167,11 +152,6 @@ RobotPose PropulsionController::targetPose() const
 	return m_target_pose;
 }
 
-
-void PropulsionController::update_test()
-{
-}
-
 void PropulsionController::updateTargetPositions()
 {
 	// Compute current distance on trajectory target
@@ -187,8 +167,6 @@ void PropulsionController::updateTargetPositions()
 	// Compute target position
 	auto target_point = m_trajectory_buffer.compute_point(parameter);
 	m_target_pose.position = target_point.position;
-
-
 
 	// Compute position of lookahead point
 	// Extend the trajectory past last point if necessary
@@ -270,58 +248,22 @@ void PropulsionController::on_stopped_enter()
 	m_pwm_limit = m_config.static_pwm_limit;
 }
 
-void PropulsionController::on_trajectory_exit()
-{
-	float parameter = m_trajectory_buffer.max_parameter();
-	auto target_point = m_trajectory_buffer.compute_point(parameter);
-	m_target_pose.position = target_point.position;
-	m_target_pose.yaw = atan2f(target_point.tangent.y, target_point.tangent.x);
-
-	if(m_direction == Direction::Backward)
-	{
-		m_target_pose.yaw = clampAngle(m_target_pose.yaw + M_PI);
-	}
-}
-
-void PropulsionController::on_rotation_exit()
-{
-	// \todo cleanup
-	float t = (m_command_end_time - m_command_begin_time) * 1e-3f;
-	float parameter, accel;
-	m_speed_profile.compute(t, &parameter, &m_target_pose.yaw_rate, &accel);
-	m_target_pose.yaw = clampAngle(m_begin_yaw + parameter);
-}
-
 void PropulsionController::on_reposition_exit()
 {
 	if(m_reposition_hit)
 	{
-		repositionReconfigureOdometry();
+		auto pose = m_odometry->pose();
+		m_target_pose.position = pose.position;
+		m_target_pose.yaw = pose.yaw;
+		m_target_pose.speed = 0;
+		m_target_pose.yaw_rate = 0;
 		m_low_level_controller.reset();
 	}
 }
 
-void PropulsionController::on_test_exit()
-{
-	m_low_level_controller.reset();
-
-	m_target_pose.position = m_current_pose.position;
-	m_target_pose.yaw = m_current_pose.yaw;
-}
-
-void PropulsionController::repositionReconfigureOdometry()
-{
-	m_odometry->measureLineNormal(m_reposition_border_normal, m_reposition_border_distance);
-	auto pose = m_odometry->pose();
-	m_target_pose.position = pose.position;
-	m_target_pose.yaw = pose.yaw;
-	m_target_pose.speed = 0;
-	m_target_pose.yaw_rate = 0;
-}
-
 void PropulsionController::initMoveCommand(float speed, float accel, float deccel)
 {
-	// Compute speed progile
+	// Compute speed profile
 	m_speed_profile.update(m_trajectory_buffer.max_parameter(), speed, accel, deccel);
 
 	// Compute direction by taking scalar product of current robot orientation vector with tangent of trajectory at origin
@@ -330,28 +272,27 @@ void PropulsionController::initMoveCommand(float speed, float accel, float decce
 	float uy = sinf(m_target_pose.yaw);
 	m_direction = ux * target_point.tangent.x + uy * target_point.tangent.y > 0 ? Direction::Forward : Direction::Backward;
 
+	// Compute final pose
+	{
+		float parameter = m_trajectory_buffer.max_parameter();
+		auto target_point = m_trajectory_buffer.compute_point(parameter);
+		m_final_pose.position = target_point.position;
+		m_final_pose.yaw = atan2f(target_point.tangent.y, target_point.tangent.x);
+		if(m_direction == Direction::Backward)
+		{
+			m_final_pose.yaw = clampAngle(m_final_pose.yaw + M_PI);
+		}
+		m_final_pose.speed = 0;
+		m_final_pose.yaw_rate = 0;
+	}
+
 	// Set command end time
 	m_command_begin_time = m_time_base_ms;
 	m_command_end_time = m_time_base_ms + static_cast<uint32_t>(ceilf(1000 * m_speed_profile.end_time()));
 }
 
-void PropulsionController::initRotationCommand(float delta_yaw, float speed, float accel, float deccel)
-{
-	// Compute yaw ramp to go to target_angle from current target angle
-	m_begin_yaw = m_target_pose.yaw;
-	m_speed_profile.update(delta_yaw, speed, accel, deccel);
-	m_command_begin_time = m_time_base_ms;
-	m_command_end_time = m_time_base_ms + static_cast<uint32_t>(ceilf(1000 * m_speed_profile.end_time()));
-
-	// Configure low level controller
-	m_low_level_controller.setConfig(m_config.low_level_config_static);
-	m_low_level_controller.m_longi_control_level = 2;
-	m_low_level_controller.m_yaw_control_level = 2;
-}
-
 bool PropulsionController::resetPose(float x, float y, float yaw)
 {
-
 	if(m_state == State::Inactive || m_state == State::Stopped)
 	{
 		RobotPose pose;
@@ -369,6 +310,7 @@ bool PropulsionController::resetPose(float x, float y, float yaw)
 		return false;
 	}
 }
+
 bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, float speed, float acceleration, float decceleration)
 {
 	if(m_state != State::Stopped)
@@ -382,23 +324,15 @@ bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, f
 	m_low_level_controller.setConfig(m_config.low_level_config_static);
 	m_low_level_controller.m_longi_control_level = 2;
 	m_low_level_controller.m_yaw_control_level = 1;
-
 	return true;
 };
 
 bool PropulsionController::executePointTo(Vector2D point, float speed, float acceleration, float decceleration)
 {
-	if(m_state != State::Stopped)
-	{
-		return false;
-	}
 	float diff_x = (point.x - m_current_pose.position.x);
 	float diff_y = (point.y - m_current_pose.position.y);
 	float target_yaw = atan2f(diff_y, diff_x);
-	initRotationCommand(angleDiff(target_yaw, m_target_pose.yaw), speed, acceleration, decceleration);
-
-	m_state = State::Rotate;
-	return true;
+	return executeRotation(angleDiff(target_yaw, m_target_pose.yaw), speed, acceleration, decceleration);
 };
 
 bool PropulsionController::executeMoveTo(Vector2D point, float speed, float acceleration, float decceleration)
@@ -406,8 +340,7 @@ bool PropulsionController::executeMoveTo(Vector2D point, float speed, float acce
 	Vector2D traj[2];
 	traj[0] = m_target_pose.position;
 	traj[1] = point;
-	executeTrajectory(traj,2,speed, acceleration, decceleration);
-	return true;
+	return executeTrajectory(traj,2,speed, acceleration, decceleration);
 };
 
 bool PropulsionController::executeRotation(float delta_yaw, float yaw_rate, float accel, float deccel)
@@ -416,36 +349,41 @@ bool PropulsionController::executeRotation(float delta_yaw, float yaw_rate, floa
 	{
 		return false;
 	}
-	initRotationCommand(delta_yaw, yaw_rate, accel, deccel);
+	// Compute yaw ramp to go to target_angle from current target angle
+	m_begin_yaw = m_target_pose.yaw;
+	m_speed_profile.update(delta_yaw, yaw_rate, accel, deccel);
+	m_command_begin_time = m_time_base_ms;
+	m_command_end_time = m_time_base_ms + static_cast<uint32_t>(ceilf(1000 * m_speed_profile.end_time()));
+
+	// Compute final pose
+	m_final_pose.position = m_target_pose.position;
+	m_final_pose.speed = 0;
+	m_final_pose.yaw = clampAngle(m_begin_yaw + delta_yaw);
+	m_final_pose.yaw_rate = 0;
+
+	// Configure low level controller
+	m_low_level_controller.setConfig(m_config.low_level_config_static);
+	m_low_level_controller.m_longi_control_level = 2;
+	m_low_level_controller.m_yaw_control_level = 2;
 
 	m_state = State::Rotate;
 	return true;
 }
 
-bool PropulsionController::executeRepositioning(Direction direction, float speed, Vector2D normal, float distance_to_center)
+bool PropulsionController::executeRepositioning(float speed)
 {
 	if(m_state != State::Stopped)
 	{
 		return false;
 	}
-	m_target_pose.speed = direction == Direction::Forward ? speed : -speed;
-	m_direction = direction;
-	m_reposition_border_normal = normal;
-	m_reposition_border_distance = distance_to_center;
-	m_reposition_hit = false;
+	m_target_pose.speed = speed;
+	m_direction = speed >=0 ? Direction::Forward : Direction::Backward;
 
-	if(direction == Direction::Backward)
-	{
-		m_reposition_border_normal.x *= -1;
-		m_reposition_border_normal.y *= -1;
-		m_reposition_border_distance *= -1;
-	}
+	m_reposition_hit = false;
 
 	m_command_begin_time = m_time_base_ms;
 	m_command_end_time = m_command_begin_time + 1500;
-
 	m_state = State::Reposition;
-
 	return true;
 }
 
@@ -456,9 +394,8 @@ bool PropulsionController::executeTranslation(float distance, float speed, float
 	float uy = sin(m_target_pose.yaw);
 	target.x = m_target_pose.position.x + ux * distance;
 	target.y = m_target_pose.position.y + uy * distance;
-	executeMoveTo(target, speed, accel, deccel);
+	return executeMoveTo(target, speed, accel, deccel);
 }
-
 
 messages::PropulsionTelemetry PropulsionController::getTelemetry() const
 {
@@ -493,4 +430,3 @@ messages::PropulsionTelemetryEx PropulsionController::getTelemetryEx() const
 	msg.right_acc = m_odometry->m_right_accumulator;
 	return msg;
 }
-

@@ -194,13 +194,7 @@ void PropulsionTask::processUrgentMessage()
 		{
 			uint8_t enabled;
 			m_urgent_message_queue.pop_message((unsigned char*)&enabled, 1);
-			if(enabled)
-			{
-				m_controller.enable();
-			} else
-			{
-				m_controller.disable();
-			}
+			m_controller.setEnable(enabled);
 		}
 		break;
 	case CommMessageType::DbgSetMotorsEnable:
