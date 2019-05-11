@@ -73,9 +73,6 @@ void MainTask::taskFunction()
 			if(Hal::get_gpio(1))
 			{
 				Robot::instance().setMatchState(MatchState::PreMatch);
-				MsgMatchStateChange msg{Robot::instance().matchState(), Robot::instance().side()};
-				Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&msg, sizeof(msg));
-				Robot::instance().mainExchangeOut().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&msg, sizeof(msg));
 
 				if(Robot::instance().side() == Side::Yellow)
 				{
@@ -92,9 +89,6 @@ void MainTask::taskFunction()
 				if(m_sequence_engine.state() == SequenceState::Idle)
 				{
 					Robot::instance().setMatchState(MatchState::WaitForStartOfMatch);
-					MsgMatchStateChange msg{Robot::instance().matchState(), Robot::instance().side()};
-					Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&msg, sizeof(msg));
-					Robot::instance().mainExchangeOut().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&msg, sizeof(msg));
 				}
 			}
 			break;
@@ -103,9 +97,6 @@ void MainTask::taskFunction()
 			{
 				Robot::instance().setStartMatchTime(xTaskGetTickCount());
 				Robot::instance().setMatchState(MatchState::Match);
-				MsgMatchStateChange msg{Robot::instance().matchState(), Robot::instance().side()};
-				Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&msg, sizeof(msg));
-				Robot::instance().mainExchangeOut().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&msg, sizeof(msg));
 
 				if(Robot::instance().side() == Side::Yellow)
 				{
@@ -124,9 +115,6 @@ void MainTask::taskFunction()
 				{
 					Hal::set_gpio(0, false);
 					Robot::instance().setMatchState(MatchState::PostMatch);
-					MsgMatchStateChange msg{Robot::instance().matchState(), Robot::instance().side()};
-					Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&msg, sizeof(msg));
-					Robot::instance().mainExchangeOut().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&msg, sizeof(msg));
 					Hal::set_motors_enable(false);
 				}
 			}

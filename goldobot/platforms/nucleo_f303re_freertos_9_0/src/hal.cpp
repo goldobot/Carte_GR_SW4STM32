@@ -69,6 +69,7 @@ extern "C"
 
 UART_HandleTypeDef* g_uart_handles[] ={
 		&huart2,
+		&huart1,
 		&huart1
 };
 
@@ -272,7 +273,7 @@ bool Hal::get_gpio(int gpio_index)
 
 bool Hal::user_flash_erase(int start_page, int num_pages)
 {
-
+	return true;
 }
 
 
