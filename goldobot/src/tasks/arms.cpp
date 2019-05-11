@@ -44,7 +44,9 @@ void ArmsTask::taskFunction()
 	Robot::instance().mainExchangeIn().subscribe({72,78,&m_message_queue});
 	Robot::instance().mainExchangeIn().subscribe({160,165,&m_message_queue});
 
-	m_arm_state = ArmState::Inactive;
+	// \todo hack,for now we are using a harcoded configuration
+	m_arm_state = ArmState::Idle;
+
 	unsigned char buff[2];
 	buff[0] = 0;
 	buff[1] = (unsigned char)m_arm_state;
@@ -116,7 +118,6 @@ void ArmsTask::dynamixels_action()
 
 void ArmsTask::go_to_position(uint8_t pos_id, uint16_t time_ms, int torque_settings)
 {
-	time_ms = 1000;
 	int pos_idx = pos_id * 3;
 
 	// Launch dynamixels

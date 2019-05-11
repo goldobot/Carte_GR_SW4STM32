@@ -1,6 +1,7 @@
 #pragma once
 #include "goldobot/tasks/task.hpp"
 #include "goldobot/core/message_queue.hpp"
+#include "goldobot/config.hpp"
 
 #include <cstdint>
 
@@ -12,13 +13,7 @@ struct DynamixelsConfig
 	uint16_t m_torque_settings[3*8];
 };
 
-enum class ArmState : uint8_t
-{
-	Inactive=0,
-	Idle=1,
-	Moving=2,
-	Blocked=3
-};
+
 
 class ArmsTask : public Task
 {
@@ -63,7 +58,7 @@ public:
 	uint16_t m_dynamixels_loads[3];
 
 	uint32_t m_end_move_timestamp;
-	ArmState m_arm_state;
+	ArmState m_arm_state{ArmState::Unconfigured};
 
 	void process_message();
 };

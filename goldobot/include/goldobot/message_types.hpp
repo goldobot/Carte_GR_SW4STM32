@@ -30,6 +30,7 @@ namespace goldobot
 		MainSequenceEndLoad=41,
 		MainSequenceLoadData=42,
 		MainSequenceStartSequence=43,
+		SetMatchState=44,
 		// Debug mode messages
 		// Robot configuration
 		DbgGetOdometryConfig=64,

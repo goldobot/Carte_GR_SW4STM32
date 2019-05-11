@@ -53,6 +53,8 @@ void MainTask::taskFunction()
 
 	while(1)
 	{
+		MsgMatchStateChange prev_state{Robot::instance().matchState(), Robot::instance().side()};
+
 		while(m_message_queue.message_ready())
 		{
 			process_message();
@@ -61,21 +63,15 @@ void MainTask::taskFunction()
 		switch(match_state)
 		{
 		case MatchState::Idle:
+			if( Hal::get_gpio(4))
+			{
+				Robot::instance().setSide(Side::Purple);
+			} else
+			{
+				Robot::instance().setSide(Side::Yellow);
+			}
 			if(Hal::get_gpio(1))
 			{
-				if( Hal::get_gpio(4))
-				{
-					Robot::instance().setSide(Side::Purple);
-				} else
-				{
-					Robot::instance().setSide(Side::Yellow);
-				}
-				Hal::set_motors_enable(true);
-
-				// send message to enable propulsion
-				uint8_t b = true;
-				Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DbgSetPropulsionEnable, (unsigned char*)&b, 1);
-
 				Robot::instance().setMatchState(MatchState::PreMatch);
 				MsgMatchStateChange msg{Robot::instance().matchState(), Robot::instance().side()};
 				Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&msg, sizeof(msg));
@@ -89,8 +85,6 @@ void MainTask::taskFunction()
 				{
 					m_sequence_engine.startSequence(1);
 				}
-
-
 			}
 			break;
 		case MatchState::PreMatch:
@@ -137,10 +131,23 @@ void MainTask::taskFunction()
 				}
 			}
 			break;
+		case MatchState::Unconfigured:
+			break;
+		case MatchState::Debug:
+			break;
 		default:
 			break;
 		}
 		m_sequence_engine.doStep();
+
+		MsgMatchStateChange post_state{Robot::instance().matchState(), Robot::instance().side()};
+		if(post_state.match_state != prev_state.match_state &&
+		   post_state.side == prev_state.side)
+		{
+			Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&post_state, sizeof(post_state));
+			Robot::instance().mainExchangeOut().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&post_state, sizeof(post_state));
+		}
+
 		vTaskDelay(1);
 	}
 }
@@ -150,6 +157,13 @@ void MainTask::process_message()
 	int msg_size = m_message_queue.message_size();
 	switch(m_message_queue.message_type())
 	{
+	case CommMessageType::SetMatchState:
+	{
+		MatchState state;
+		m_message_queue.pop_message((unsigned char*)&state, sizeof(MatchState));
+		Robot::instance().setMatchState(state);
+	}
+	break;
 	case CommMessageType::MainSequenceBeginLoad:
 		m_sequence_engine.beginLoad();
 		m_message_queue.pop_message(nullptr, 0);
