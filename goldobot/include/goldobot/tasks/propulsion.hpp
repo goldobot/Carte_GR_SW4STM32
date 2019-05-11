@@ -22,7 +22,7 @@ namespace goldobot
 		unsigned char m_message_queue_buffer[512];
 
 		MessageQueue m_urgent_message_queue;
-		unsigned char m_urgent_message_queue_buffer[64];
+		unsigned char m_urgent_message_queue_buffer[768];
 
 
 

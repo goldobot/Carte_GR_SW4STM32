@@ -45,6 +45,7 @@ void MainTask::taskFunction()
 {
 	Robot::instance().mainExchangeIn().subscribe({40,50,&m_message_queue});
 	Robot::instance().mainExchangeIn().subscribe({90,90,&m_message_queue});
+	Robot::instance().mainExchangeIn().subscribe({166,166,&m_message_queue});
 
 	MsgMatchStateChange msg{Robot::instance().matchState(), Robot::instance().side()};
 	Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&msg, sizeof(msg));
@@ -64,10 +65,10 @@ void MainTask::taskFunction()
 			{
 				if( Hal::get_gpio(4))
 				{
-					Robot::instance().setSide(Side::Green);
+					Robot::instance().setSide(Side::Purple);
 				} else
 				{
-					Robot::instance().setSide(Side::Orange);
+					Robot::instance().setSide(Side::Yellow);
 				}
 				Hal::set_motors_enable(true);
 
@@ -79,7 +80,16 @@ void MainTask::taskFunction()
 				MsgMatchStateChange msg{Robot::instance().matchState(), Robot::instance().side()};
 				Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&msg, sizeof(msg));
 				Robot::instance().mainExchangeOut().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&msg, sizeof(msg));
-				m_sequence_engine.startSequence(0);
+
+				if(Robot::instance().side() == Side::Yellow)
+				{
+					m_sequence_engine.startSequence(0);
+				}
+				if(Robot::instance().side() == Side::Purple)
+				{
+					m_sequence_engine.startSequence(1);
+				}
+
 
 			}
 			break;
@@ -102,7 +112,15 @@ void MainTask::taskFunction()
 				MsgMatchStateChange msg{Robot::instance().matchState(), Robot::instance().side()};
 				Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&msg, sizeof(msg));
 				Robot::instance().mainExchangeOut().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&msg, sizeof(msg));
-				m_sequence_engine.startSequence(1);
+
+				if(Robot::instance().side() == Side::Yellow)
+				{
+					m_sequence_engine.startSequence(2);
+				}
+				if(Robot::instance().side() == Side::Purple)
+				{
+					m_sequence_engine.startSequence(3);
+				}
 			}
 			break;
 
@@ -152,13 +170,25 @@ void MainTask::process_message()
 			m_sequence_engine.startSequence(seq_id);
 			break;
 	case CommMessageType::PropulsionStateChanged:
+		{
 		uint8_t buff[2];
 		m_message_queue.pop_message((unsigned char*) (&buff),2);
 		if(buff[0] == 1)
 		{
 			m_sequence_engine.finishedMovement();
 		}
-		break;;
+		}
+		break;
+	case CommMessageType::ArmsStateChange:
+		{
+		uint8_t buff[2];
+		m_message_queue.pop_message((unsigned char*) (&buff),2);
+		if(buff[1] == 1)
+		{
+			m_sequence_engine.finishedArmMovement();
+		}
+		}
+		break;
 
 	default:
 		m_message_queue.pop_message(nullptr, 0);

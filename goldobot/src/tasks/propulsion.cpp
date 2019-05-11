@@ -252,7 +252,7 @@ void PropulsionTask::taskFunction()
 {
 	// Register for messages
 	Robot::instance().mainExchangeIn().subscribe({83,95, &m_message_queue});
-	Robot::instance().mainExchangeIn().subscribe({64,67, &m_urgent_message_queue});
+	Robot::instance().mainExchangeIn().subscribe({64,68, &m_urgent_message_queue});
 	Robot::instance().mainExchangeIn().subscribe({80,82, &m_urgent_message_queue});
 
 	// Set task to high

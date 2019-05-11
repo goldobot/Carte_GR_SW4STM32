@@ -4,8 +4,8 @@ namespace goldobot {
 enum class Side : uint8_t
 {
 	Unknown=0,
-	Green=1,
-	Orange=2
+	Yellow=1,
+	Purple=2
 };
 
 enum class MatchState : uint8_t

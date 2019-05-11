@@ -29,7 +29,7 @@ namespace goldobot
 
 		char m_send_buffer[128];
 		char m_recv_buffer[128];
-		unsigned char m_tmp_buffer[512];
+		unsigned char m_tmp_buffer[768];
 
 		unsigned char m_serialize_buffer[1024];
 		unsigned char m_deserialize_buffer[1024];

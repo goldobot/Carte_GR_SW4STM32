@@ -68,6 +68,13 @@ bool SequenceEngine::execOp(const Op& op)
 			return true;
 		}
 		return false;
+	case 125:
+		if(m_arm_moving == false)
+			{
+				m_pc++;
+				return true;
+			}
+		return false;
 	case 126:
 		if(m_moving == false)
 			{
@@ -185,6 +192,7 @@ bool SequenceEngine::execOp(const Op& op)
 					CommMessageType::DbgArmsGoToPosition,
 					buff,
 					4);
+			m_arm_moving = true;
 		}
 		m_pc++;
 		return true;

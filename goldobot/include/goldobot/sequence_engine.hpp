@@ -36,6 +36,7 @@ public:
 	SequenceState state() const {return m_state;};
 
 	void finishedMovement() {m_moving = false;};
+	void finishedArmMovement() {m_arm_moving = false;};
 
 private:
 	SequenceState m_state{SequenceState::WaitForInit};
@@ -53,6 +54,7 @@ private:
 	int m_stack_level{0};
 
 	bool m_moving{false};
+	bool m_arm_moving{false};
 	uint32_t m_end_delay{0};
 
 	bool execOp(const Op& op);
