@@ -53,19 +53,23 @@ void ArmsTask::taskFunction()
 	while(1)
 	{
 		uint32_t clock = xTaskGetTickCount();
+		auto prev_state = m_arm_state;
 		if(m_arm_state == ArmState::Moving && clock >= m_end_move_timestamp )
 		{
 			m_arm_state = ArmState::Idle;
-			unsigned char buff[2];
-			buff[0] = 0;
-			buff[1] = (unsigned char)m_arm_state;
-			Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ArmsStateChange, buff, 2);
 		}
 		while(m_message_queue.message_ready() && m_arm_state != ArmState::Moving)
 		{
 			process_message();
-
 			// Periodically check servo positions and torques
+		}
+
+		if(m_arm_state != prev_state)
+		{
+			unsigned char buff[2];
+			buff[0] = 0;// arm id, 0 for now since we have only one arm
+			buff[1] = (unsigned char)m_arm_state;
+			Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ArmsStateChange, buff, 2);
 		}
 		delay_periodic(1);
 	}
@@ -180,13 +184,7 @@ void ArmsTask::go_to_position(uint8_t pos_id, uint16_t time_ms, int torque_setti
 
 
 	m_arm_state = ArmState::Moving;
-	unsigned char buff[2];
-	buff[0] = 0;
-	buff[1] = (unsigned char)m_arm_state;
-	Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ArmsStateChange, buff, 2);
-
 	m_end_move_timestamp = xTaskGetTickCount() + (uint32_t)time_ms;
-
 }
 
 void ArmsTask::process_message()
