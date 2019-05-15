@@ -58,4 +58,5 @@
 "goldobot/src/tasks/propulsion.o"
 "goldobot/src/tasks/task.o"
 "goldobot/src/tasks/uart_comm.o"
+"goldobot/src/tasks/uart2_comm.o"
 "startup/startup_stm32f303xe.o"
