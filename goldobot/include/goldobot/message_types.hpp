@@ -60,6 +60,8 @@ namespace goldobot
 		DbgPropulsionExecuteMoveTo=89,
 		PropulsionStateChanged=90,
 		PropulsionExecuteTranslation=91,
+		PropulsionEnterManualControl=92,
+		PropulsionExitManualControl=93,
 
 
 		DbgMiscRepositionStartGreen=100,

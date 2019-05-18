@@ -45,6 +45,8 @@ const PropulsionControllerConfig& PropulsionController::config() const
 void PropulsionController::setConfig(const PropulsionControllerConfig& config)
 {
 	m_config = config;
+	m_low_level_controller.setConfig(m_config.low_level_config_static);
+	m_low_level_controller.reset();
 }
 
 void PropulsionController::clearError()
@@ -71,7 +73,6 @@ void PropulsionController::update()
 	case State::Inactive:
 		break;
 	case State::Stopped:
-		updateMotorsPwm();
 		if(fabsf(m_low_level_controller.m_longi_error) > 0.1f)
 		{
 			m_state = State::Error;
@@ -109,6 +110,8 @@ void PropulsionController::update()
 			}
 		}
 		break;
+	case State::ManualControl:
+		break;
 	case State::EmergencyStop:
 		{
 			m_left_motor_pwm = 0;
@@ -128,7 +131,7 @@ void PropulsionController::update()
 		break;
 	}
 
-	if(m_state != State::Inactive && m_state != State::Error)
+	if(m_state != State::Inactive && m_state != State::Error&& m_state != State::EmergencyStop)
 	{
 		updateMotorsPwm();
 	}
@@ -320,7 +323,6 @@ bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, f
 	m_trajectory_buffer.push_segment(points, num_points);
 	initMoveCommand(speed, acceleration, decceleration);
 	m_state = State::FollowTrajectory;
-	//m_translation_pid.set_config(m_config.translation_cruise_pid_config);
 	m_low_level_controller.setConfig(m_config.low_level_config_static);
 	m_low_level_controller.m_longi_control_level = 2;
 	m_low_level_controller.m_yaw_control_level = 1;
@@ -395,6 +397,18 @@ bool PropulsionController::executeTranslation(float distance, float speed, float
 	target.x = m_target_pose.position.x + ux * distance;
 	target.y = m_target_pose.position.y + uy * distance;
 	return executeMoveTo(target, speed, accel, deccel);
+}
+
+void PropulsionController::enterManualControl()
+{
+	m_state = State::ManualControl;
+}
+
+void PropulsionController::exitManualControl()
+{
+	m_current_pose = m_odometry->pose();
+	m_target_pose = m_current_pose;
+	on_stopped_enter();
 }
 
 messages::PropulsionTelemetry PropulsionController::getTelemetry() const

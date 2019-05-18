@@ -142,6 +142,14 @@ void PropulsionTask::processMessage()
 			m_controller.resetPose(pose[0], pose[1], pose[2]);
 		}
 		break;
+	case CommMessageType::PropulsionEnterManualControl:
+		m_controller.enterManualControl();
+		break;
+
+	case CommMessageType::PropulsionExitManualControl:
+		m_controller.exitManualControl();
+		break;
+
 	default:
 		m_message_queue.pop_message(nullptr, 0);
 		break;
@@ -245,7 +253,7 @@ PropulsionController& PropulsionTask::controller()
 void PropulsionTask::taskFunction()
 {
 	// Register for messages
-	Robot::instance().mainExchangeIn().subscribe({83,95, &m_message_queue});
+	Robot::instance().mainExchangeIn().subscribe({83,99, &m_message_queue});
 	Robot::instance().mainExchangeIn().subscribe({64,68, &m_urgent_message_queue});
 	Robot::instance().mainExchangeIn().subscribe({80,82, &m_urgent_message_queue});
 

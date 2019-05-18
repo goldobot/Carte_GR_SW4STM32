@@ -89,6 +89,12 @@ namespace goldobot
 		//! \brief Emergency stop. Abort current PointTo of FollowTrajectory command and bring the robot to a stop.
 		void emergencyStop();
 
+		void enterManualControl();
+		void exitManualControl();
+
+		void setTargetPose(RobotPose& target_pose);
+		void setControlLevels(uint8_t longi, uint8_t yaw);
+
 		const PropulsionControllerConfig& config() const;
 		void setConfig(const PropulsionControllerConfig& config);
 
