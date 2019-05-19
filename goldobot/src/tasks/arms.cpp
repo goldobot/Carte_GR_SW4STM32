@@ -77,6 +77,12 @@ void ArmsTask::taskFunction()
 	}
 }
 
+void ArmsTask::shutdown()
+{
+	unsigned char buff = 0;
+	dynamixels_write_data(254, 0x18, &buff, 0);
+}
+
 bool ArmsTask::dynamixels_read_data(uint8_t id, uint8_t address, unsigned char* buffer, uint8_t size)
 {
 	unsigned char tmp_buff[2];
@@ -118,31 +124,33 @@ void ArmsTask::dynamixels_action()
 
 void ArmsTask::go_to_position(uint8_t pos_id, uint16_t time_ms, int torque_settings)
 {
-	int pos_idx = pos_id * 3;
+	int pos_idx = pos_id * m_config.num_servos;
 
 	// Launch dynamixels
-	uint8_t servo_ids[] = {81,82,1};
-	uint8_t servo_types[3] = {1,1,0};
+	//uint8_t servo_ids[] = {81,82,1};
+	//uint8_t servo_types[3] = {1,1,0};
 
 	//get previous positions and compute move timing based on limiting speed
-	uint16_t prev_posa[3];
+	uint16_t prev_posa[8];
 
 	uint16_t tim = 1;
 
-	for(int i=0; i< 3;i++)
+	for(int i=0; i< m_config.num_servos;i++)
 	{
 		uint16_t prev_pos = m_current_position[i];
-		uint16_t tar_pos = m_config.m_positions[pos_idx+i];
-		dynamixels_read_data(servo_ids[i],0x24,(unsigned char*)&prev_pos, 2);
+		uint16_t tar_pos = m_config.positions_ptr[pos_idx+i];
+		const auto& servo = m_config.servos[i];
+
+		dynamixels_read_data(servo.id,0x24,(unsigned char*)&prev_pos, 2);
 		prev_posa[i] = prev_pos;
 		int diff_angle = abs(tar_pos - prev_pos);
-		switch(servo_types[i])
+		switch(servo.type)
 		{
-		case 0:
+		case ServoType::DynamixelAX12:
 			//ax 12
 			tim = std::max<uint16_t>((diff_angle*25000)/(57 * 0x3ff), tim);
 			break;
-		case 1:
+		case ServoType::DynamixelMX28:
 			//mx28
 			tim = std::max<uint16_t>((diff_angle*128)/0x3ff, tim);
 			break;
@@ -152,24 +160,24 @@ void ArmsTask::go_to_position(uint8_t pos_id, uint16_t time_ms, int torque_setti
 	}
 
 	time_ms = tim*2;
-	for(int i=0; i< 3;i++)
+	for(int i=0; i< m_config.num_servos;i++)
 	{
 		uint16_t buff[3];
 		uint16_t prev_pos = m_current_position[i];
-		buff[0] = m_config.m_positions[pos_idx+i]; // position setpoint
+		buff[0] = m_config.positions_ptr[pos_idx+i]; // position setpoint
 		buff[2] = 1023;//m_config.m_torque_settings[3*torque_settings+i]; // torque limit
 
 		prev_pos = prev_posa[i];
 
 		int diff_angle = abs(buff[0] - prev_pos);
 
-		switch(servo_types[i])
+		switch(m_config.servos[i].type)
 		{
-		case 0:
+		case ServoType::DynamixelAX12:
 			//ax 12
 			buff[1] = std::min<uint16_t>((diff_angle*25000)/(time_ms*57), 0x3ff);
 			break;
-		case 1:
+		case ServoType::DynamixelMX28:
 			//mx28
 			buff[1] = std::min<uint16_t>((diff_angle*128)/(time_ms), 0x3ff);
 			break;
@@ -177,13 +185,11 @@ void ArmsTask::go_to_position(uint8_t pos_id, uint16_t time_ms, int torque_setti
 			break;
 		}
 		// write new register values
-		dynamixels_reg_write(servo_ids[i],0x1E,(unsigned char*)buff, 6);
+		dynamixels_reg_write(m_config.servos[i].id,0x1E,(unsigned char*)buff, 6);
 	}
 	dynamixels_action();
 
 	// Set time of end
-
-
 	m_arm_state = ArmState::Moving;
 	m_end_move_timestamp = xTaskGetTickCount() + (uint32_t)time_ms;
 }
@@ -254,18 +260,18 @@ void ArmsTask::process_message()
 		break;
 	case CommMessageType::DbgArmsSetPose:
 		{
-			unsigned char buff[8];
-			m_message_queue.pop_message((unsigned char*)buff,8);
-			uint16_t* ptr = m_config.m_positions + 3*buff[1];
-			memcpy(ptr, (unsigned char*)(buff+2), 6);
+			unsigned char buff[16];
+			m_message_queue.pop_message((unsigned char*)buff,(m_config.num_servos + 1) * sizeof(uint16_t));
+			uint16_t* ptr = m_config.positions_ptr + m_config.num_servos*buff[1];
+			memcpy(ptr, (unsigned char*)(buff+2), m_config.num_servos * sizeof(uint16_t));
 		}
 		break;
 	case CommMessageType::DbgArmsSetTorques:
 		{
 			uint16_t buff[4];
 			m_message_queue.pop_message((unsigned char*)buff,8);
-			uint16_t* ptr = m_config.m_torque_settings + 3*buff[0];
-			memcpy(ptr, (unsigned char*)(buff+1), 6);
+			//uint16_t* ptr = m_config.m_torque_settings + 3*buff[0];
+			//memcpy(ptr, (unsigned char*)(buff+1), 6);
 		}
 		break;
 	case CommMessageType::DbgArmsGoToPosition:

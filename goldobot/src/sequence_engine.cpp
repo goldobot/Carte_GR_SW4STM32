@@ -162,9 +162,54 @@ bool SequenceEngine::execOp(const Op& op)
 			m_pc++;
 			return false;
 		}
-
-
-
+	case 132://propulsion.reposition
+		{
+			float params[2];
+			params[0] = *(float*)(m_vars + 4 * op.arg1);
+			params[1] = *(float*)(m_vars + 4 * (op.arg2));
+			Robot::instance().mainExchangeIn().pushMessage(
+					CommMessageType::DbgPropulsionExecuteReposition,
+					(unsigned char*) params, sizeof(params));
+			m_moving = true;
+			m_pc++;
+			return false;
+		}
+	case 133://propulsion.enter_manual
+			{
+				Robot::instance().mainExchangeIn().pushMessage(
+						CommMessageType::PropulsionEnterManualControl,nullptr, 0);
+				m_pc++;
+				return false;
+			}
+	case 134://propulsion.enter_manual
+			{
+				Robot::instance().mainExchangeIn().pushMessage(
+						CommMessageType::PropulsionExitManualControl,nullptr, 0);
+				m_pc++;
+				return false;
+			}
+	case 135://propulsion.set_control_levels
+			{
+				Robot::instance().mainExchangeIn().pushMessage(
+						CommMessageType::PropulsionSetControlLevels,&(op.arg1), 2);
+				m_pc++;
+				return false;
+			}
+	case 136://propulsion.set_target_pose
+			{
+				RobotPose pose;
+				pose.position.x = *(float*)(m_vars + 4 * op.arg1);
+				pose.position.y = *(float*)(m_vars + 4 * (op.arg1 + 1));
+				pose.yaw = *(float*)(m_vars + 4 * (op.arg1 + 2));
+				pose.speed = *(float*)(m_vars + 4 * (op.arg2 + 0));
+				pose.yaw_rate = *(float*)(m_vars + 4 * (op.arg2 + 1));
+				pose.acceleration = 0;
+				pose.angular_acceleration = 0;
+				Robot::instance().mainExchangeIn().pushMessage(
+						CommMessageType::PropulsionSetTargetPose,(unsigned char*)&pose, sizeof(pose));
+				m_pc++;
+				return false;
+			}
 	case 30:
 		if(m_stack_level == 0)
 		{
@@ -223,8 +268,8 @@ bool SequenceEngine::execOp(const Op& op)
 	default:
 		m_pc++;
 		return false;
-
 	}
+	return true;
 }
 
 void SequenceEngine::beginLoad()

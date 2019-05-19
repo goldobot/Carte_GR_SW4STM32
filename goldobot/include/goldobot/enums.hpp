@@ -19,12 +19,12 @@ enum class MatchState : uint8_t
 	Debug // Match start switch is disabled
 };
 
-enum class ServoType
+enum class ServoType : uint8_t
 {
 	Unknown=0,
+	StandardServo,
 	DynamixelAX12,
 	DynamixelMX28,
-	StandardServo
 };
 
 enum class ArmState : uint8_t

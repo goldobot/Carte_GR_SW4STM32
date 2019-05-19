@@ -24,6 +24,8 @@ public:
 	// Dirty provisional api
 
 	void go_to_position(uint8_t pos_id, uint16_t time_ms, int torque_setting=0);
+	// Disable all dynamixels torque
+	void shutdown();
 
 	//! \brief Read data from dynamixel registers
 	bool dynamixels_read_data(uint8_t id, uint8_t address, unsigned char* buffer, uint8_t size);
@@ -39,9 +41,10 @@ public:
 	bool dynamixels_receive_packet();
 	void taskFunction() override;
 
-	DynamixelsConfig m_config;
-	uint16_t m_current_position[3];
-	uint16_t m_current_load[3];
+	ArmConfig m_config;
+
+	uint16_t m_current_position[8];
+	uint16_t m_current_load[8];
 
 
 	unsigned char m_dynamixels_buffer[256];
@@ -54,8 +57,8 @@ public:
 	MessageQueue m_message_queue;
 	unsigned char m_message_queue_buffer[256];
 
-	uint16_t m_dynamixels_positions[3];
-	uint16_t m_dynamixels_loads[3];
+	//uint16_t m_dynamixels_positions[3];
+	//uint16_t m_dynamixels_loads[3];
 
 	uint32_t m_end_move_timestamp;
 	ArmState m_arm_state{ArmState::Unconfigured};

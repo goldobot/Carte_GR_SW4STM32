@@ -12,10 +12,29 @@ struct ServoConfig
 	uint16_t max_speed;
 };
 
+struct ServosConfig
+{
+	int num_servos;
+	ServoConfig servos[16];
+};
+
 struct ArmConfig
 {
-	uint8_t num_servos;
-	ServoConfig servos[];
+	uint16_t num_servos;
+	ServoConfig servos[8];
+	uint16_t num_positions;
+	uint16_t num_torques;
+	uint16_t* positions_ptr;
+	uint16_t* torques_ptr;
+};
+
+struct RobotConfig
+{
+	//! \brief distance from wheels axis to front of the robot
+	float front_length;
+
+	//! \brief distance from wheels axis to back of the robot
+	float back_length;
 };
 
 

@@ -46,11 +46,21 @@ void MainTask::taskFunction()
 	Robot::instance().mainExchangeIn().subscribe({40,50,&m_message_queue});
 	Robot::instance().mainExchangeIn().subscribe({90,90,&m_message_queue});
 	Robot::instance().mainExchangeIn().subscribe({166,166,&m_message_queue});
+	Robot::instance().mainExchangeIn().subscribe({400,402,&m_message_queue});
 
 	MsgMatchStateChange msg{Robot::instance().matchState(), Robot::instance().side()};
 	Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&msg, sizeof(msg));
 	Robot::instance().mainExchangeOut().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&msg, sizeof(msg));
 
+	// Config loop
+	while(Robot::instance().matchState() == MatchState::Unconfigured)
+	{
+	while(m_message_queue.message_ready())
+		{
+			process_message_config();
+		}
+		vTaskDelay(1);
+	}
 	while(1)
 	{
 		MsgMatchStateChange prev_state{Robot::instance().matchState(), Robot::instance().side()};
@@ -140,6 +150,38 @@ void MainTask::taskFunction()
 	}
 }
 
+
+void MainTask::process_message_config()
+{
+	int msg_size = m_message_queue.message_size();
+	switch(m_message_queue.message_type())
+	{
+	case CommMessageType::RobotBeginLoadConfig:
+	{
+		m_message_queue.pop_message(nullptr, 0);
+		Robot::instance().beginLoadConfig();
+	}
+	break;
+
+	case CommMessageType::RobotLoadConfig:
+	{
+		m_message_queue.pop_message(m_scratchpad, msg_size);
+		Robot::instance().loadConfig((char*)m_scratchpad, msg_size);
+	}
+	break;
+
+	case CommMessageType::RobotEndLoadConfig:
+	{
+		uint16_t crc;
+		m_message_queue.pop_message((unsigned char*)&crc, 2);
+		Robot::instance().endLoadConfig(crc);
+	}
+	break;
+	default:
+		m_message_queue.pop_message(nullptr, 0);
+		break;
+	}
+}
 void MainTask::process_message()
 {
 	int msg_size = m_message_queue.message_size();

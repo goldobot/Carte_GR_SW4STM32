@@ -1,6 +1,7 @@
 #pragma once
 #include "goldobot/core/message_exchange.hpp"
 #include "goldobot/enums.hpp"
+#include "goldobot/config.hpp"
 #include "goldobot/tasks/propulsion.hpp"
 #include "goldobot/tasks/uart_comm.hpp"
 #include "goldobot/tasks/uart2_comm.hpp"
@@ -14,14 +15,7 @@
 
 namespace goldobot
 {
-	struct RobotConfig
-	{
-		//! \brief distance from wheels axis to front of the robot
-		float front_length;
 
-		//! \brief distance from wheels axis to back of the robot
-		float back_length;
-	};
 
 
 
@@ -48,8 +42,11 @@ namespace goldobot
 
 		const RobotConfig& robotConfig() const;
 
+		ArmConfig* armConfig(int arm_id);
+		ServosConfig* servosConfig();
+
 		OdometryConfig odometryConfig();
-		OdometryConfig defaultOdometryConfig();
+
 		PropulsionControllerConfig defaultPropulsionControllerConfig();
 		void setOdometryConfig(const OdometryConfig& config);
 
@@ -62,7 +59,7 @@ namespace goldobot
 
 	private:
 		Side m_side{Side::Unknown};
-		MatchState m_match_state{MatchState::Idle};
+		MatchState m_match_state{MatchState::Unconfigured};
 
 		std::atomic<int> m_start_match_time{0};
 
@@ -72,8 +69,12 @@ namespace goldobot
 		HeartbeatTask m_heartbeat_task;
 
 
-		OdometryConfig m_odometry_config;
-		RobotConfig m_robot_config;
+		OdometryConfig* m_odometry_config;
+		RobotConfig* m_robot_config;
+		PropulsionControllerConfig* m_propulsion_controller_config;
+
+		unsigned char* m_load_config_ptr{0};
+		uint16_t m_load_config_crc;
 
 
 		MainTask m_main_task;
@@ -83,7 +84,7 @@ namespace goldobot
 		MessageExchange m_main_exchange_in;
 		MessageExchange m_main_exchange_out;
 
-		//static unsigned char s_config_area[4096];
+		static unsigned char s_config_area[4096];
 		static Robot s_instance;
 	};
 }

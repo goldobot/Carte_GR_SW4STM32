@@ -62,6 +62,8 @@ namespace goldobot
 		PropulsionExecuteTranslation=91,
 		PropulsionEnterManualControl=92,
 		PropulsionExitManualControl=93,
+		PropulsionSetTargetPose=94,
+		PropulsionSetControlLevels=95,
 
 
 		DbgMiscRepositionStartGreen=100,
@@ -95,5 +97,9 @@ namespace goldobot
 		FpgaColumnsCalib=320,
 		FpgaColumnsMove=321,
 		FpgaColumnsSetOffset=322,
+
+		RobotBeginLoadConfig=400,
+		RobotLoadConfig=401,
+		RobotEndLoadConfig=402
 	};
 }

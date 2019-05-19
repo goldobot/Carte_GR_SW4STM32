@@ -155,6 +155,17 @@ RobotPose PropulsionController::targetPose() const
 	return m_target_pose;
 }
 
+void PropulsionController::setTargetPose(RobotPose& target_pose)
+{
+	m_target_pose = target_pose;
+}
+
+void PropulsionController::setControlLevels(uint8_t longi, uint8_t yaw)
+{
+	m_low_level_controller.m_longi_control_level = longi;
+	m_low_level_controller.m_yaw_control_level = yaw;
+}
+
 void PropulsionController::updateTargetPositions()
 {
 	// Compute current distance on trajectory target
@@ -231,7 +242,7 @@ void PropulsionController::updateReposition()
 	m_target_pose.position.x += ux * m_target_pose.speed * 1e-3;
 	m_target_pose.position.y += uy * m_target_pose.speed * 1e-3;
 
-	if(fabs(m_low_level_controller.m_longi_error) > 0.06 && ! m_reposition_hit)
+	if(fabs(m_low_level_controller.m_longi_error) > 0.05 && ! m_reposition_hit)
 	{
 		m_reposition_hit = true;
 		m_command_end_time = m_time_base_ms + 500;
@@ -296,22 +307,15 @@ void PropulsionController::initMoveCommand(float speed, float accel, float decce
 
 bool PropulsionController::resetPose(float x, float y, float yaw)
 {
-	if(m_state == State::Inactive || m_state == State::Stopped)
-	{
-		RobotPose pose;
-		pose.position.x = x;
-		pose.position.y = y;
-		pose.yaw = yaw;
-		pose.speed = 0;
-		pose.yaw_rate = 0;
-		m_odometry->setPose(pose);
-		m_target_pose.position = pose.position;
-		m_target_pose.yaw = yaw;
-		return true;
-	} else
-	{
-		return false;
-	}
+	RobotPose pose;
+	pose.position.x = x;
+	pose.position.y = y;
+	pose.yaw = yaw;
+	pose.speed = 0;
+	pose.yaw_rate = 0;
+	m_odometry->setPose(pose);
+	m_target_pose = pose;
+	return true;
 }
 
 bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, float speed, float acceleration, float decceleration)
@@ -372,7 +376,7 @@ bool PropulsionController::executeRotation(float delta_yaw, float yaw_rate, floa
 	return true;
 }
 
-bool PropulsionController::executeRepositioning(float speed)
+bool PropulsionController::executeRepositioning(float speed, float accel)
 {
 	if(m_state != State::Stopped)
 	{

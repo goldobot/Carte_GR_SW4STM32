@@ -80,7 +80,7 @@ namespace goldobot
 		bool resetPose(float x, float y, float yaw);
 
 		bool executeTrajectory(Vector2D* points, int num_points, float speed, float acceleration, float decceleration);
-		bool executeRepositioning(float speed);
+		bool executeRepositioning(float speed, float accel);
 		bool executePointTo(Vector2D target, float yaw_rate, float accel, float deccel);
 		bool executeMoveTo(Vector2D target, float yaw_rate, float accel, float deccel);
 		bool executeRotation(float delta_yaw, float yaw_rate, float accel, float deccel);

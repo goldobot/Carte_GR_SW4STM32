@@ -35,6 +35,11 @@ void PropulsionTask::doStep()
 		processMessage();
 	}
 
+	while(m_message_queue.message_ready() && m_controller.state() == PropulsionController::State::ManualControl)
+		{
+			processMessage();
+		}
+
 	// Update odometry
 	uint16_t left;
 	uint16_t right;
@@ -135,6 +140,13 @@ void PropulsionTask::processMessage()
 				m_controller.executeMoveTo(*(Vector2D*)(params), params[2], params[3], params[4]);
 			}
 			break;
+	case CommMessageType::DbgPropulsionExecuteReposition:
+			{
+				float params[2];
+				m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
+				m_controller.executeRepositioning(params[0], params[1]);
+			}
+			break;
 	case CommMessageType::DbgPropulsionSetPose:
 		{
 			float pose[3];
@@ -148,6 +160,20 @@ void PropulsionTask::processMessage()
 
 	case CommMessageType::PropulsionExitManualControl:
 		m_controller.exitManualControl();
+		break;
+	case CommMessageType::PropulsionSetControlLevels:
+		{
+			uint8_t buff[2];
+			m_message_queue.pop_message((unsigned char*)buff,2);
+			m_controller.setControlLevels(buff[0], buff[1]);
+		}
+		break;
+	case CommMessageType::PropulsionSetTargetPose:
+		{
+			RobotPose pose;
+			m_message_queue.pop_message((unsigned char*)&pose, sizeof(pose));
+			m_controller.setTargetPose(pose);
+		}
 		break;
 
 	default:

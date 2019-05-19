@@ -10,5 +10,4 @@ void goldobot_main()
 {
 	goldobot::Hal::init();
 	goldobot::Robot::instance().init();
-	goldobot::Robot::instance().start();
 }
