@@ -10,6 +10,7 @@
 #include "goldobot/robot.hpp"
 #include "goldobot/core/message_exchange.hpp"
 #include "FreeRTOS.h"
+#include "task.h"
 #include "stm32f3xx_hal.h"
 #include <cstring>
 
@@ -34,6 +35,15 @@ const char* FpgaTask::name() const
 void FpgaTask::taskFunction()
 {
 	Robot::instance().mainExchangeIn().subscribe({256,322,&m_message_queue});
+	m_servos_config = Robot::instance().servosConfig();
+
+	for(unsigned i = 0; i < 16; i++)
+	{
+		m_servos_positions[i] = -1;
+		m_servos_target_positions[i] = 0;
+	}
+
+	m_last_timestamp = xTaskGetTickCount();
 
 	while(1)
 	{
@@ -61,8 +71,30 @@ void FpgaTask::taskFunction()
 			Robot::instance().mainExchangeOut().pushMessage(CommMessageType::SensorsChange, (unsigned char *)&m_sensors_state, 4);
 		}
 
-		delay(1);
+		//Recompute servo targets
+		uint32_t ts = xTaskGetTickCount();
+		float delta_t = (ts - m_last_timestamp)*1e-3;
+		for(int i=0; i < m_servos_config->num_servos; i++)
+		{
+			if(m_servos_positions[i] < 0)
+			{
+				continue;
+			}
 
+			if(m_servos_positions[i] > m_servos_target_positions[i])
+			{
+				m_servos_positions[i] = std::max<float>(m_servos_target_positions[i], m_servos_positions[i] - m_servos_config->servos[i].max_speed * delta_t);
+				goldo_fpga_cmd_servo(m_servos_config[i].servos[i].id, (unsigned int)m_servos_positions[i]);
+			}
+
+			if(m_servos_positions[i] < m_servos_target_positions[i])
+			{
+				m_servos_positions[i] = std::min<float>(m_servos_target_positions[i], m_servos_positions[i] + m_servos_config->servos[i].max_speed * delta_t);
+				goldo_fpga_cmd_servo(m_servos_config[i].servos[i].id, (unsigned int)m_servos_positions[i]);
+			}
+		}
+
+		delay(1);
 	}
 }
 
@@ -317,7 +349,12 @@ void FpgaTask::process_message()
 		m_message_queue.pop_message(buff, 3);
 		int motor_id = buff[0];
 		int pwm = *(uint16_t*)(buff+1);
-		goldo_fpga_cmd_servo(motor_id, pwm);
+		if(m_servos_positions[motor_id] < 0)
+		{
+			m_servos_positions[motor_id] = pwm;
+			goldo_fpga_cmd_servo(motor_id, pwm);
+		}
+		m_servos_target_positions[motor_id] = pwm;
 	}
 	break;
 	default:

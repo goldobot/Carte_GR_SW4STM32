@@ -52,6 +52,11 @@ void Robot::setOdometryConfig(const OdometryConfig& config)
 	odometry().setConfig(config);
 }
 
+ServosConfig* Robot::servosConfig()
+{
+	return m_servos_config;
+}
+
 PropulsionController::State Robot::propulsionState()
 {
 	return m_propulsion_task.controller().state();
@@ -88,11 +93,12 @@ bool Robot::endLoadConfig(uint16_t crc)
 	m_robot_config = (RobotConfig*)(s_config_area + offsets[0]);
 	m_odometry_config = (OdometryConfig*)(s_config_area + offsets[1]);
 	m_propulsion_controller_config = (PropulsionControllerConfig*)(s_config_area + offsets[2]);
+	m_arms_task.m_config = *(ArmConfig*)(s_config_area + offsets[3]);
+	m_arms_task.m_config.positions_ptr = (uint16_t*)(s_config_area + offsets[4]);
+	m_servos_config = (ServosConfig*)(s_config_area + offsets[5]);
 
 	odometry().setConfig(*m_odometry_config);
 	m_propulsion_task.controller().setConfig(defaultPropulsionControllerConfig());
-	m_arms_task.m_config = *(ArmConfig*)(s_config_area + offsets[3]);
-	m_arms_task.m_config.positions_ptr = (uint16_t*)(s_config_area + offsets[4]);
 	m_propulsion_task.init();
 	m_arms_task.init();
 	m_fpga_task.init();

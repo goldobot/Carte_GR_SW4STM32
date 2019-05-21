@@ -14,7 +14,7 @@ struct ServoConfig
 
 struct ServosConfig
 {
-	int num_servos;
+	uint16_t num_servos;
 	ServoConfig servos[16];
 };
 

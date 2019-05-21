@@ -57,6 +57,8 @@ namespace goldobot
 		void loadConfig(char* buffer, size_t size);
 		bool endLoadConfig(uint16_t crc);
 
+		uint32_t m_sensors_state{0};
+
 	private:
 		Side m_side{Side::Unknown};
 		MatchState m_match_state{MatchState::Unconfigured};
@@ -72,6 +74,7 @@ namespace goldobot
 		OdometryConfig* m_odometry_config;
 		RobotConfig* m_robot_config;
 		PropulsionControllerConfig* m_propulsion_controller_config;
+		ServosConfig* m_servos_config;
 
 		unsigned char* m_load_config_ptr{0};
 		uint16_t m_load_config_crc;

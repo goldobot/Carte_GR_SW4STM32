@@ -1,6 +1,7 @@
 #pragma once
 #include "goldobot/tasks/task.hpp"
 #include "goldobot/core/message_queue.hpp"
+#include "goldobot/config.hpp"
 #include <cstdint>
 
 namespace goldobot
@@ -41,5 +42,11 @@ private:
 	unsigned char m_message_queue_buffer[128];
 
 	uint32_t m_sensors_state{0};
+
+	uint32_t m_last_timestamp{0};
+
+	ServosConfig* m_servos_config;
+	float m_servos_positions[16];
+	uint16_t m_servos_target_positions[16];
 };
 }
