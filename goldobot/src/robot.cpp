@@ -20,6 +20,7 @@ void Robot::init()
 	m_main_exchange_out.pushMessage(CommMessageType::Reset,nullptr, 0);
 	m_main_task.init();
 	m_heartbeat_task.init();
+	m_rt_telemetry_task.init();
 }
 
 void Robot::start()

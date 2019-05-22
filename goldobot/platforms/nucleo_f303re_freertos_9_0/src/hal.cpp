@@ -45,6 +45,7 @@ extern "C"
 {
 	extern UART_HandleTypeDef huart1;
 	extern UART_HandleTypeDef huart2;
+	extern UART_HandleTypeDef huart3;
 
 	extern TIM_HandleTypeDef htim1;
 	extern TIM_HandleTypeDef htim2;
@@ -70,7 +71,7 @@ extern "C"
 UART_HandleTypeDef* g_uart_handles[] ={
 		&huart2,
 		&huart1,
-		&huart1
+		&huart3
 };
 
 #ifdef SIMULATE_ROBOT
@@ -181,6 +182,16 @@ bool Hal::uart_transmit(int uart_index, const char* buffer, uint16_t size, bool 
 	if(blocking)
 	{
 		Hal::uart_wait_for_transmit(uart_index);
+	}
+	return true;
+}
+
+bool Hal::uart_transmit_dma(int uart_index, const char* buffer, uint16_t size)
+{
+	auto huart_ptr = g_uart_handles[uart_index];
+	if(HAL_UART_Transmit_DMA(huart_ptr, (uint8_t*)buffer, size)!= HAL_OK)
+	{
+		return false;
 	}
 	return true;
 }

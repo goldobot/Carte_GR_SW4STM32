@@ -54,6 +54,7 @@
 "goldobot/src/tasks/arms.o"
 "goldobot/src/tasks/fpga.o"
 "goldobot/src/tasks/heartbeat.o"
+"goldobot/src/tasks/rttelemetry.o"
 "goldobot/src/tasks/main.o"
 "goldobot/src/tasks/propulsion.o"
 "goldobot/src/tasks/task.o"
