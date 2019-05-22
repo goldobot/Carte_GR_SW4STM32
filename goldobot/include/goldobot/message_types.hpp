@@ -100,6 +100,12 @@ namespace goldobot
 
 		RobotBeginLoadConfig=400,
 		RobotLoadConfig=401,
-		RobotEndLoadConfig=402
+		RobotEndLoadConfig=402,
+
+		RplidarStart=1024,
+		RplidarStop=1025,
+
+		RplidarRobotDetection=1280,
+
 	};
 }
