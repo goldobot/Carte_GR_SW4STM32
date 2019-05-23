@@ -137,6 +137,23 @@ extern bool g_goldo_megakill_switch;
 
 void Hal::set_motors_pwm(float left, float right)
 {
+#if 1 /* FIXME : DEBUG : GOLDO */
+	if((right>0.000000001))
+	{
+		right += 0.01;
+	} else if((right<-0.000000001))
+	{
+		right -= 0.01;
+	}
+	if((left>0.000000001))
+	{
+		left += 0.01;
+	} else if((left<-0.000000001))
+	{
+		left -= 0.01;
+	}
+#endif
+
     if (g_goldo_megakill_switch) {
         disable_motors_pwm();
         return;

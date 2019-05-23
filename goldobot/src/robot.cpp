@@ -95,6 +95,10 @@ PropulsionControllerConfig Robot::defaultPropulsionControllerConfig()
 	config.translation_cruise_pid_config.period = 1e-3f;
 	config.yaw_pid_config.period = 1e-3f;
 
+/* FIXME : DEBUG */
+/* 0 : PR 2019 */
+/* 1 : GR 2018 */
+#if 0 /* 0 : PR 2019 */
 	config.translation_pid_config.kp = 5;
 	config.translation_pid_config.ki = 10;
 	config.translation_pid_config.lim_iterm = 0.2;
@@ -116,6 +120,32 @@ PropulsionControllerConfig Robot::defaultPropulsionControllerConfig()
 	// Configure yaw rate pid
 	config.yaw_rate_pid_config.feed_forward = 0.12f;
 	config.yaw_rate_pid_config.kp = 0.2;
+#else
+	config.translation_pid_config.kp = 1;
+	config.translation_pid_config.ki = 1;
+	config.translation_pid_config.kd = 80;
+	config.translation_pid_config.lim_iterm = 0.2;
+
+	config.translation_cruise_pid_config.kp = 1;
+	config.translation_cruise_pid_config.ki = 1;
+	config.translation_cruise_pid_config.kd = 80;
+	config.translation_cruise_pid_config.lim_iterm = 0.1;
+
+	config.yaw_pid_config.kp = 3;
+	config.yaw_pid_config.ki = 30;
+	config.yaw_pid_config.kd = 30;
+	config.yaw_pid_config.lim_iterm = 0.2;
+
+
+	// Configure speed pid
+	config.speed_pid_config.feed_forward = 0.64f;
+	config.speed_pid_config.kp = 1.0f;
+	config.speed_pid_config.lim_iterm = 0.2;
+
+	// Configure yaw rate pid
+	config.yaw_rate_pid_config.feed_forward = 0.12f;
+	config.yaw_rate_pid_config.kp = 0.2;
+#endif
 
 	config.lookahead_distance = 0.15f;
 	config.lookahead_time = 0;

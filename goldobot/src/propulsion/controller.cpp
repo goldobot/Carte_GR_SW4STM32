@@ -61,7 +61,11 @@ PropulsionController::PropulsionController(SimpleOdometry* odometry):
 		m_yaw_error(0),
 		m_speed_error(0),
 		m_yaw_rate_error(0),
-		m_pwm_limit(1)
+		m_pwm_limit(1),
+		m_control_translation(false),
+		m_control_yaw(false),
+		m_control_speed(false),
+		m_control_yaw_rate(false)
 {
 	test = false;
 	m_mutex = xSemaphoreCreateMutex();
@@ -274,6 +278,10 @@ void PropulsionController::updateMotorsPwm()
 		m_speed_pid.set_target(m_target_speed + translation_command);
 		speed_command = m_speed_pid.update(m_pose.speed);
 	}
+	else
+	{
+		speed_command = m_target_speed + translation_command;
+	}
 
 	// Compute yaw and yaw_rate command
 	// Two nested PID controllers are used
@@ -293,8 +301,12 @@ void PropulsionController::updateMotorsPwm()
 		m_yaw_rate_pid.set_target(m_target_yaw_rate + yaw_command);
 		yaw_rate_command = m_yaw_rate_pid.update(m_pose.yaw_rate);
 	}
+	else
+	{
+		yaw_rate_command = m_target_yaw_rate + yaw_command;
+	}
 
-	m_left_motor_pwm = speed_command -yaw_rate_command;
+	m_left_motor_pwm = speed_command - yaw_rate_command;
 	m_right_motor_pwm =  speed_command + yaw_rate_command;
 }
 
@@ -450,7 +462,7 @@ void PropulsionController::updateTargetPositions()
 	float rel_x = diff_x * ux + diff_y * uy;
 	float rel_y = -diff_x * uy + diff_y * ux;
 
-	float curvature = 2 * rel_y / (rel_x*rel_x + rel_y * rel_y);
+	float curvature = 2.0 * rel_y / (rel_x*rel_x + rel_y*rel_y);
 	m_target_yaw_rate = m_pose.speed * curvature;
 	m_target_yaw = m_pose.yaw;
 }
@@ -617,7 +629,7 @@ bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, f
 
 	m_control_translation = true;
 	m_control_speed = true;
-	m_control_yaw = false;
+	m_control_yaw = true /* false */; /* FIXME : DEBUG */
 	m_control_yaw_rate = true;
 
 	xSemaphoreGive(m_mutex);

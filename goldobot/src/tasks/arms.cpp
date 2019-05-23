@@ -73,39 +73,41 @@ ArmsTask::ArmsTask():
 		m_arms_moving[i] = false;
 		m_arms_current_position[i] = 0;
 	}
-	// left arm
-	m_servo_descrs[0] = {4,0,0,1023}; //left slider
-	m_servo_descrs[1] = {83,1,0,4095}; // left  rotation
-	m_servo_descrs[2] = {84,1,0,4095}; //left shoulder
-	m_servo_descrs[3] = {5,0,0,1023}; // left elbow
-	m_servo_descrs[4] = {6,0,0,1023}; //left head
+	/* FIXME : DEBUG : HACKS PR 2019  vv */
+	// left arm (not used in PR 2019)
+	m_servo_descrs[0] = {4,3/*0*/,0,1023}; //left slider
+	m_servo_descrs[1] = {83,3/*1*/,0,4095}; // left  rotation
+	m_servo_descrs[2] = {84,3/*1*/,0,4095}; //left shoulder
+	m_servo_descrs[3] = {5,3/*0*/,0,1023}; // left elbow
+	m_servo_descrs[4] = {6,3/*0*/,0,1023}; //left head
 
 	//right arm
 	m_servo_descrs[5] = {1,0,0,1023}; //left slider
 	m_servo_descrs[6] = {81,1,0,4095}; // left  rotation
 	m_servo_descrs[7] = {82,1,0,4095}; //left shoulder
-	m_servo_descrs[8] = {2,0,0,1023}; // left elbow
-	m_servo_descrs[9] = {3,0,0,1023}; //left head
+	m_servo_descrs[8] = {2,3/*0*/,0,1023}; // left elbow
+	m_servo_descrs[9] = {3,3/*0*/,0,1023}; //left head
 
 	//pince
-	m_servo_descrs[10] = {101,0,0,1023}; // grabber servo
-	m_servo_descrs[11] = {7,2,0,65535}; //grabber pincer
+	m_servo_descrs[10] = {101,3/*0*/,0,1023}; // grabber servo
+	m_servo_descrs[11] = {10/*7*/,2,0,65535}; //grabber pincer
 
-	//bascule
-	m_servo_descrs[12] = {7,0,0,1023}; // bascule
-	m_servo_descrs[13] = {8,0,0,1023}; // gache
+	//bascule (not used in PR 2019)
+	m_servo_descrs[12] = {7,3/*0*/,0,1023}; // bascule
+	m_servo_descrs[13] = {8,3/*0*/,0,1023}; // gache
 
-	//colonnes
-	m_servo_descrs[14] = {1,2,0,65535}; // gache gauche
-	m_servo_descrs[15] = {0,2,0,65535}; // gache droite
-	m_servo_descrs[16] = {3,2,0,65535}; // porte gauche
-	m_servo_descrs[17] = {2,2,0,65535}; // porte droite
+	//colonnes (not used in PR 2019)
+	m_servo_descrs[14] = {1,3/*2*/,0,65535}; // gache gauche
+	m_servo_descrs[15] = {0,3/*2*/,0,65535}; // gache droite
+	m_servo_descrs[16] = {3,3/*2*/,0,65535}; // porte gauche
+	m_servo_descrs[17] = {2,3/*2*/,0,65535}; // porte droite
 
-	m_servo_descrs[18] = {4,2,0,65535}; // cubibox gauche
-	m_servo_descrs[19] = {5,2,0,65535}; // cubibox droite
+	m_servo_descrs[18] = {4,3/*2*/,0,65535}; // cubibox gauche
+	m_servo_descrs[19] = {5,3/*2*/,0,65535}; // cubibox droite
+	/* FIXME : DEBUG : HACKS PR 2019  ^^ */
 
 	register_arm(5,64,0,c_left_arm_default_positions);
-	register_arm(5,64,1,c_right_arm_default_positions);
+	register_arm(5,64,0/*1*/,c_right_arm_default_positions); /* FIXME : DEBUG : HACKS PR 2019  vv */
 	register_arm(2,16,0,c_grabber_default_positions);
 	register_arm(2,8,0,c_bascule_default_positions);
 	register_arm(4,8,0,c_columns_default_positions);

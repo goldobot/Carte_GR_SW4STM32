@@ -25,8 +25,13 @@ MainTask::MainTask():
     m_sequence_active(false)
 {
 	m_dbg_message_queue_mutex = xSemaphoreCreateMutex();
+#if 0 /* FIXME : DEBUG */
 	m_speed_settings[0] = {0.5,1,1,2,1,1,0.2};
 	m_speed_settings[1] = {0.25,0.5,0.5,1,0.5,0.5,0.2};
+#else
+	m_speed_settings[0] = {0.33,0.66,0.66,1,0.5,0.5,0.2};
+	m_speed_settings[1] = {0.125,0.25,0.25,0.5,0.25,0.25,0.1};
+#endif
 }
 
 const char* MainTask::name() const
@@ -331,6 +336,20 @@ void MainTask::taskFunction()
 
 				comm.send_debug_event(DbgEventType::DbgEventRobotHoming, (uint32_t)m_side, 0, 0);
 
+				switch(m_side)
+				{
+				case Side::Green:
+					//Robot::instance().fpgaTask().goldo_fpga_cmd_servo(10, 32000);
+					//Robot::instance().fpgaTask().goldo_fpga_cmd_servo(10, 32000);
+					break;
+				case Side::Orange:
+					//Robot::instance().fpgaTask().goldo_fpga_cmd_servo(10, 45000);
+					//Robot::instance().fpgaTask().goldo_fpga_cmd_servo(10, 45000);
+					break;
+				default:
+					break;
+				}
+
 				m_match_state = State::WaitForStartOfMatch;
 				Hal::set_motors_enable(true);
 				Robot::instance().propulsion().enable();
@@ -363,10 +382,12 @@ void MainTask::taskFunction()
 				case Side::Green:
 					execute_sequence(2);
 					//Robot::instance().fpgaTask().goldo_fpga_cmd_servo(10, 32000);
+					//Robot::instance().fpgaTask().goldo_fpga_cmd_servo(10, 32000);
 					m_match_state = State::Match;
 					break;
 				case Side::Orange:
 					execute_sequence(3);
+					//Robot::instance().fpgaTask().goldo_fpga_cmd_servo(10, 45000);
 					//Robot::instance().fpgaTask().goldo_fpga_cmd_servo(10, 45000);
 					m_match_state = State::Match;
 					break;
@@ -380,6 +401,7 @@ void MainTask::taskFunction()
 
 		case State::Match:
 			{
+#if 0 /* FIXME : DEBUG */
 				if(remainingMatchTime() == 80)
 				{
 					switch(m_side)
@@ -394,6 +416,7 @@ void MainTask::taskFunction()
 							break;
 					}
 				}
+#endif
 
 				if(remainingMatchTime() == 0)
 				{
