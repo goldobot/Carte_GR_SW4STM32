@@ -36,6 +36,9 @@ namespace goldobot
 		bool uart_transmit(int uart_index, const char* buffer, uint16_t size, bool blocking = true);
 
 		static
+		bool uart_transmit_dma(int uart_index, const char* buffer, uint16_t size);
+
+		static
 		bool uart_transmit_finished(int uart_index);
 
 		static
