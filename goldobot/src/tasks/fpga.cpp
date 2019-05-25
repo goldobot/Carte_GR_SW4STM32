@@ -43,6 +43,11 @@ void FpgaTask::taskFunction()
 		m_servos_target_positions[i] = 0;
 	}
 
+	for(unsigned i=0; i<12; i++)
+	{
+		goldo_fpga_cmd_servo(i, 0);
+	}
+
 	m_last_timestamp = xTaskGetTickCount();
 
 	while(1)
@@ -74,6 +79,7 @@ void FpgaTask::taskFunction()
 		//Recompute servo targets
 		uint32_t ts = xTaskGetTickCount();
 		float delta_t = (ts - m_last_timestamp)*1e-3;
+		m_last_timestamp = ts;
 		for(int i=0; i < m_servos_config->num_servos; i++)
 		{
 			if(m_servos_positions[i] < 0)
@@ -84,13 +90,13 @@ void FpgaTask::taskFunction()
 			if(m_servos_positions[i] > m_servos_target_positions[i])
 			{
 				m_servos_positions[i] = std::max<float>(m_servos_target_positions[i], m_servos_positions[i] - m_servos_config->servos[i].max_speed * delta_t);
-				goldo_fpga_cmd_servo(m_servos_config[i].servos[i].id, (unsigned int)m_servos_positions[i]);
+				goldo_fpga_cmd_servo(m_servos_config->servos[i].id, (unsigned int)m_servos_positions[i]);
 			}
 
 			if(m_servos_positions[i] < m_servos_target_positions[i])
 			{
 				m_servos_positions[i] = std::min<float>(m_servos_target_positions[i], m_servos_positions[i] + m_servos_config->servos[i].max_speed * delta_t);
-				goldo_fpga_cmd_servo(m_servos_config[i].servos[i].id, (unsigned int)m_servos_positions[i]);
+				goldo_fpga_cmd_servo(m_servos_config->servos[i].id, (unsigned int)m_servos_positions[i]);
 			}
 		}
 
@@ -352,7 +358,7 @@ void FpgaTask::process_message()
 		if(m_servos_positions[motor_id] < 0)
 		{
 			m_servos_positions[motor_id] = pwm;
-			goldo_fpga_cmd_servo(motor_id, pwm);
+			goldo_fpga_cmd_servo(m_servos_config->servos[motor_id].id, pwm);
 		}
 		m_servos_target_positions[motor_id] = pwm;
 	}

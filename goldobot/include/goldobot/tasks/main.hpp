@@ -27,6 +27,8 @@ namespace goldobot
 		int remainingMatchTime();
 		void preMatchBegin();
 		void preMatchStep();
+
+		SequenceEngine& sequenceEngine() { return m_sequence_engine;};
 	private:
 
 		void taskFunction() override;

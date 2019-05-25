@@ -42,7 +42,7 @@ const char* ArmsTask::name() const
 void ArmsTask::taskFunction()
 {
 	Robot::instance().mainExchangeIn().subscribe({72,78,&m_message_queue});
-	Robot::instance().mainExchangeIn().subscribe({160,165,&m_message_queue});
+	Robot::instance().mainExchangeIn().subscribe({160,170,&m_message_queue});
 
 	// \todo hack,for now we are using a harcoded configuration
 	m_arm_state = ArmState::Idle;
@@ -72,6 +72,7 @@ void ArmsTask::taskFunction()
 			buff[0] = 0;// arm id, 0 for now since we have only one arm
 			buff[1] = (unsigned char)m_arm_state;
 			Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ArmsStateChange, buff, 2);
+			Robot::instance().mainExchangeIn().pushMessage(CommMessageType::ArmsStateChange, buff, 2);
 		}
 		delay_periodic(1);
 	}

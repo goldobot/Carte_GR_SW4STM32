@@ -227,7 +227,7 @@ bool SequenceEngine::execOp(const Op& op)
 		m_pc = m_sequence_offsets[op.arg1];
 		return true;
 
-	case 140:
+	case 140://pump
 		{
 			unsigned char buff[3];
 			buff[0] = 0;
@@ -287,7 +287,6 @@ void SequenceEngine::endLoad()
 	m_vars = m_buffer + sizeof(SequenceHeader);
 	m_sequence_offsets = (uint16_t*)(m_vars + 4*header->num_vars);
 	m_ops = (Op*)(m_vars + 4*header->num_vars + 2 * header->num_seqs);
-
 }
 
 void SequenceEngine::loadData(unsigned char* data, uint16_t size)

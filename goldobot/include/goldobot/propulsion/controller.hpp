@@ -35,7 +35,7 @@ namespace goldobot
 			Reposition, // Se deplace a vitesse fixe jusqu'a bloquer
 			ManualControl, // Controle manuel, utilise pour le reglage de PID
 			EmergencyStop, // Arret d'urgence, deccelere avant de s'arreter
-			Error // Cotrolleur desactive suite a une erreur
+			Error // Controlleur desactive suite a une erreur
 		};
 
 		enum class Error

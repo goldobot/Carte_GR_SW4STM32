@@ -29,7 +29,7 @@ namespace goldobot
 		void subscribe(const Subscription& sub);
 
 	private:
-		Subscription m_subscriptions[48];
+		Subscription m_subscriptions[64];
 		int m_num_subscriptions{0};
 		SemaphoreHandle_t m_mutex;
 

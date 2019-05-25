@@ -4,7 +4,6 @@ using namespace goldobot;
 
 #include <algorithm>
 
-
 PropulsionController::PropulsionController(SimpleOdometry* odometry):
 		m_odometry(odometry)
 {
@@ -16,6 +15,7 @@ void PropulsionController::setEnable(bool enable)
 	{
 		m_current_pose = m_odometry->pose();
 		m_target_pose = m_current_pose;
+		m_low_level_controller.reset();
 		on_stopped_enter();
 	}
 	if(!enable && m_state != State::Inactive)
@@ -76,6 +76,7 @@ void PropulsionController::update()
 		if(fabsf(m_low_level_controller.m_longi_error) > 0.1f)
 		{
 			m_state = State::Error;
+			m_error = Error::TrackingError;
 		}
 		break;
 	case State::FollowTrajectory:
@@ -315,6 +316,7 @@ bool PropulsionController::resetPose(float x, float y, float yaw)
 	pose.yaw_rate = 0;
 	m_odometry->setPose(pose);
 	m_target_pose = pose;
+	m_low_level_controller.reset();
 	return true;
 }
 

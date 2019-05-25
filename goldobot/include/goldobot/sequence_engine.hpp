@@ -26,6 +26,7 @@ public:
 
 	void doStep(); /*< Execute instructions until forced to wait*/
 
+	void setBuffer(unsigned char* buffer) {m_buffer = buffer;};
 	void beginLoad();
 	void loadData(unsigned char* data, uint16_t size);
 	void endLoad();
@@ -44,7 +45,7 @@ private:
 	uint16_t* m_sequence_offsets{nullptr};
 	unsigned char* m_vars{nullptr};
 	unsigned char* m_var_types;
-	unsigned char m_buffer[4096];
+	unsigned char* m_buffer;
 	int m_load_offset{0};
 	uint8_t m_num_vars;
 	uint8_t m_num_seqs;

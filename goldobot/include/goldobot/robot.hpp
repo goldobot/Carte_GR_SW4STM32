@@ -68,7 +68,7 @@ namespace goldobot
 
 		PropulsionTask m_propulsion_task;
 		UARTCommTask m_comm_task;
-		UART2CommTask m_comm2_task;
+		//UART2CommTask m_comm2_task;
 		HeartbeatTask m_heartbeat_task;
 		RtTelemetryTask m_rt_telemetry_task;
 

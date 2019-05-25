@@ -9,6 +9,11 @@ void LowLevelController::reset()
 	m_speed_pid.reset();
 	m_yaw_pid.reset();
 	m_yaw_rate_pid.reset();
+	m_longi_error = 0;
+	m_yaw_error = 0;
+	m_lateral_error = 0;
+	m_speed_error = 0;
+	m_yaw_rate_error = 0;
 }
 
 void LowLevelController::setConfig(const PropulsionLowLevelControllerConfig& config)
