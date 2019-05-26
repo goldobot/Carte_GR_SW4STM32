@@ -73,6 +73,7 @@ void FpgaTask::taskFunction()
 		if(apb_data != m_sensors_state)
 		{
 			m_sensors_state = apb_data;
+			Robot::instance().setSensorsState(apb_data),
 			Robot::instance().mainExchangeOut().pushMessage(CommMessageType::SensorsChange, (unsigned char *)&m_sensors_state, 4);
 		}
 
@@ -89,13 +90,13 @@ void FpgaTask::taskFunction()
 
 			if(m_servos_positions[i] > m_servos_target_positions[i])
 			{
-				m_servos_positions[i] = std::max<float>(m_servos_target_positions[i], m_servos_positions[i] - m_servos_config->servos[i].max_speed * delta_t);
+				m_servos_positions[i] = std::max<float>(m_servos_target_positions[i], m_servos_positions[i] - m_servos_speeds[i] * delta_t);
 				goldo_fpga_cmd_servo(m_servos_config->servos[i].id, (unsigned int)m_servos_positions[i]);
 			}
 
 			if(m_servos_positions[i] < m_servos_target_positions[i])
 			{
-				m_servos_positions[i] = std::min<float>(m_servos_target_positions[i], m_servos_positions[i] + m_servos_config->servos[i].max_speed * delta_t);
+				m_servos_positions[i] = std::min<float>(m_servos_target_positions[i], m_servos_positions[i] + m_servos_speeds[i] * delta_t);
 				goldo_fpga_cmd_servo(m_servos_config->servos[i].id, (unsigned int)m_servos_positions[i]);
 			}
 		}
@@ -351,8 +352,8 @@ void FpgaTask::process_message()
 	break;
 	case CommMessageType::FpgaCmdServo:
 	{
-		unsigned char buff[3];
-		m_message_queue.pop_message(buff, 3);
+		unsigned char buff[4];
+		m_message_queue.pop_message(buff, 4);
 		int motor_id = buff[0];
 		int pwm = *(uint16_t*)(buff+1);
 		if(m_servos_positions[motor_id] < 0)
@@ -361,6 +362,7 @@ void FpgaTask::process_message()
 			goldo_fpga_cmd_servo(m_servos_config->servos[motor_id].id, pwm);
 		}
 		m_servos_target_positions[motor_id] = pwm;
+		m_servos_speeds[motor_id] = (m_servos_config->servos[motor_id].max_speed * buff[3])/100;
 	}
 	break;
 	default:

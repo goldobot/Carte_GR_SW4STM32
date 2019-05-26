@@ -210,6 +210,21 @@ bool SequenceEngine::execOp(const Op& op)
 				m_pc++;
 				return false;
 			}
+	case 137://propulsion.face_direction
+		{
+			float params[4];
+			params[0] = *(float*)(m_vars + 4 * op.arg1);
+			params[1] = *(float*)(m_vars + 4 * (op.arg2));
+			params[2] = *(float*)(m_vars + 4 * (op.arg2+1));
+			params[3] = *(float*)(m_vars + 4 * (op.arg2+2));
+
+			Robot::instance().mainExchangeIn().pushMessage(
+					CommMessageType::PropulsionExecuteFaceDirection,
+					(unsigned char*) params, sizeof(params));
+			m_moving = true;
+			m_pc++;
+			return false;
+		}
 	case 30:
 		if(m_stack_level == 0)
 		{
@@ -226,6 +241,21 @@ bool SequenceEngine::execOp(const Op& op)
 		m_stack_level++;
 		m_pc = m_sequence_offsets[op.arg1];
 		return true;
+	case 33: // yield. Do nothing and wait for next task tick. use for polling loop
+		m_pc++;
+		return false;
+	case 34: // sequence event
+		{
+			unsigned char buff[2];
+			buff[0] = op.arg1;
+			buff[1] = op.arg2;
+			Robot::instance().mainExchangeOut().pushMessage(
+					CommMessageType::SequenceEvent,
+					buff,
+					2);
+		}
+		m_pc++;
+		return true;
 
 	case 140://pump
 		{
@@ -239,12 +269,12 @@ bool SequenceEngine::execOp(const Op& op)
 		}
 		m_pc++;
 		return true;
-	case 141:
+	case 141: //arms go to position
 		{
 			unsigned char buff[4];
 			buff[0] = op.arg1;
 			buff[1] = op.arg2;
-			*(uint16_t*)(buff+2) = 1000;
+			*(uint16_t*)(buff+2) = op.arg3;// speed in % of max speed
 			Robot::instance().mainExchangeIn().pushMessage(
 					CommMessageType::DbgArmsGoToPosition,
 					buff,
@@ -253,11 +283,12 @@ bool SequenceEngine::execOp(const Op& op)
 		}
 		m_pc++;
 		return true;
-	case 142:
+	case 142: //servo move
 		{
-			unsigned char buff[3];
+			unsigned char buff[4];
 			buff[0] = op.arg1;
 			*(uint16_t*)(buff+1) = *(int*)(m_vars + 4 * op.arg2);
+			buff[3] = op.arg3;
 			Robot::instance().mainExchangeIn().pushMessage(
 					CommMessageType::FpgaCmdServo,
 					buff,
@@ -265,6 +296,48 @@ bool SequenceEngine::execOp(const Op& op)
 		}
 		m_pc++;
 		return true;
+	case 143: // arms.shutdown
+		{
+			Robot::instance().mainExchangeIn().pushMessage(
+					CommMessageType::ArmsShutdown,
+					nullptr,
+					0);
+
+		}
+		m_pc++;
+		return true;
+	case 150: // check sensor
+		if(Robot::instance().sensorsState() & (1 << op.arg1))
+		{
+			m_status_register |= 1;
+		} else
+		{
+			m_status_register &= (0xffff-1);
+		}
+		m_pc++;
+		return true;
+	case 200://jmp
+		m_pc = (uint16_t)op.arg1 | ((uint16_t)op.arg2 << 8);
+		return true;
+	case 201://jz
+		if(m_status_register & 0x01)
+		{
+			m_pc++;
+		} else
+		{
+			m_pc = (uint16_t)op.arg1 | ((uint16_t)op.arg2 << 8);
+		}
+		return true;
+	case 202://jnz
+		if(m_status_register & 0x01)
+		{
+			m_pc = (uint16_t)op.arg1 | ((uint16_t)op.arg2 << 8);
+		} else
+		{
+			m_pc++;
+		}
+		return true;
+
 	default:
 		m_pc++;
 		return false;
@@ -299,6 +372,11 @@ void SequenceEngine::startSequence(int id)
 {
 	m_state = SequenceState::Executing;
 	m_pc = m_sequence_offsets[id];
+}
+
+void SequenceEngine::abortSequence()
+{
+	m_state = SequenceState::Idle;
 }
 
 }

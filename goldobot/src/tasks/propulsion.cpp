@@ -45,13 +45,6 @@ void PropulsionTask::doStep()
 	uint16_t right;
 	Hal::read_encoders(left, right);
 	m_odometry.update(left, right);
-
-	// Test emergency stop
-	if(Hal::get_gpio(2))
-	{
-		//m_controller.emergencyStop();
-	}
-
 	m_controller.update();
 
 	// Check state change
@@ -131,6 +124,13 @@ void PropulsionTask::processMessage()
 			float params[5];
 			m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
 			m_controller.executePointTo(*(Vector2D*)(params), params[2], params[3], params[4]);
+		}
+		break;
+	case CommMessageType::PropulsionExecuteFaceDirection:
+		{
+			float params[4];
+			m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
+			m_controller.executeFaceDirection(params[0], params[1], params[2], params[3]);
 		}
 		break;
 	case CommMessageType::DbgPropulsionExecuteMoveTo:
@@ -282,6 +282,7 @@ void PropulsionTask::taskFunction()
 	Robot::instance().mainExchangeIn().subscribe({83,99, &m_message_queue});
 	Robot::instance().mainExchangeIn().subscribe({64,68, &m_urgent_message_queue});
 	Robot::instance().mainExchangeIn().subscribe({80,82, &m_urgent_message_queue});
+	Robot::instance().mainExchangeIn().subscribe({32,32, &m_urgent_message_queue});
 
 	// Set task to high
 	set_priority(6);

@@ -84,6 +84,7 @@ namespace goldobot
 		bool executePointTo(Vector2D target, float yaw_rate, float accel, float deccel);
 		bool executeMoveTo(Vector2D target, float yaw_rate, float accel, float deccel);
 		bool executeRotation(float delta_yaw, float yaw_rate, float accel, float deccel);
+		bool executeFaceDirection(float direction, float yaw_rate, float accel, float deccel);
 		bool executeTranslation(float distance, float speed, float accel, float deccel);
 
 		//! \brief Emergency stop. Abort current PointTo of FollowTrajectory command and bring the robot to a stop.

@@ -343,6 +343,11 @@ bool PropulsionController::executePointTo(Vector2D point, float speed, float acc
 	return executeRotation(angleDiff(target_yaw, m_target_pose.yaw), speed, acceleration, decceleration);
 };
 
+bool PropulsionController::executeFaceDirection(float direction, float yaw_rate, float accel, float deccel)
+{
+	return executeRotation(angleDiff(direction, m_target_pose.yaw), yaw_rate, accel, deccel);
+}
+
 bool PropulsionController::executeMoveTo(Vector2D point, float speed, float acceleration, float decceleration)
 {
 	Vector2D traj[2];

@@ -81,7 +81,7 @@ void ArmsTask::taskFunction()
 void ArmsTask::shutdown()
 {
 	unsigned char buff = 0;
-	dynamixels_write_data(254, 0x18, &buff, 0);
+	dynamixels_write_data(254, 0x18, &buff, 1);
 }
 
 bool ArmsTask::dynamixels_read_data(uint8_t id, uint8_t address, unsigned char* buffer, uint8_t size)
@@ -123,7 +123,7 @@ void ArmsTask::dynamixels_action()
 	dynamixels_transmit_packet(0xFE, AX_ACTION, nullptr, 0);
 }
 
-void ArmsTask::go_to_position(uint8_t pos_id, uint16_t time_ms, int torque_settings)
+void ArmsTask::go_to_position(uint8_t pos_id, uint16_t speed_percent, int torque_settings)
 {
 	int pos_idx = pos_id * m_config.num_servos;
 
@@ -134,7 +134,7 @@ void ArmsTask::go_to_position(uint8_t pos_id, uint16_t time_ms, int torque_setti
 	//get previous positions and compute move timing based on limiting speed
 	uint16_t prev_posa[8];
 
-	uint16_t tim = 1;
+	uint32_t tim = 1;
 
 	for(int i=0; i< m_config.num_servos;i++)
 	{
@@ -160,13 +160,13 @@ void ArmsTask::go_to_position(uint8_t pos_id, uint16_t time_ms, int torque_setti
 		}
 	}
 
-	time_ms = tim*2;
+	uint32_t time_ms = (tim * 100) / speed_percent;
 	for(int i=0; i< m_config.num_servos;i++)
 	{
 		uint16_t buff[3];
 		uint16_t prev_pos = m_current_position[i];
 		buff[0] = m_config.positions_ptr[pos_idx+i]; // position setpoint
-		buff[2] = 1023;//m_config.m_torque_settings[3*torque_settings+i]; // torque limit
+		buff[2] = m_config.torques_ptr[torque_settings * m_config.num_servos + i];
 
 		prev_pos = prev_posa[i];
 
@@ -282,7 +282,10 @@ void ArmsTask::process_message()
 			go_to_position(buff[0], *(uint16_t*)(buff+2), buff[1]);
 		}
 		break;
-
+	case CommMessageType::ArmsShutdown:
+		m_message_queue.pop_message(nullptr, 0);
+		shutdown();
+		break;
 	default:
 		m_message_queue.pop_message(nullptr, 0);
 		break;

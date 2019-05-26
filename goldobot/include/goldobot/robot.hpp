@@ -33,6 +33,9 @@ namespace goldobot
 		MatchState matchState() const noexcept { return m_match_state;};
 		void setMatchState(MatchState state) noexcept {m_match_state = state;};
 
+		uint32_t sensorsState() const { return m_sensors_state;};
+		void setSensorsState(uint32_t state) { m_sensors_state = state;};
+
 		void setStartMatchTime(uint32_t time) {m_start_match_time = time;};
 
 		SimpleOdometry& odometry();
@@ -58,13 +61,14 @@ namespace goldobot
 		void loadConfig(char* buffer, size_t size);
 		bool endLoadConfig(uint16_t crc);
 
-		uint32_t m_sensors_state{0};
+
 
 	private:
 		Side m_side{Side::Unknown};
 		MatchState m_match_state{MatchState::Unconfigured};
 
 		std::atomic<int> m_start_match_time{0};
+		uint32_t m_sensors_state{0};
 
 		PropulsionTask m_propulsion_task;
 		UARTCommTask m_comm_task;

@@ -21,6 +21,8 @@ namespace goldobot
 		MatchStateChange=15,
 		SensorsChange=20,
 		GPIODebug=21,
+		SequenceEvent=22,
+
 		// Commands
 		CmdEmergencyStop=32, // Order an emergency stop
 		CmdSelectSide=33, // Select side. payload is an unsigned byte, 0=green, 1=orange
@@ -31,6 +33,7 @@ namespace goldobot
 		MainSequenceLoadData=42,
 		MainSequenceStartSequence=43,
 		SetMatchState=44,
+		MainSequenceAbortSequence=45,
 		// Debug mode messages
 		// Robot configuration
 		DbgGetOdometryConfig=64,
@@ -64,6 +67,7 @@ namespace goldobot
 		PropulsionExitManualControl=93,
 		PropulsionSetTargetPose=94,
 		PropulsionSetControlLevels=95,
+		PropulsionExecuteFaceDirection=96,
 
 
 		DbgMiscRepositionStartGreen=100,
@@ -76,6 +80,7 @@ namespace goldobot
 		DbgArmsExecuteSequence=164,
 		DbgArmsGoToPosition=165,
 		ArmsStateChange=166,
+		ArmsShutdown=167,
 
 		DbgRobotSetCommand=176,
 		DbgRobotSetPoint=177,

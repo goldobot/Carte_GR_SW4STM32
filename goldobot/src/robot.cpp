@@ -96,6 +96,7 @@ bool Robot::endLoadConfig(uint16_t crc)
 	m_propulsion_controller_config = (PropulsionControllerConfig*)(s_config_area + offsets[2]);
 	m_arms_task.m_config = *(ArmConfig*)(s_config_area + offsets[3]);
 	m_arms_task.m_config.positions_ptr = (uint16_t*)(s_config_area + offsets[4]);
+	m_arms_task.m_config.torques_ptr = (uint16_t*)(s_config_area + offsets[7]);
 	m_servos_config = (ServosConfig*)(s_config_area + offsets[5]);
 	m_main_task.sequenceEngine().setBuffer(s_config_area + offsets[6]);
 	m_main_task.sequenceEngine().endLoad();
@@ -108,5 +109,6 @@ bool Robot::endLoadConfig(uint16_t crc)
 
 	start();
 	m_match_state = MatchState::Idle;
+	return true;
 }
 

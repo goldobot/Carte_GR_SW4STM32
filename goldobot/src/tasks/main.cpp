@@ -213,6 +213,10 @@ void MainTask::process_message()
 			m_message_queue.pop_message((unsigned char*) (&seq_id),2);
 			m_sequence_engine.startSequence(seq_id);
 			break;
+	case CommMessageType::MainSequenceAbortSequence:
+		m_message_queue.pop_message(nullptr,0);
+		m_sequence_engine.abortSequence();
+		break;
 	case CommMessageType::PropulsionStateChanged:
 		{
 		uint8_t buff[2];

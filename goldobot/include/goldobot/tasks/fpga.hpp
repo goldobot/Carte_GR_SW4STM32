@@ -47,6 +47,7 @@ private:
 
 	ServosConfig* m_servos_config;
 	float m_servos_positions[16];
+	uint16_t m_servos_speeds[16];
 	uint16_t m_servos_target_positions[16];
 };
 }
