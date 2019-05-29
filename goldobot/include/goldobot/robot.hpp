@@ -38,6 +38,9 @@ namespace goldobot
 
 		void setStartMatchTime(uint32_t time) {m_start_match_time = time;};
 
+		int remainingMatchTime() const { return m_remaining_match_time;};
+		void setRemainingMatchTime(int t) { m_remaining_match_time = t;};
+
 		SimpleOdometry& odometry();
 
 		MessageExchange& mainExchangeIn() { return m_main_exchange_in; };
@@ -68,6 +71,7 @@ namespace goldobot
 		MatchState m_match_state{MatchState::Unconfigured};
 
 		std::atomic<int> m_start_match_time{0};
+		std::atomic<int> m_remaining_match_time{0};
 		uint32_t m_sensors_state{0};
 
 		PropulsionTask m_propulsion_task;

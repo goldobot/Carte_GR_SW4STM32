@@ -25,6 +25,10 @@ void HeartbeatTask::taskFunction()
 		exchange.pushMessage(CommMessageType::Sync,(unsigned char*)"goldobot",8);
 		exchange.pushMessage(CommMessageType::Heartbeat,(unsigned char*)&clock,sizeof(clock));
 
+		uint16_t remaining_time = Robot::instance().remainingMatchTime();
+		exchange.pushMessage(CommMessageType::MatchRemainingTime,(unsigned char*)&remaining_time, 2);
+
+
 		//gpio debug
 		uint32_t gpio = 0;
 		for(int i=0; i<5; i++)

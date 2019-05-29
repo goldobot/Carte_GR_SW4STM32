@@ -79,6 +79,17 @@ bool SequenceEngine::execOp(const Op& op)
 		m_pc++;
 		return true;
 	}
+	case 66: //propulsion.motors_disable
+		Hal::set_motors_enable(false);
+		m_pc++;
+		return true;
+	case 67: // propulsion.disable
+		{
+			uint8_t b = false;
+			Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DbgSetPropulsionEnable, (unsigned char*)&b, 1);
+			m_pc++;
+			return true;
+		}
 
 	case 125:
 		if(m_arm_moving == false)

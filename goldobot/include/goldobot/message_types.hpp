@@ -8,7 +8,7 @@ namespace goldobot
 	{
 		// General messages
 		Sync=0, // "goldobot" synchronization message, used to synchronize stream parser
-		Heartbeat=1, // Current OS time in ms as uint32, sent every second
+		Heartbeat=1, // Current OS time in ms as uint32, sent every 10th of second
 		Reset=2, // Sent once on startup
 		CommStats=3,
 		DbgPrintf=4,
@@ -22,6 +22,7 @@ namespace goldobot
 		SensorsChange=20,
 		GPIODebug=21,
 		SequenceEvent=22,
+		MatchRemainingTime=23,
 
 		// Commands
 		CmdEmergencyStop=32, // Order an emergency stop
@@ -68,6 +69,8 @@ namespace goldobot
 		PropulsionSetTargetPose=94,
 		PropulsionSetControlLevels=95,
 		PropulsionExecuteFaceDirection=96,
+		PropulsionClearCommandQueue=98,
+		PropulsionClearError=99,
 
 
 		DbgMiscRepositionStartGreen=100,
@@ -106,6 +109,7 @@ namespace goldobot
 		RobotBeginLoadConfig=400,
 		RobotLoadConfig=401,
 		RobotEndLoadConfig=402,
+		RobotEndLoadConfigStatus=403,
 
 		RplidarStart=1024,
 		RplidarStop=1025,

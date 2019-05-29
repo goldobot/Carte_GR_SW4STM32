@@ -224,6 +224,18 @@ void PropulsionTask::processUrgentMessage()
 		m_controller.emergencyStop();
 		m_urgent_message_queue.pop_message(nullptr, 0);
 		break;
+	case CommMessageType::PropulsionClearError:
+			m_controller.clearError();
+			m_urgent_message_queue.pop_message(nullptr, 0);
+			break;
+	case CommMessageType::PropulsionClearCommandQueue:
+			m_controller.clearError();
+			m_urgent_message_queue.pop_message(nullptr, 0);
+			while(m_message_queue.message_ready())
+			{
+				m_message_queue.pop_message(nullptr, 0);
+			}
+			break;
 	case CommMessageType::DbgSetPropulsionEnable:
 		{
 			uint8_t enabled;
@@ -283,6 +295,7 @@ void PropulsionTask::taskFunction()
 	Robot::instance().mainExchangeIn().subscribe({64,68, &m_urgent_message_queue});
 	Robot::instance().mainExchangeIn().subscribe({80,82, &m_urgent_message_queue});
 	Robot::instance().mainExchangeIn().subscribe({32,32, &m_urgent_message_queue});
+	Robot::instance().mainExchangeIn().subscribe({98,99, &m_urgent_message_queue});
 
 	// Set task to high
 	set_priority(6);

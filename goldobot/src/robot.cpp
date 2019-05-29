@@ -89,6 +89,10 @@ bool Robot::endLoadConfig(uint16_t crc)
 	// Arm positions
 	// ServosConfig
 
+	if(crc != m_load_config_crc)
+	{
+		return false;
+	}
 	uint16_t* offsets = (uint16_t*)s_config_area;
 
 	m_robot_config = (RobotConfig*)(s_config_area + offsets[0]);
