@@ -65,6 +65,8 @@ namespace goldobot
 		PropulsionSetTargetPose=94,
 		PropulsionSetControlLevels=95,
 
+		PropulsionClearError=99,
+
 
 		DbgMiscRepositionStartGreen=100,
 		DbgReset=127,

@@ -131,8 +131,27 @@ void Hal::set_servo_pwm(uint16_t pwm)
 {
 	__HAL_TIM_SET_COMPARE(&htim16, TIM_CHANNEL_1, pwm);
 }
+
+#if 0 /* FIXME : DEBUG */
+extern bool g_goldo_megakill_switch;
+void Hal::disable_motors_pwm()
+{
+	HAL_GPIO_WritePin(MAXON1_DIR_GPIO_Port, MAXON1_DIR_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(MAXON2_DIR_GPIO_Port, MAXON2_DIR_Pin, GPIO_PIN_RESET);
+	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 0);
+	__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);
+}
+#endif
+
 void Hal::set_motors_pwm(float left, float right)
 {
+#if 0 /* FIXME : DEBUG */
+    if (g_goldo_megakill_switch) {
+        disable_motors_pwm();
+        return;
+    }
+#endif
+
 #ifdef SIMULATE_ROBOT
 	s_robot_simulator.m_left_pwm = left;
 	s_robot_simulator.m_right_pwm = right;

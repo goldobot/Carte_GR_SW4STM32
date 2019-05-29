@@ -16,7 +16,8 @@ enum class SequenceState : uint8_t
 {
 	WaitForInit,
 	Idle,
-	Executing
+	Executing,
+	Interruption,
 };
 
 class SequenceEngine
@@ -32,7 +33,8 @@ public:
 	void endLoad();
 	void startSequence(int id);
 
-
+	void IRQ(int irq_id);
+	void IRQ_END(int irq_id);
 
 	SequenceState state() const {return m_state;};
 

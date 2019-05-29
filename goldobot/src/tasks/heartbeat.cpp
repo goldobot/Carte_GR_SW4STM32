@@ -16,8 +16,22 @@ const char* HeartbeatTask::name() const
 	return "heartbeat";
 }
 
+#if 1 /* FIXME : DEBUG */
+bool g_goldo_megakill_switch = false;
+namespace goldobot {
+	bool g_goldo_debug6 = false;
+	bool g_goldo_debug7 = false;
+};
+#endif
+
 void HeartbeatTask::taskFunction()
 {
+#if 1 /* FIXME : DEBUG */
+	g_goldo_megakill_switch = false;
+    goldobot::g_goldo_debug6 = true;
+    goldobot::g_goldo_debug7 = true;
+#endif
+
 	while(1)
 	{
 		uint32_t clock = xTaskGetTickCount();
@@ -31,9 +45,25 @@ void HeartbeatTask::taskFunction()
 		{
 			if(Hal::get_gpio(i)) gpio |= (1 << i);
 		}
+		if(goldobot::g_goldo_debug6)
+		{
+			gpio |= (1 << 6);
+		}
+		if(goldobot::g_goldo_debug7)
+		{
+			gpio |= (1 << 7);
+		}
 		Robot::instance().mainExchangeOut().pushMessage(
 						CommMessageType::GPIODebug,
 						(unsigned char*)&gpio, sizeof(gpio));
+
+#if 0 /* FIXME : DEBUG */
+		g_goldo_megakill_switch = (Hal::get_gpio(2)!=0);
+		if (g_goldo_megakill_switch) {
+			Hal::disable_motors_pwm();
+		}
+#endif
+
 		delay_periodic(100);
 	}
 }

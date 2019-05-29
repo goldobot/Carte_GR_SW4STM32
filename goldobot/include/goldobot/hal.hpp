@@ -29,6 +29,10 @@ namespace goldobot
 		static
 		void set_motors_pwm(float left, float right);
 
+#if 1 /* FIXME : DEBUG */
+		static
+		void disable_motors_pwm();
+#endif
 		static
 		bool uart_read_char(int uart_index, char* c, bool blocking);
 

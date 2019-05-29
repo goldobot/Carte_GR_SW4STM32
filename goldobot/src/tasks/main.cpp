@@ -41,8 +41,21 @@ struct MsgMatchStateChange
 	Side side;
 };
 
+#if 1 /* FIXME : DEBUG */
+namespace goldobot {
+	extern bool g_goldo_debug6;
+	extern bool g_goldo_debug7;
+};
+#endif
+
+
 void MainTask::taskFunction()
 {
+#if 1 /* FIXME : DEBUG */
+	bool act_obstacle = false;
+	bool prev_obstacle = false;
+#endif
+
 	Robot::instance().mainExchangeIn().subscribe({40,50,&m_message_queue});
 	Robot::instance().mainExchangeIn().subscribe({90,90,&m_message_queue});
 	Robot::instance().mainExchangeIn().subscribe({166,166,&m_message_queue});
@@ -136,7 +149,44 @@ void MainTask::taskFunction()
 		default:
 			break;
 		}
+#if 0 /* FIXME : DEBUG : GOLDO */
 		m_sequence_engine.doStep();
+#else
+		act_obstacle = (Hal::get_gpio(2)!=0);
+
+		if(prev_obstacle) /* on etait bloques */
+		{
+			goldobot::g_goldo_debug6 = false;
+
+			if(act_obstacle) /* on reste bloques */
+			{
+				/* FIXME : TODO : rien a faire? */
+			}
+			else /* la voie devient libre */
+			{
+				goldobot::g_goldo_debug7 = false;
+
+				m_sequence_engine.IRQ_END(1);
+			}
+		}
+		else /* on avait la voie libre */
+		{
+			goldobot::g_goldo_debug6 = true;
+
+			if(act_obstacle) /* on nous bloque */
+			{
+				goldobot::g_goldo_debug7 = true;
+
+				m_sequence_engine.IRQ(1);
+			}
+			else /* la voie reste libre */
+			{
+				m_sequence_engine.doStep();
+			}
+		}
+
+		prev_obstacle = act_obstacle;
+#endif
 
 		MsgMatchStateChange post_state{Robot::instance().matchState(), Robot::instance().side()};
 		if(post_state.match_state != prev_state.match_state &&
