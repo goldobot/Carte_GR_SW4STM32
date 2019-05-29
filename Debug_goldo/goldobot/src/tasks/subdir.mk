@@ -13,8 +13,7 @@ CPP_SRCS += \
 ../goldobot/src/tasks/main.cpp \
 ../goldobot/src/tasks/propulsion.cpp \
 ../goldobot/src/tasks/task.cpp \
-../goldobot/src/tasks/uart_comm.cpp \
-../goldobot/src/tasks/uart2_comm.cpp
+../goldobot/src/tasks/uart_comm.cpp
 
 OBJS += \
 ./goldobot/src/tasks/arms.o \
@@ -24,8 +23,7 @@ OBJS += \
 ./goldobot/src/tasks/main.o \
 ./goldobot/src/tasks/propulsion.o \
 ./goldobot/src/tasks/task.o \
-./goldobot/src/tasks/uart_comm.o \
-./goldobot/src/tasks/uart2_comm.o
+./goldobot/src/tasks/uart_comm.o
 
 CPP_DEPS += \
 ./goldobot/src/tasks/arms.d \
@@ -35,8 +33,7 @@ CPP_DEPS += \
 ./goldobot/src/tasks/main.d \
 ./goldobot/src/tasks/propulsion.d \
 ./goldobot/src/tasks/task.d \
-./goldobot/src/tasks/uart_comm.d \
-./goldobot/src/tasks/uart2_comm.d
+./goldobot/src/tasks/uart_comm.d
 
 
 # Each subdirectory must supply rules for building sources it contributes
