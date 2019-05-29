@@ -40,6 +40,11 @@ void PropulsionTask::doStep()
 			processMessage();
 		}
 
+	// adversary detection
+	if(Hal::get_gpio(2) && m_controller.state() == PropulsionController::State::FollowTrajectory)
+	{
+		m_controller.emergencyStop();
+	}
 	// Update odometry
 	uint16_t left;
 	uint16_t right;
@@ -229,7 +234,6 @@ void PropulsionTask::processUrgentMessage()
 			m_urgent_message_queue.pop_message(nullptr, 0);
 			break;
 	case CommMessageType::PropulsionClearCommandQueue:
-			m_controller.clearError();
 			m_urgent_message_queue.pop_message(nullptr, 0);
 			while(m_message_queue.message_ready())
 			{
@@ -241,6 +245,14 @@ void PropulsionTask::processUrgentMessage()
 			uint8_t enabled;
 			m_urgent_message_queue.pop_message((unsigned char*)&enabled, 1);
 			m_controller.setEnable(enabled);
+			if(!enabled)
+			{
+				// Clear queue on disable
+				while(m_message_queue.message_ready())
+				{
+					m_message_queue.pop_message(nullptr, 0);
+				}
+			}
 		}
 		break;
 	case CommMessageType::DbgSetMotorsEnable:

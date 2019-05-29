@@ -62,6 +62,13 @@ void MainTask::taskFunction()
 		}
 		vTaskDelay(1);
 	}
+	{
+		MsgMatchStateChange post_state{Robot::instance().matchState(), Robot::instance().side()};
+		Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&post_state, sizeof(post_state));
+			Robot::instance().mainExchangeOut().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&post_state, sizeof(post_state));
+	}
+
+
 	while(1)
 	{
 		MsgMatchStateChange prev_state{Robot::instance().matchState(), Robot::instance().side()};
@@ -107,6 +114,7 @@ void MainTask::taskFunction()
 			if(!Hal::get_gpio(1))
 			{
 				Robot::instance().setStartMatchTime(xTaskGetTickCount());
+				m_start_of_match_time = xTaskGetTickCount();
 				Robot::instance().setRemainingMatchTime(remainingMatchTime());
 				Robot::instance().setMatchState(MatchState::Match);
 
@@ -124,7 +132,7 @@ void MainTask::taskFunction()
 		case MatchState::Match:
 			{
 				Robot::instance().setRemainingMatchTime(remainingMatchTime());
-				if(remainingMatchTime() == 0)
+				if(remainingMatchTime() == 0 || m_sequence_engine.state() == SequenceState::Idle)
 				{
 					Robot::instance().setMatchState(MatchState::Idle);
 					m_sequence_engine.abortSequence();

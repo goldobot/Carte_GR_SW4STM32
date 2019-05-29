@@ -132,7 +132,7 @@ void PropulsionController::update()
 		break;
 	}
 
-	if(m_state != State::Inactive && m_state != State::Error&& m_state != State::EmergencyStop)
+	if(m_state != State::Inactive && m_state != State::Error && m_state != State::EmergencyStop)
 	{
 		updateMotorsPwm();
 	}
