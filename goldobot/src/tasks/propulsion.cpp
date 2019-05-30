@@ -52,6 +52,11 @@ void PropulsionTask::doStep()
 	m_odometry.update(left, right);
 	m_controller.update();
 
+	while(m_message_queue.message_ready() && m_controller.state() == PropulsionController::State::Stopped)
+	{
+		processMessage();
+	}
+
 	// Check state change
 	if(m_controller.state() != m_previous_state)
 	{
