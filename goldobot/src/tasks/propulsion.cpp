@@ -41,9 +41,30 @@ void PropulsionTask::doStep()
 		}
 
 	// adversary detection
-	if(Hal::get_gpio(2) && m_controller.state() == PropulsionController::State::FollowTrajectory)
+	if(Hal::get_gpio(2) && m_controller.state() == PropulsionController::State::FollowTrajectory&& m_adversary_detection_enabled)
 	{
 		m_controller.emergencyStop();
+	}
+	// Goldenium hack
+	if(m_recalage_goldenium_armed)
+	{
+		if(Robot::instance().side() == Side::Yellow && Robot::instance().sensorsState() & (1 << 42))
+		{
+			auto pose = m_odometry.pose();
+			pose.position.y = 1;
+			m_odometry.setPose(pose);
+			m_recalage_goldenium_armed = false;
+
+		}
+
+		if(Robot::instance().side() == Side::Purple && Robot::instance().sensorsState() & (1 << 42))
+		{
+			auto pose = m_odometry.pose();
+			//pose.position.y = ;
+			m_odometry.setPose(pose);
+			m_recalage_goldenium_armed = false;
+		}
+
 	}
 	// Update odometry
 	uint16_t left;
@@ -162,6 +183,13 @@ void PropulsionTask::processMessage()
 			float pose[3];
 			m_message_queue.pop_message((unsigned char*)&pose, 12);
 			m_controller.resetPose(pose[0], pose[1], pose[2]);
+		}
+		break;
+	case CommMessageType::PropulsionSetAdversaryDetectionEnable:
+		{
+			uint8_t buff;
+			m_message_queue.pop_message((unsigned char*)&buff,1);
+			m_adversary_detection_enabled = (bool)buff;
 		}
 		break;
 	case CommMessageType::PropulsionEnterManualControl:
@@ -308,7 +336,7 @@ PropulsionController& PropulsionTask::controller()
 void PropulsionTask::taskFunction()
 {
 	// Register for messages
-	Robot::instance().mainExchangeIn().subscribe({83,99, &m_message_queue});
+	Robot::instance().mainExchangeIn().subscribe({83,100, &m_message_queue});
 	Robot::instance().mainExchangeIn().subscribe({64,68, &m_urgent_message_queue});
 	Robot::instance().mainExchangeIn().subscribe({80,82, &m_urgent_message_queue});
 	Robot::instance().mainExchangeIn().subscribe({32,32, &m_urgent_message_queue});

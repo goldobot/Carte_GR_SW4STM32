@@ -1,6 +1,7 @@
 #include "goldobot/tasks/heartbeat.hpp"
 #include "goldobot/hal.hpp"
 #include "goldobot/robot.hpp"
+#include "goldobot/messages.hpp"
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -31,13 +32,18 @@ void HeartbeatTask::taskFunction()
 
 		//gpio debug
 		uint32_t gpio = 0;
-		for(int i=0; i<5; i++)
+		for(int i=0; i<6; i++)
 		{
 			if(Hal::get_gpio(i)) gpio |= (1 << i);
 		}
 		Robot::instance().mainExchangeOut().pushMessage(
 						CommMessageType::GPIODebug,
 						(unsigned char*)&gpio, sizeof(gpio));
+
+		messages::MsgMatchStateChange post_state{Robot::instance().matchState(), Robot::instance().side()};
+		Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&post_state, sizeof(post_state));
+
+
 		delay_periodic(100);
 	}
 }

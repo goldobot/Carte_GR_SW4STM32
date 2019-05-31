@@ -5,7 +5,7 @@
 using namespace goldobot;
 
 Robot Robot::s_instance;
-unsigned char Robot::s_config_area[4096];
+unsigned char Robot::s_config_area[8192];
 
 Robot& Robot::instance()
 {

@@ -33,7 +33,8 @@ namespace goldobot
 		uint16_t m_telemetry_counter{0};
 		PropulsionController::State m_previous_state{PropulsionController::State::Inactive};
 
-
+		bool m_adversary_detection_enabled{true};
+		bool m_recalage_goldenium_armed{false};
 
 		void doStep();
 		void processMessage();

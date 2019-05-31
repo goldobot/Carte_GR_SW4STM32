@@ -40,5 +40,9 @@ namespace goldobot
 	    uint16_t m_message_type;
 	    uint16_t m_state;
 		uint16_t m_crc;
+		uint8_t m_sequence_number;
+
+		int m_corrupted_messages{0};
+		int m_lost_messages{0};
 	};
 }

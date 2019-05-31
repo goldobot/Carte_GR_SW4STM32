@@ -6,8 +6,11 @@
 #include "task.h"
 
 #include <cstring>
+uint16_t update_crc16(const unsigned char* data_p, size_t length, uint16_t crc = 0xFFFF);
+
 namespace goldobot
 {
+
 
 enum Opcode
 {
@@ -91,8 +94,8 @@ bool SequenceEngine::execOp(const Op& op)
 			return true;
 		}
 
-	case 125:
-		if(m_arm_moving == false)
+	case 125: // wait_for_end_of_arm_movement
+		if(m_arm_state == ArmState::Idle & ! m_arm_state_dirty)
 			{
 				m_pc++;
 				return true;
@@ -100,6 +103,13 @@ bool SequenceEngine::execOp(const Op& op)
 		return false;
 	case 126:
 		if(m_moving == false)
+			{
+				m_pc++;
+				return true;
+			}
+		return false;
+	case 146: // wait_for_servo_finished
+		if(!m_servo_moving[op.arg1])
 			{
 				m_pc++;
 				return true;
@@ -236,7 +246,19 @@ bool SequenceEngine::execOp(const Op& op)
 			m_pc++;
 			return false;
 		}
-	case 30:
+	case 138: // set adversary detection enable
+		{
+			unsigned char buff;
+			buff = op.arg1;
+
+			Robot::instance().mainExchangeIn().pushMessage(
+					CommMessageType::PropulsionSetAdversaryDetectionEnable,
+					&buff,
+					1);
+		}
+		m_pc++;
+		return true;
+	case 30: // ret
 		if(m_stack_level == 0)
 		{
 			m_state = SequenceState::Idle;
@@ -247,7 +269,7 @@ bool SequenceEngine::execOp(const Op& op)
 			m_pc = m_call_stack[m_stack_level]+1;
 		}
 		return true;
-	case 31:
+	case 31: //call
 		m_call_stack[m_stack_level] = m_pc;
 		m_stack_level++;
 		m_pc = m_sequence_offsets[op.arg1];
@@ -292,6 +314,10 @@ bool SequenceEngine::execOp(const Op& op)
 		}
 		m_pc++;
 		return true;
+	case 145://gpio out
+		Hal::set_gpio(op.arg1,op.arg2);
+		m_pc++;
+		return true;
 	case 141: //arms go to position
 		{
 			unsigned char buff[4];
@@ -302,12 +328,13 @@ bool SequenceEngine::execOp(const Op& op)
 					CommMessageType::DbgArmsGoToPosition,
 					buff,
 					4);
-			m_arm_moving = true;
+			m_arm_state_dirty = true;
 		}
 		m_pc++;
 		return true;
 	case 142: //servo move
 		{
+			m_servo_state_dirty[op.arg1] = true;
 			unsigned char buff[4];
 			buff[0] = op.arg1;
 			*(uint16_t*)(buff+1) = *(int*)(m_vars + 4 * op.arg2);
@@ -378,6 +405,27 @@ void SequenceEngine::endLoad()
 	m_state = SequenceState::Idle;
 	//decode header
 	SequenceHeader* header = (SequenceHeader*)(m_buffer);
+
+    //check crc
+	uint16_t crc = update_crc16(m_buffer + 4, header->size, 0);
+
+	if(crc == header->crc16)
+	{
+		unsigned char buff[1];
+		buff[0] = 1;
+		Robot::instance().mainExchangeOut().pushMessage(
+							CommMessageType::MainSequenceLoadStatus,
+							buff,
+							1);
+	} else
+	{
+		unsigned char buff[1];
+		buff[0] = 0;
+		Robot::instance().mainExchangeOut().pushMessage(
+							CommMessageType::MainSequenceLoadStatus,
+							buff,
+							1);
+	}
 	m_num_vars = header->num_vars;
 	m_num_seqs = header->num_seqs;
 	m_vars = m_buffer + sizeof(SequenceHeader);
@@ -400,6 +448,18 @@ void SequenceEngine::startSequence(int id)
 void SequenceEngine::abortSequence()
 {
 	m_state = SequenceState::Idle;
+}
+
+void SequenceEngine::updateArmState(ArmState sta)
+{
+	m_arm_state = sta;
+	m_arm_state_dirty = false;
+}
+
+void SequenceEngine::updateServoState(int id, bool moving)
+{
+	m_servo_moving[id] = moving;
+	m_servo_state_dirty[id] = false;
 }
 
 }

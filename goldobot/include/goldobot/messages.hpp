@@ -9,6 +9,12 @@ namespace messages {
  *
  */
 
+struct MsgMatchStateChange
+{
+	MatchState match_state;
+	Side side;
+};
+
 struct PropulsionTelemetry
 {
 	int16_t x;//quarters of mm

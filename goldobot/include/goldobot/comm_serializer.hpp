@@ -22,5 +22,6 @@ namespace goldobot
 		size_t m_buffer_size;
 		size_t m_begin_index;
 		size_t m_end_index;
+		uint8_t m_sequence_number{0};
 	};
 }

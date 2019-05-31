@@ -2,6 +2,7 @@
 #include "goldobot/tasks/uart_comm.hpp"
 #include "goldobot/hal.hpp"
 #include "goldobot/robot.hpp"
+#include "goldobot/messages.hpp"
 
 #include <cstring>
 
@@ -35,21 +36,15 @@ int MainTask::remainingMatchTime()
 	return elapsed_time < match_duration ? match_duration - elapsed_time : 0;
 }
 
-
-struct MsgMatchStateChange
-{
-	MatchState match_state;
-	Side side;
-};
-
 void MainTask::taskFunction()
 {
 	Robot::instance().mainExchangeIn().subscribe({40,50,&m_message_queue});
 	Robot::instance().mainExchangeIn().subscribe({90,90,&m_message_queue});
 	Robot::instance().mainExchangeIn().subscribe({166,166,&m_message_queue});
 	Robot::instance().mainExchangeIn().subscribe({400,402,&m_message_queue});
+	Robot::instance().mainExchangeIn().subscribe({322,322,&m_message_queue});
 
-	MsgMatchStateChange msg{Robot::instance().matchState(), Robot::instance().side()};
+	messages::MsgMatchStateChange msg{Robot::instance().matchState(), Robot::instance().side()};
 	Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&msg, sizeof(msg));
 	Robot::instance().mainExchangeOut().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&msg, sizeof(msg));
 
@@ -63,7 +58,7 @@ void MainTask::taskFunction()
 		vTaskDelay(1);
 	}
 	{
-		MsgMatchStateChange post_state{Robot::instance().matchState(), Robot::instance().side()};
+		messages::MsgMatchStateChange post_state{Robot::instance().matchState(), Robot::instance().side()};
 		Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&post_state, sizeof(post_state));
 			Robot::instance().mainExchangeOut().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&post_state, sizeof(post_state));
 	}
@@ -71,7 +66,7 @@ void MainTask::taskFunction()
 
 	while(1)
 	{
-		MsgMatchStateChange prev_state{Robot::instance().matchState(), Robot::instance().side()};
+		messages::MsgMatchStateChange prev_state{Robot::instance().matchState(), Robot::instance().side()};
 
 		while(m_message_queue.message_ready())
 		{
@@ -147,11 +142,12 @@ void MainTask::taskFunction()
 		default:
 			break;
 		}
+		auto prev_seq_state = m_sequence_engine.state();
 		m_sequence_engine.doStep();
 
-		MsgMatchStateChange post_state{Robot::instance().matchState(), Robot::instance().side()};
-		if(post_state.match_state != prev_state.match_state &&
-		   post_state.side == prev_state.side)
+		messages::MsgMatchStateChange post_state{Robot::instance().matchState(), Robot::instance().side()};
+		if(post_state.match_state != prev_state.match_state ||
+		   post_state.side != prev_state.side)
 		{
 			Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&post_state, sizeof(post_state));
 			Robot::instance().mainExchangeOut().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&post_state, sizeof(post_state));
@@ -243,10 +239,14 @@ void MainTask::process_message()
 		{
 		uint8_t buff[2];
 		m_message_queue.pop_message((unsigned char*) (&buff),2);
-		if(buff[1] == 1)
-		{
-			m_sequence_engine.finishedArmMovement();
+		m_sequence_engine.updateArmState((ArmState)buff[1]);
 		}
+		break;
+	case CommMessageType::FpgaServoState:
+		{
+			uint8_t buff[2];
+			m_message_queue.pop_message((unsigned char*) (&buff),2);
+			m_sequence_engine.updateServoState(buff[0], buff[1]);
 		}
 		break;
 
