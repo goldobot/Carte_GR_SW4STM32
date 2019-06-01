@@ -70,6 +70,10 @@ private:
 	bool m_servo_state_dirty[16];
 	bool m_servo_moving[16];
 
+	float get_var_float(int index)
+	{
+		return *(float*)(m_vars + 4 * index);
+	}
 
 
 	//organisation of buffer:

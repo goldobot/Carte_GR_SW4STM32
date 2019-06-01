@@ -93,7 +93,7 @@ namespace goldobot
 		void enterManualControl();
 		void exitManualControl();
 
-		void setTargetPose(RobotPose& target_pose);
+		void setTargetPose(const RobotPose& target_pose);
 		void setControlLevels(uint8_t longi, uint8_t yaw);
 
 		const PropulsionControllerConfig& config() const;

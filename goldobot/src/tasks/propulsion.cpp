@@ -213,7 +213,13 @@ void PropulsionTask::processMessage()
 			m_controller.setTargetPose(pose);
 		}
 		break;
-
+	case CommMessageType::PropulsionMeasureNormal:
+			{
+				float buff[2];
+				m_message_queue.pop_message((unsigned char*)&buff, sizeof(buff));
+				measureNormal(buff[0], buff[1]);
+			}
+			break;
 	default:
 		m_message_queue.pop_message(nullptr, 0);
 		break;
@@ -332,6 +338,28 @@ PropulsionController& PropulsionTask::controller()
 	return m_controller;
 }
 
+void PropulsionTask::measureNormal(float angle, float distance)
+{
+	auto pose = m_odometry.pose();
+	Vector2D normal{cos(angle), sin(angle)};
+	// Check if front or back is touching the border
+	float dot = normal.x * cos(pose.yaw) + normal.y * sin(pose.yaw);
+	if(dot >0)
+	{
+		// border normal is aligned with robot yaw
+		// means the robot back is touching the border
+		distance = distance + Robot::instance().robotConfig().back_length;
+	} else
+	{
+		// touched on the front
+		distance = distance + Robot::instance().robotConfig().front_length;
+	}
+	// Project current position on line and adjust yaw
+	m_odometry.measureLineNormal(normal, distance);
+	pose = m_odometry.pose();
+	// Set controller to new pose
+	m_controller.resetPose(pose.position.x, pose.position.y, pose.yaw);
+}
 
 void PropulsionTask::taskFunction()
 {

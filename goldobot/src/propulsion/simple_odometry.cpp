@@ -130,6 +130,31 @@ void SimpleOdometry::measureLineNormal(Vector2D normal, float distance)
 
 	// Select sign of new yaw to be consistent with current
 	float dp = normal.x * cos(m_yaw) + normal.y * sin(m_yaw);
+	if(dp >= 0)
+	{
+		m_yaw = atan2(normal.y, normal.x);
+	} else
+	{
+		m_yaw = atan2(-normal.y, -normal.x);
+	}
+
+	m_x = new_x;
+	m_y = new_y;
+
+	m_pose.position.x = static_cast<float>(m_x);
+	m_pose.position.y = static_cast<float>(m_y);
+	m_pose.yaw = static_cast<float>(m_yaw);
+}
+
+/*
+void SimpleOdometry::measurePerpendicularPoint(Vector2D point)
+{
+	// Project position on line
+	double new_x = normal.y*normal.y*m_x - normal.x*normal.y*m_y + normal.x*distance;
+	double new_y = -normal.x*normal.y*m_x + normal.x*normal.x*m_y + normal.y*distance;
+
+	// Select sign of new yaw to be consistent with current
+	float dp = normal.x * cos(m_yaw) + normal.y * sin(m_yaw);
 	double new_yaw = atan2(normal.y, normal.x) * (dp >= 0 ? 1 : -1);
 
 	m_x = new_x;
@@ -139,6 +164,6 @@ void SimpleOdometry::measureLineNormal(Vector2D normal, float distance)
 	m_pose.position.x = static_cast<float>(m_x);
 	m_pose.position.y = static_cast<float>(m_y);
 	m_pose.yaw = static_cast<float>(m_yaw);
-}
+}*/
 
 

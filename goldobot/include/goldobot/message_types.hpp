@@ -70,9 +70,11 @@ namespace goldobot
 		PropulsionSetTargetPose=94,
 		PropulsionSetControlLevels=95,
 		PropulsionExecuteFaceDirection=96,
+		PropulsionMeasureNormal=97,
 		PropulsionClearCommandQueue=98,
 		PropulsionClearError=99,
 		PropulsionSetAdversaryDetectionEnable=100,
+
 
 		DbgReset=127,
 

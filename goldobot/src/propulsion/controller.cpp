@@ -156,7 +156,7 @@ RobotPose PropulsionController::targetPose() const
 	return m_target_pose;
 }
 
-void PropulsionController::setTargetPose(RobotPose& target_pose)
+void PropulsionController::setTargetPose(const RobotPose& target_pose)
 {
 	m_target_pose = target_pose;
 }
