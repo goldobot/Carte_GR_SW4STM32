@@ -36,9 +36,9 @@ void PropulsionTask::doStep()
 	}
 
 	while(m_message_queue.message_ready() && m_controller.state() == PropulsionController::State::ManualControl)
-		{
-			processMessage();
-		}
+	{
+		processMessage();
+	}
 
 #if 0 /* FIXME : DEBUG : GOLDO */
 	// adversary detection
@@ -53,6 +53,11 @@ void PropulsionTask::doStep()
 	Hal::read_encoders(left, right);
 	m_odometry.update(left, right);
 	m_controller.update();
+
+	while(m_message_queue.message_ready() && m_controller.state() == PropulsionController::State::Stopped)
+	{
+		processMessage();
+	}
 
 	// Check state change
 	if(m_controller.state() != m_previous_state)

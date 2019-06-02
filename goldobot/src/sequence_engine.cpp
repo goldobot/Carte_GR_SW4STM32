@@ -317,7 +317,19 @@ bool SequenceEngine::execOp(const Op& op)
 		}
 		m_pc++;
 		return true;
-	case 150: // CHECK SENSOR
+	case 144: // DC_MOTOR
+		{
+			unsigned char buff[3];
+			buff[0] = op.arg1;
+			*(int16_t*)(buff+1) = *(int*)(m_vars + 4 * op.arg2);
+			Robot::instance().mainExchangeIn().pushMessage(
+					CommMessageType::FpgaCmdDCMotor,
+					buff,
+					3);
+		}
+		m_pc++;
+		return true;
+	case 150: // CHECK_SENSOR
 		if(Robot::instance().sensorsState() & (1 << op.arg1))
 		{
 			m_status_register |= 1;
