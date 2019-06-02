@@ -40,18 +40,18 @@ void PropulsionTask::doStep()
 			processMessage();
 		}
 
+#if 0 /* FIXME : DEBUG : GOLDO */
+	// adversary detection
+	if(Hal::get_gpio(2) && m_controller.state() == PropulsionController::State::FollowTrajectory)
+	{
+		m_controller.emergencyStop();
+	}
+#endif
 	// Update odometry
 	uint16_t left;
 	uint16_t right;
 	Hal::read_encoders(left, right);
 	m_odometry.update(left, right);
-
-	// Test emergency stop
-	if(Hal::get_gpio(2))
-	{
-		//m_controller.emergencyStop();
-	}
-
 	m_controller.update();
 
 	// Check state change
@@ -131,6 +131,13 @@ void PropulsionTask::processMessage()
 			float params[5];
 			m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
 			m_controller.executePointTo(*(Vector2D*)(params), params[2], params[3], params[4]);
+		}
+		break;
+	case CommMessageType::PropulsionExecuteFaceDirection:
+		{
+			float params[4];
+			m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
+			m_controller.executeFaceDirection(params[0], params[1], params[2], params[3]);
 		}
 		break;
 	case CommMessageType::DbgPropulsionExecuteMoveTo:
@@ -225,14 +232,29 @@ void PropulsionTask::processUrgentMessage()
 		m_urgent_message_queue.pop_message(nullptr, 0);
 		break;
 	case CommMessageType::PropulsionClearError:
-		m_controller.clearError();
-		m_urgent_message_queue.pop_message(nullptr, 0);
-		break;
+			m_controller.clearError();
+			m_urgent_message_queue.pop_message(nullptr, 0);
+			break;
+	case CommMessageType::PropulsionClearCommandQueue:
+			m_urgent_message_queue.pop_message(nullptr, 0);
+			while(m_message_queue.message_ready())
+			{
+				m_message_queue.pop_message(nullptr, 0);
+			}
+			break;
 	case CommMessageType::DbgSetPropulsionEnable:
 		{
 			uint8_t enabled;
 			m_urgent_message_queue.pop_message((unsigned char*)&enabled, 1);
 			m_controller.setEnable(enabled);
+			if(!enabled)
+			{
+				// Clear queue on disable
+				while(m_message_queue.message_ready())
+				{
+					m_message_queue.pop_message(nullptr, 0);
+				}
+			}
 		}
 		break;
 	case CommMessageType::DbgSetMotorsEnable:

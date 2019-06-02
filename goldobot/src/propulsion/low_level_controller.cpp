@@ -55,8 +55,8 @@ void LowLevelController::update(const RobotPose& current_pose, const RobotPose& 
 
 	if(m_longi_control_level >= 1)
 	{
-		m_speed_pid.set_target(target_pose.speed + translation_command);
-		speed_command = m_speed_pid.update(target_pose.speed);
+		m_speed_pid.set_target(target_pose.speed);
+		speed_command = m_speed_pid.update(target_pose.speed) + translation_command;
 	}
 
 	// Compute yaw and yaw_rate command
@@ -75,8 +75,8 @@ void LowLevelController::update(const RobotPose& current_pose, const RobotPose& 
 
 	if(m_yaw_control_level >=1)
 	{
-		m_yaw_rate_pid.set_target(target_pose.yaw_rate + yaw_command);
-		yaw_rate_command = m_yaw_rate_pid.update(current_pose.yaw_rate);
+		m_yaw_rate_pid.set_target(target_pose.yaw_rate);
+		yaw_rate_command = m_yaw_rate_pid.update(current_pose.yaw_rate) + yaw_command;
 	}
 
 	m_left_motor_pwm = speed_command -yaw_rate_command;

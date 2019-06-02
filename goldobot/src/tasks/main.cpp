@@ -31,7 +31,8 @@ const char* MainTask::name() const
 int MainTask::remainingMatchTime()
 {
 	int elapsed_time = (xTaskGetTickCount() - m_start_of_match_time)/1000;
-	return elapsed_time < 90 ? 90 - elapsed_time : 0;
+	int match_duration = 98;
+	return elapsed_time < match_duration ? match_duration - elapsed_time : 0;
 }
 
 
@@ -74,6 +75,13 @@ void MainTask::taskFunction()
 		}
 		vTaskDelay(1);
 	}
+	{
+		MsgMatchStateChange post_state{Robot::instance().matchState(), Robot::instance().side()};
+		Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&post_state, sizeof(post_state));
+			Robot::instance().mainExchangeOut().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&post_state, sizeof(post_state));
+	}
+
+
 	while(1)
 	{
 		MsgMatchStateChange prev_state{Robot::instance().matchState(), Robot::instance().side()};
@@ -119,6 +127,8 @@ void MainTask::taskFunction()
 			if(!Hal::get_gpio(1))
 			{
 				Robot::instance().setStartMatchTime(xTaskGetTickCount());
+				m_start_of_match_time = xTaskGetTickCount();
+				Robot::instance().setRemainingMatchTime(remainingMatchTime());
 				Robot::instance().setMatchState(MatchState::Match);
 
 				if(Robot::instance().side() == Side::Yellow)
@@ -134,11 +144,12 @@ void MainTask::taskFunction()
 
 		case MatchState::Match:
 			{
-				if(remainingMatchTime() == 0)
+				Robot::instance().setRemainingMatchTime(remainingMatchTime());
+				if(remainingMatchTime() == 0 || m_sequence_engine.state() == SequenceState::Idle)
 				{
-					Hal::set_gpio(0, false);
-					Robot::instance().setMatchState(MatchState::PostMatch);
-					Hal::set_motors_enable(false);
+					Robot::instance().setMatchState(MatchState::Idle);
+					m_sequence_engine.abortSequence();
+					m_sequence_engine.startSequence(4);
 				}
 			}
 			break;
@@ -224,7 +235,8 @@ void MainTask::process_message_config()
 	{
 		uint16_t crc;
 		m_message_queue.pop_message((unsigned char*)&crc, 2);
-		Robot::instance().endLoadConfig(crc);
+		uint8_t status = Robot::instance().endLoadConfig(crc);
+		Robot::instance().mainExchangeOut().pushMessage(CommMessageType::RobotEndLoadConfigStatus, (unsigned char*)&status, 1);
 	}
 	break;
 	default:
@@ -263,6 +275,10 @@ void MainTask::process_message()
 			m_message_queue.pop_message((unsigned char*) (&seq_id),2);
 			m_sequence_engine.startSequence(seq_id);
 			break;
+	case CommMessageType::MainSequenceAbortSequence:
+		m_message_queue.pop_message(nullptr,0);
+		m_sequence_engine.abortSequence();
+		break;
 	case CommMessageType::PropulsionStateChanged:
 		{
 		uint8_t buff[2];

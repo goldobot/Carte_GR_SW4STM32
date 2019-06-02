@@ -79,6 +79,17 @@ bool SequenceEngine::execOp(const Op& op)
 		m_pc++;
 		return true;
 	}
+	case 66: //PROPULSION.MOTORS_DISABLE
+		Hal::set_motors_enable(false);
+		m_pc++;
+		return true;
+	case 67: // PROPULSION.DISABLE
+		{
+			uint8_t b = false;
+			Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DbgSetPropulsionEnable, (unsigned char*)&b, 1);
+			m_pc++;
+			return true;
+		}
 
 	case 125: // WAIT_ARM_FINISHED
 		if(m_arm_moving == false)
@@ -210,6 +221,21 @@ bool SequenceEngine::execOp(const Op& op)
 				m_pc++;
 				return false;
 			}
+	case 137://PROPULSION.FACE_DIRECTION
+		{
+			float params[4];
+			params[0] = *(float*)(m_vars + 4 * op.arg1);
+			params[1] = *(float*)(m_vars + 4 * (op.arg2));
+			params[2] = *(float*)(m_vars + 4 * (op.arg2+1));
+			params[3] = *(float*)(m_vars + 4 * (op.arg2+2));
+
+			Robot::instance().mainExchangeIn().pushMessage(
+					CommMessageType::PropulsionExecuteFaceDirection,
+					(unsigned char*) params, sizeof(params));
+			m_moving = true;
+			m_pc++;
+			return false;
+		}
 	case 30: // RET
 		if(m_stack_level == 0)
 		{
@@ -225,6 +251,21 @@ bool SequenceEngine::execOp(const Op& op)
 		m_call_stack[m_stack_level] = m_pc;
 		m_stack_level++;
 		m_pc = m_sequence_offsets[op.arg1];
+		return true;
+	case 33: // YIELD. Do nothing and wait for next task tick. use for polling loop
+		m_pc++;
+		return false;
+	case 34: // SEQUENCE EVENT
+		{
+			unsigned char buff[2];
+			buff[0] = op.arg1;
+			buff[1] = op.arg2;
+			Robot::instance().mainExchangeOut().pushMessage(
+					CommMessageType::SequenceEvent,
+					buff,
+					2);
+		}
+		m_pc++;
 		return true;
 
 	case 140: // PUMP.SET_PWM
@@ -244,7 +285,7 @@ bool SequenceEngine::execOp(const Op& op)
 			unsigned char buff[4];
 			buff[0] = op.arg1;
 			buff[1] = op.arg2;
-			*(uint16_t*)(buff+2) = 1000;
+			*(uint16_t*)(buff+2) = op.arg3;// speed in % of max speed
 			Robot::instance().mainExchangeIn().pushMessage(
 					CommMessageType::DbgArmsGoToPosition,
 					buff,
@@ -255,9 +296,10 @@ bool SequenceEngine::execOp(const Op& op)
 		return true;
 	case 142: // SET_SERVO
 		{
-			unsigned char buff[3];
+			unsigned char buff[4];
 			buff[0] = op.arg1;
 			*(uint16_t*)(buff+1) = *(int*)(m_vars + 4 * op.arg2);
+			buff[3] = op.arg3;
 			Robot::instance().mainExchangeIn().pushMessage(
 					CommMessageType::FpgaCmdServo,
 					buff,
@@ -265,7 +307,49 @@ bool SequenceEngine::execOp(const Op& op)
 		}
 		m_pc++;
 		return true;
-	default: // NOP (?)
+	case 143: // ARMS.SHUTDOWN
+		{
+			Robot::instance().mainExchangeIn().pushMessage(
+					CommMessageType::ArmsShutdown,
+					nullptr,
+					0);
+
+		}
+		m_pc++;
+		return true;
+	case 150: // CHECK SENSOR
+		if(Robot::instance().sensorsState() & (1 << op.arg1))
+		{
+			m_status_register |= 1;
+		} else
+		{
+			m_status_register &= (0xffff-1);
+		}
+		m_pc++;
+		return true;
+	case 200://JMP
+		m_pc = (uint16_t)op.arg1 | ((uint16_t)op.arg2 << 8);
+		return true;
+	case 201://JZ
+		if(m_status_register & 0x01)
+		{
+			m_pc++;
+		} else
+		{
+			m_pc = (uint16_t)op.arg1 | ((uint16_t)op.arg2 << 8);
+		}
+		return true;
+	case 202://JNZ
+		if(m_status_register & 0x01)
+		{
+			m_pc = (uint16_t)op.arg1 | ((uint16_t)op.arg2 << 8);
+		} else
+		{
+			m_pc++;
+		}
+		return true;
+
+	default: //NOP (?)
 		m_pc++;
 		return false;
 	}
@@ -299,6 +383,11 @@ void SequenceEngine::startSequence(int id)
 {
 	m_state = SequenceState::Executing;
 	m_pc = m_sequence_offsets[id];
+}
+
+void SequenceEngine::abortSequence()
+{
+	m_state = SequenceState::Idle;
 }
 
 /* FIXME : TODO : traiter d'autres causes d'interruption (pour l'instant on a : irq_id=1:="obstacle") */

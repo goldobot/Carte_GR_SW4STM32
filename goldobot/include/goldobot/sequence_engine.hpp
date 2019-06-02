@@ -32,6 +32,7 @@ public:
 	void loadData(unsigned char* data, uint16_t size);
 	void endLoad();
 	void startSequence(int id);
+	void abortSequence();
 
 	void IRQ(int irq_id);
 	void IRQ_END(int irq_id);
@@ -55,6 +56,7 @@ private:
 	uint16_t m_pc{0};
 	uint16_t m_call_stack[8];
 	int m_stack_level{0};
+	uint32_t m_status_register{0};
 
 	bool m_moving{false};
 	bool m_arm_moving{false};

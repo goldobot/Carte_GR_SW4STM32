@@ -2,7 +2,7 @@
 # Automatically-generated file. Do not edit!
 ################################################################################
 #PREFIX_GOLDO = /home/jlouis/src/robotik/coupe2018/goldorak/soft/gros_robot_postcoupe/Carte_GR_SW4STM32
-PREFIX_GOLDO = /home/jlouis/src/robotik/coupe2019/goldorak/soft/thomas/Carte_GR_SW4STM32
+PREFIX_GOLDO = /home/jlouis/src/robotik/coupe2019/goldorak/soft/goldo/Carte_GR_SW4STM32
 
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \

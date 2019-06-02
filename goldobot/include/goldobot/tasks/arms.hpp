@@ -23,7 +23,7 @@ public:
 
 	// Dirty provisional api
 
-	void go_to_position(uint8_t pos_id, uint16_t time_ms, int torque_setting=0);
+	void go_to_position(uint8_t pos_id, uint16_t speed_percent, int torque_setting=0);
 	// Disable all dynamixels torque
 	void shutdown();
 

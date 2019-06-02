@@ -22,6 +22,7 @@ bool MessageExchange::pushMessage(CommMessageType message_type, const unsigned c
 		}
 	}
 	xSemaphoreGive(m_mutex);
+	return true;
 }
 
 void MessageExchange::subscribe(const Subscription& sub)
