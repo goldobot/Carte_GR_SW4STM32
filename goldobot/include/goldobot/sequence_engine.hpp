@@ -38,8 +38,6 @@ public:
 
 	SequenceState state() const {return m_state;};
 
-	void finishedMovement() {m_moving = false;};
-
 	void updateArmState(ArmState sta);
 	void updatePropulsionState(PropulsionState state);
 	void updateServoState(int id, bool moving);
@@ -60,7 +58,6 @@ private:
 	int m_stack_level{0};
 	uint32_t m_status_register{0};
 
-	bool m_moving{false};
 	uint32_t m_end_delay{0};
 
 	bool execOp(const Op& op);

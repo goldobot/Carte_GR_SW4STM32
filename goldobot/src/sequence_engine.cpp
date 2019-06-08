@@ -152,7 +152,6 @@ bool SequenceEngine::execOp(const Op& op)
 				CommMessageType::DbgPropulsionExecutePointTo,
 				(unsigned char*) params, sizeof(params));
 	}
-		m_moving = true;
 		m_propulsion_state_dirty = true;
 		m_pc++;
 		return false;
@@ -168,11 +167,28 @@ bool SequenceEngine::execOp(const Op& op)
 		Robot::instance().mainExchangeIn().pushMessage(
 				CommMessageType::DbgPropulsionExecuteMoveTo,
 				(unsigned char*) params, sizeof(params));
-		m_moving = true;
 		m_propulsion_state_dirty = true;
 		m_pc++;
 		return false;
 	}
+	case 120://propulsion.trajectory
+		{
+			unsigned char buff[76];//12 for traj params and 8*8 for points
+			*(float*)(buff) = get_var_float(op.arg3);
+			*(float*)(buff+4) = get_var_float(op.arg3+1);
+			*(float*)(buff+8) = get_var_float(op.arg3 + 2);
+
+			memcpy(buff+12, m_vars + 4 * op.arg1, op.arg2 * 8);
+
+
+			Robot::instance().mainExchangeIn().pushMessage(
+					CommMessageType::DbgPropulsionExecuteTrajectory,
+					buff, 12 + op.arg2 * 8);
+
+			m_propulsion_state_dirty = true;
+			m_pc++;
+			return false;
+		}
 	case 130://propulsion.rotate
 	{
 		float params[4];
@@ -184,7 +200,6 @@ bool SequenceEngine::execOp(const Op& op)
 		Robot::instance().mainExchangeIn().pushMessage(
 				CommMessageType::DbgPropulsionExecuteRotation,
 				(unsigned char*) params, sizeof(params));
-		m_moving = true;
 		m_propulsion_state_dirty = true;
 		m_pc++;
 		return false;
@@ -199,7 +214,6 @@ bool SequenceEngine::execOp(const Op& op)
 			Robot::instance().mainExchangeIn().pushMessage(
 					CommMessageType::PropulsionExecuteTranslation,
 					(unsigned char*) params, sizeof(params));
-			m_moving = true;
 			m_propulsion_state_dirty = true;
 			m_pc++;
 			return false;
@@ -212,7 +226,6 @@ bool SequenceEngine::execOp(const Op& op)
 			Robot::instance().mainExchangeIn().pushMessage(
 					CommMessageType::DbgPropulsionExecuteReposition,
 					(unsigned char*) params, sizeof(params));
-			m_moving = true;
 			m_propulsion_state_dirty = true;
 			m_pc++;
 			return false;
@@ -266,7 +279,6 @@ bool SequenceEngine::execOp(const Op& op)
 			Robot::instance().mainExchangeIn().pushMessage(
 					CommMessageType::PropulsionExecuteFaceDirection,
 					(unsigned char*) params, sizeof(params));
-			m_moving = true;
 			m_propulsion_state_dirty = true;
 			m_pc++;
 			return false;
