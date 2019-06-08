@@ -35,4 +35,16 @@ enum class ArmState : uint8_t
 	Blocked=3
 };
 
+enum class PropulsionState : uint8_t
+{
+	Inactive, // Controller desactive
+	Stopped, // Robot immobile
+	FollowTrajectory, // Poursuite de trajectoire
+	Rotate, // Rotation sur place
+	Reposition, // Se deplace a vitesse fixe jusqu'a bloquer
+	ManualControl, // Controle manuel, utilise pour le reglage de PID
+	EmergencyStop, // Arret d'urgence, deccelere avant de s'arreter
+	Error // Controlleur desactive suite a une erreur
+};
+
 }

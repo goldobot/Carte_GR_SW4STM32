@@ -41,6 +41,7 @@ public:
 	void finishedMovement() {m_moving = false;};
 
 	void updateArmState(ArmState sta);
+	void updatePropulsionState(PropulsionState state);
 	void updateServoState(int id, bool moving);
 
 private:
@@ -63,6 +64,10 @@ private:
 	uint32_t m_end_delay{0};
 
 	bool execOp(const Op& op);
+
+	bool m_propulsion_state_dirty{false};
+	PropulsionState m_propulsion_state{PropulsionState::Inactive};
+
 
 	bool m_arm_state_dirty{false};
 	ArmState m_arm_state{ArmState::Unconfigured};

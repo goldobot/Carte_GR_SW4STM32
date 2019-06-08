@@ -229,10 +229,7 @@ void MainTask::process_message()
 		{
 		uint8_t buff[2];
 		m_message_queue.pop_message((unsigned char*) (&buff),2);
-		if(buff[0] == 1)
-		{
-			m_sequence_engine.finishedMovement();
-		}
+		m_sequence_engine.updatePropulsionState((PropulsionState)buff[0]);
 		}
 		break;
 	case CommMessageType::ArmsStateChange:

@@ -8,6 +8,9 @@
 #include <cstring>
 uint16_t update_crc16(const unsigned char* data_p, size_t length, uint16_t crc = 0xFFFF);
 
+#define FLAG_Z (1 << 0)
+#define FLAG_N (1 << 1)
+
 namespace goldobot
 {
 
@@ -58,6 +61,18 @@ bool SequenceEngine::execOp(const Op& op)
 		*(int32_t*)(m_vars + 4 * (op.arg1 + 2)) = *(int32_t*)(m_vars + 4 * (op.arg2 + 2));
 		m_pc++;
 		break;
+	case 4: // movi
+		*(int32_t*)(m_vars + 4 * op.arg1) = op.arg2;
+		m_pc++;
+		break;
+	case 8: // addi
+		*(int32_t*)(m_vars + 4 * op.arg1) += op.arg2;
+		m_pc++;
+		break;
+	case 9: // subi
+		*(int32_t*)(m_vars + 4 * op.arg1) -= op.arg2;
+		m_pc++;
+		break;
 	case 32:
 		if(m_end_delay == 0)
 		{
@@ -79,6 +94,7 @@ bool SequenceEngine::execOp(const Op& op)
 	{
 		uint8_t b = true;
 		Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DbgSetPropulsionEnable, (unsigned char*)&b, 1);
+		m_propulsion_state_dirty = true;
 		m_pc++;
 		return true;
 	}
@@ -90,19 +106,20 @@ bool SequenceEngine::execOp(const Op& op)
 		{
 			uint8_t b = false;
 			Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DbgSetPropulsionEnable, (unsigned char*)&b, 1);
+			m_propulsion_state_dirty = true;
 			m_pc++;
 			return true;
 		}
 
 	case 125: // wait_for_end_of_arm_movement
-		if(m_arm_state == ArmState::Idle & ! m_arm_state_dirty)
+		if(m_arm_state == ArmState::Idle && !m_arm_state_dirty)
 			{
 				m_pc++;
 				return true;
 			}
 		return false;
-	case 126:
-		if(m_moving == false)
+	case 126: // wait for movement finished
+		if(m_propulsion_state == PropulsionState::Stopped)
 			{
 				m_pc++;
 				return true;
@@ -136,6 +153,7 @@ bool SequenceEngine::execOp(const Op& op)
 				(unsigned char*) params, sizeof(params));
 	}
 		m_moving = true;
+		m_propulsion_state_dirty = true;
 		m_pc++;
 		return false;
 	case 129://propulsion.move_to
@@ -151,6 +169,7 @@ bool SequenceEngine::execOp(const Op& op)
 				CommMessageType::DbgPropulsionExecuteMoveTo,
 				(unsigned char*) params, sizeof(params));
 		m_moving = true;
+		m_propulsion_state_dirty = true;
 		m_pc++;
 		return false;
 	}
@@ -166,6 +185,7 @@ bool SequenceEngine::execOp(const Op& op)
 				CommMessageType::DbgPropulsionExecuteRotation,
 				(unsigned char*) params, sizeof(params));
 		m_moving = true;
+		m_propulsion_state_dirty = true;
 		m_pc++;
 		return false;
 	}
@@ -180,6 +200,7 @@ bool SequenceEngine::execOp(const Op& op)
 					CommMessageType::PropulsionExecuteTranslation,
 					(unsigned char*) params, sizeof(params));
 			m_moving = true;
+			m_propulsion_state_dirty = true;
 			m_pc++;
 			return false;
 		}
@@ -192,6 +213,7 @@ bool SequenceEngine::execOp(const Op& op)
 					CommMessageType::DbgPropulsionExecuteReposition,
 					(unsigned char*) params, sizeof(params));
 			m_moving = true;
+			m_propulsion_state_dirty = true;
 			m_pc++;
 			return false;
 		}
@@ -200,6 +222,7 @@ bool SequenceEngine::execOp(const Op& op)
 				Robot::instance().mainExchangeIn().pushMessage(
 						CommMessageType::PropulsionEnterManualControl,nullptr, 0);
 				m_pc++;
+				m_propulsion_state_dirty = true;
 				return false;
 			}
 	case 134://propulsion.enter_manual
@@ -207,6 +230,7 @@ bool SequenceEngine::execOp(const Op& op)
 				Robot::instance().mainExchangeIn().pushMessage(
 						CommMessageType::PropulsionExitManualControl,nullptr, 0);
 				m_pc++;
+				m_propulsion_state_dirty = true;
 				return false;
 			}
 	case 135://propulsion.set_control_levels
@@ -243,6 +267,7 @@ bool SequenceEngine::execOp(const Op& op)
 					CommMessageType::PropulsionExecuteFaceDirection,
 					(unsigned char*) params, sizeof(params));
 			m_moving = true;
+			m_propulsion_state_dirty = true;
 			m_pc++;
 			return false;
 		}
@@ -375,11 +400,45 @@ bool SequenceEngine::execOp(const Op& op)
 		}
 		m_pc++;
 		return true;
+	case 151: // check propulsion state
+		// Set zero flag if equality
+		if(!m_propulsion_state_dirty && (uint8_t)m_propulsion_state ==  op.arg1)
+		{
+			m_status_register &= (0xffff-FLAG_Z);
+		} else
+		{
+			m_status_register |= FLAG_Z;
+		}
+		m_pc++;
+		return true;
+	case 160: // cmp
+	{
+		// Set zero flag if equality
+		int v1 = *(int*)(m_vars + 4 * op.arg1);
+		int v2 = *(int*)(m_vars + 4 * op.arg2);
+		if(v1 == v2)
+		{
+			m_status_register |= FLAG_Z;
+		} else
+		{
+			m_status_register &= (0xffff-FLAG_Z);
+		}
+		if(v1 >= v2)
+		{
+			m_status_register &= (0xffff-FLAG_N);
+		} else
+		{
+			m_status_register |= FLAG_N;
+		}
+	}
+
+		m_pc++;
+		return true;
 	case 200://jmp
 		m_pc = (uint16_t)op.arg1 | ((uint16_t)op.arg2 << 8);
 		return true;
 	case 201://jz
-		if(m_status_register & 0x01)
+		if(m_status_register & FLAG_Z)
 		{
 			m_pc++;
 		} else
@@ -388,7 +447,7 @@ bool SequenceEngine::execOp(const Op& op)
 		}
 		return true;
 	case 202://jnz
-		if(m_status_register & 0x01)
+		if(m_status_register & FLAG_Z)
 		{
 			m_pc = (uint16_t)op.arg1 | ((uint16_t)op.arg2 << 8);
 		} else
@@ -396,7 +455,17 @@ bool SequenceEngine::execOp(const Op& op)
 			m_pc++;
 		}
 		return true;
+	case 203://jge
+		// jump if last comparison was posive (has negative flag to 0
+		if(m_status_register & FLAG_N)
+		{
+			m_pc++;
+		} else
+		{
+			m_pc = (uint16_t)op.arg1 | ((uint16_t)op.arg2 << 8);
 
+		}
+		return true;
 	default:
 		m_pc++;
 		return false;
@@ -465,6 +534,11 @@ void SequenceEngine::updateArmState(ArmState sta)
 	m_arm_state_dirty = false;
 }
 
+void SequenceEngine::updatePropulsionState(PropulsionState state)
+{
+	m_propulsion_state = state;
+	m_propulsion_state_dirty = false;
+}
 void SequenceEngine::updateServoState(int id, bool moving)
 {
 	m_servo_moving[id] = moving;

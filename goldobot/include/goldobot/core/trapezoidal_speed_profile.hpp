@@ -13,9 +13,11 @@ namespace goldobot
 		void compute(float t, float* val, float* deriv, float* accel);
 
 	private:
-		float m_c0[4];
-		float m_c1[4];
-		float m_c2[4];
-		float m_t[4];
+		float m_c0[8];
+		float m_c1[8];
+		float m_c2[8];
+		float m_c3[8];
+		float m_t[8];
+		unsigned m_num_points;
 	};
 }
