@@ -118,7 +118,7 @@ void PropulsionController::update()
 		{
 			m_left_motor_pwm = 0;
 			m_right_motor_pwm = 0;
-#if 0 /* FIXME : DEBUG : GOLDO (why this?!..) */
+#if 1 /* FIXME : DEBUG : GOLDO (why this?!..) */
 			if (fabsf(m_current_pose.speed) < 0.01 && fabsf(m_current_pose.yaw_rate) < 0.1)
 			{
 				m_state = State::Error;

@@ -55,6 +55,7 @@ private:
 
 	uint16_t m_pc{0};
 	uint16_t m_call_stack[8];
+	uint16_t m_saved_irq_pc{0xffff};
 	int m_stack_level{0};
 	uint32_t m_status_register{0};
 
@@ -64,6 +65,8 @@ private:
 
 	bool execOp(const Op& op);
 
+	bool m_prev_obstacle{false};
+	int m_obstacle_count{0};
 
 
 	//organisation of buffer:

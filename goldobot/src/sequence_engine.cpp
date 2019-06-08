@@ -22,6 +22,34 @@ SequenceEngine::SequenceEngine()
 
 void SequenceEngine::doStep()
 {
+	bool act_obstacle = (Hal::get_gpio(2)!=0);
+
+	if ((act_obstacle) && (!m_prev_obstacle) && (m_obstacle_count==0))
+	{
+		m_obstacle_count = 4000;
+		IRQ (1);
+	}
+
+	if ((m_obstacle_count==2000))
+	{
+		if ((act_obstacle))
+		{
+			IRQ_END (1);
+		}
+		else
+		{
+			IRQ_END (0);
+		}
+
+	}
+
+	if (m_obstacle_count>0)
+	{
+		m_obstacle_count--;
+	}
+
+	m_prev_obstacle = act_obstacle;
+
 	switch(m_state)
 	{
 	case SequenceState::Executing:
@@ -413,29 +441,117 @@ void SequenceEngine::IRQ(int /*irq_id*/)
 	}
 }
 
-void SequenceEngine::IRQ_END(int /*irq_id*/)
+void SequenceEngine::IRQ_END(int irq_id)
 {
-	if(m_state == SequenceState::Interruption)
+	if ((irq_id==1)) /* obstacle encore present */
 	{
-		Hal::set_motors_enable(true);
+		uint16_t irq_seq_pc = m_sequence_offsets[5];
 
-		Op& op = m_ops[m_pc-1];
+		if (((irq_seq_pc+4)!=(m_pc)) || (m_saved_irq_pc==0xffff)) m_saved_irq_pc = m_pc-1;
 
-		float params[5];
-		params[0] = *(float*)(m_vars + 4 * op.arg1);
-		params[1] = *(float*)(m_vars + 4 * (op.arg1+1));
-		params[2] = *(float*)(m_vars + 4 * (op.arg2));
-		params[3] = *(float*)(m_vars + 4 * (op.arg2+1));
-		params[4] = *(float*)(m_vars + 4 * (op.arg2+2));
+		Op& old_op = m_ops[m_saved_irq_pc];
+
+		//Op& op0 = m_ops[irq_seq_pc]; // DELAY : raf
+
+
+		RobotPose my_pose = Robot::instance().odometry().pose();
+		double my_x_m = my_pose.position.x;
+		double my_y_m = my_pose.position.y;
+		double my_theta_rad = my_pose.yaw;
+		double my_cos_theta = cos(my_theta_rad);
+		double my_sin_theta = sin(my_theta_rad);
+
+		double new_theta_right_rad =  my_theta_rad - (M_PI/2.0);
+		double new_theta_left_rad  =  my_theta_rad + (M_PI/2.0);
+
+		double cos_new_theta_right =  my_sin_theta;
+		double sin_new_theta_right = -my_cos_theta;
+
+		double cos_new_theta_left  = -my_sin_theta;
+		double sin_new_theta_left  =  my_cos_theta;
+
+		double x_right_m = my_x_m + 0.3*cos_new_theta_right;
+		double y_right_m = my_y_m + 0.3*sin_new_theta_right;
+
+		double x_left_m  = my_x_m + 0.3*cos_new_theta_left;
+		double y_left_m  = my_y_m + 0.3*sin_new_theta_left;
+
+		double x_center_m  = 0.8;
+		double y_center_m  = 0.0;
+
+		double new_x_m = x_center_m;
+		double new_y_m = y_center_m;
+
+		double anti_new_x_m = x_center_m;
+		double anti_new_y_m = y_center_m;
+
+		double D2_right  = (x_right_m-x_center_m)*(x_right_m-x_center_m) + 
+                           (y_right_m-y_center_m)*(y_right_m-y_center_m);
+
+		double D2_left   = (x_left_m-x_center_m)*(x_left_m-x_center_m) + 
+                           (y_left_m-y_center_m)*(y_left_m-y_center_m);
+
+        if (D2_right<D2_left)
+        {
+            new_x_m = x_right_m;
+            new_y_m = y_right_m;
+            anti_new_x_m = x_left_m;
+            anti_new_y_m = y_left_m;
+        }
+        else
+        {
+            new_x_m = x_left_m;
+            new_y_m = y_left_m;
+            anti_new_x_m = x_right_m;
+            anti_new_y_m = y_right_m;
+        }
+
+		Op& op1 = m_ops[irq_seq_pc+1]; // PROPULSION.POINT_TO parking
+		*(float*)(m_vars + 4 * op1.arg1)     = anti_new_x_m;
+		*(float*)(m_vars + 4 * (op1.arg1+1)) = anti_new_y_m;
+
+		//Op& op2 = m_ops[irq_seq_pc+2]; // WAIT_MOVEMENT_FINISHED point_to parking : raf
+
+		Op& op3 = m_ops[irq_seq_pc+3]; // PROPULSION.MOVE_TO parking : raf
+		*(float*)(m_vars + 4 * op3.arg1)     = new_x_m;
+		*(float*)(m_vars + 4 * (op3.arg1+1)) = new_y_m;
+
+		//Op& op4 = m_ops[irq_seq_pc+4]; // WAIT_MOVEMENT_FINISHED move_to parking : raf
+
+		Op& op5 = m_ops[irq_seq_pc+5]; // PROPULSION.POINT_TO cible
+		op5.arg1 = old_op.arg1;
+		op5.arg2 = old_op.arg2;
+
+		//Op& op6 = m_ops[irq_seq_pc+6]; // WAIT_MOVEMENT_FINISHED point_to cible : raf
+
+		Op& op7 = m_ops[irq_seq_pc+7]; // JMP
+		uint16_t dummy = m_saved_irq_pc & 0x00ff;
+		op7.arg1 = (uint8_t) dummy;
+		dummy = (m_saved_irq_pc >> 8) & 0x00ff;
+		op7.arg2 = (uint8_t) dummy;
+
+		m_pc = irq_seq_pc;
 
 		Robot::instance().mainExchangeIn().pushMessage(CommMessageType::PropulsionClearError, nullptr, 0);
-		Robot::instance().mainExchangeIn().pushMessage(
-				CommMessageType::DbgPropulsionExecuteMoveTo,
-				(unsigned char*) params, sizeof(params));
+
 		m_moving = true;
 		m_state = SequenceState::Executing;
+
+		Hal::set_motors_enable(true);
+	}
+	else /* l'adversaire s'est barre */
+	{
+		uint16_t irq_seq_pc = m_sequence_offsets[5];
+
+		m_pc = m_pc-1;
+
+		Robot::instance().mainExchangeIn().pushMessage(CommMessageType::PropulsionClearError, nullptr, 0);
+
+		m_moving = true;
+		m_state = SequenceState::Executing;
+
+		Hal::set_motors_enable(true);
 	}
 }
-
 
 }
