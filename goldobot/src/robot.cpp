@@ -74,6 +74,10 @@ uint16_t update_crc16(const unsigned char* data_p, size_t length, uint16_t crc =
 
 void Robot::loadConfig(char* buffer, size_t size)
 {
+	if(m_load_config_ptr + size >= s_config_area + sizeof(s_config_area))
+	{
+		return;
+	}
 	std::memcpy(m_load_config_ptr, buffer, size);
 	m_load_config_ptr+=size;
 	m_load_config_crc = update_crc16((unsigned char*)buffer, size, m_load_config_crc);
@@ -88,7 +92,6 @@ bool Robot::endLoadConfig(uint16_t crc)
 	// ArmConfig
 	// Arm positions
 	// ServosConfig
-
 	if(crc != m_load_config_crc)
 	{
 		return false;

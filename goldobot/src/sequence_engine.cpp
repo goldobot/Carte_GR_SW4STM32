@@ -119,7 +119,7 @@ bool SequenceEngine::execOp(const Op& op)
 			}
 		return false;
 	case 126: // wait for movement finished
-		if(m_propulsion_state == PropulsionState::Stopped)
+		if(!m_propulsion_state_dirty && m_propulsion_state == PropulsionState::Stopped)
 			{
 				m_pc++;
 				return true;
@@ -420,6 +420,15 @@ bool SequenceEngine::execOp(const Op& op)
 		} else
 		{
 			m_status_register |= FLAG_Z;
+		}
+		m_pc++;
+		return true;
+	case 152: // propulsion.get_pose
+		{
+		auto pose = Robot::instance().odometry().pose();
+		*(float*)(m_vars + 4 * op.arg1) = pose.position.x;
+		*(float*)(m_vars + 4 * (op.arg1 + 1)) = pose.position.y;
+		*(float*)(m_vars + 4 * (op.arg1 + 2)) = pose.yaw;
 		}
 		m_pc++;
 		return true;

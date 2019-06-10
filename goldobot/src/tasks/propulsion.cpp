@@ -178,20 +178,6 @@ void PropulsionTask::processMessage()
 				m_controller.executeRepositioning(params[0], params[1]);
 			}
 			break;
-	case CommMessageType::DbgPropulsionSetPose:
-		{
-			float pose[3];
-			m_message_queue.pop_message((unsigned char*)&pose, 12);
-			m_controller.resetPose(pose[0], pose[1], pose[2]);
-		}
-		break;
-	case CommMessageType::PropulsionSetAdversaryDetectionEnable:
-		{
-			uint8_t buff;
-			m_message_queue.pop_message((unsigned char*)&buff,1);
-			m_adversary_detection_enabled = (bool)buff;
-		}
-		break;
 	case CommMessageType::PropulsionEnterManualControl:
 		m_controller.enterManualControl();
 		break;
@@ -232,6 +218,20 @@ void PropulsionTask::processUrgentMessage()
 
 	switch(message_type)
 	{
+	case CommMessageType::DbgPropulsionSetPose:
+		{
+			float pose[3];
+			m_urgent_message_queue.pop_message((unsigned char*)&pose, 12);
+			m_controller.resetPose(pose[0], pose[1], pose[2]);
+		}
+		break;
+	case CommMessageType::PropulsionSetAdversaryDetectionEnable:
+		{
+			uint8_t buff;
+			m_urgent_message_queue.pop_message((unsigned char*)&buff,1);
+			m_adversary_detection_enabled = (bool)buff;
+		}
+		break;
 	case CommMessageType::DbgGetOdometryConfig:
 		{
 			auto config = m_odometry.config();
@@ -364,11 +364,11 @@ void PropulsionTask::measureNormal(float angle, float distance)
 void PropulsionTask::taskFunction()
 {
 	// Register for messages
-	Robot::instance().mainExchangeIn().subscribe({83,100, &m_message_queue});
+	Robot::instance().mainExchangeIn().subscribe({84,97, &m_message_queue});
 	Robot::instance().mainExchangeIn().subscribe({64,68, &m_urgent_message_queue});
-	Robot::instance().mainExchangeIn().subscribe({80,82, &m_urgent_message_queue});
+	Robot::instance().mainExchangeIn().subscribe({80,83, &m_urgent_message_queue});
 	Robot::instance().mainExchangeIn().subscribe({32,32, &m_urgent_message_queue});
-	Robot::instance().mainExchangeIn().subscribe({98,99, &m_urgent_message_queue});
+	Robot::instance().mainExchangeIn().subscribe({98,100, &m_urgent_message_queue});
 
 	// Set task to high
 	set_priority(6);
