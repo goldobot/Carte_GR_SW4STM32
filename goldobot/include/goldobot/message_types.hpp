@@ -74,6 +74,7 @@ namespace goldobot
 		PropulsionClearCommandQueue=98,
 		PropulsionClearError=99,
 		PropulsionSetAdversaryDetectionEnable=100,
+		PropulsionMeasurePoint=101,
 
 
 		DbgReset=127,

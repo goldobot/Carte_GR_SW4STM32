@@ -308,6 +308,16 @@ void PropulsionTask::processUrgentMessage()
 			Hal::set_motors_pwm(pwm[0], pwm[1]);
 		}
 		break;
+	case CommMessageType::PropulsionMeasurePoint:
+		{
+			float buff[4];
+			m_urgent_message_queue.pop_message((unsigned char*)&buff, sizeof(buff));
+			m_odometry.measurePerpendicularPoint(buff[0], buff[1], *(Vector2D*)(buff+2));
+			auto pose = m_odometry.pose();
+			// Set controller to new pose
+			m_controller.resetPose(pose.position.x, pose.position.y, pose.yaw);
+		}
+		break;
 	default:
 		m_urgent_message_queue.pop_message(nullptr, 0);
 		break;
@@ -368,7 +378,7 @@ void PropulsionTask::taskFunction()
 	Robot::instance().mainExchangeIn().subscribe({64,68, &m_urgent_message_queue});
 	Robot::instance().mainExchangeIn().subscribe({80,83, &m_urgent_message_queue});
 	Robot::instance().mainExchangeIn().subscribe({32,32, &m_urgent_message_queue});
-	Robot::instance().mainExchangeIn().subscribe({98,100, &m_urgent_message_queue});
+	Robot::instance().mainExchangeIn().subscribe({98,102, &m_urgent_message_queue});
 
 	// Set task to high
 	set_priority(6);

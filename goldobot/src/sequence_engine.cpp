@@ -304,6 +304,19 @@ bool SequenceEngine::execOp(const Op& op)
 			m_pc++;
 			return false;
 		}
+	case 147://propulsion.measure_normal
+		{
+			//arg: vector(border normal angle, projection of border point on normal
+			float buff[4] = {get_var_float(op.arg1),
+							get_var_float(op.arg1+1),
+							get_var_float(op.arg2),
+							get_var_float(op.arg2+1)
+			};
+			Robot::instance().mainExchangeIn().pushMessage(
+					CommMessageType::PropulsionMeasurePoint,(unsigned char*)&buff, sizeof(buff));
+			m_pc++;
+			return false;
+		}
 	case 30: // ret
 		if(m_stack_level == 0)
 		{
