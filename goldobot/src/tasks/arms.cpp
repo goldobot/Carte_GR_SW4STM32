@@ -126,6 +126,10 @@ void ArmsTask::dynamixels_action()
 void ArmsTask::go_to_position(uint8_t pos_id, uint16_t speed_percent, int torque_settings)
 {
 	int pos_idx = pos_id * m_config.num_servos;
+	if(speed_percent<10)
+	{
+		speed_percent = 10;
+	}
 
 	// Launch dynamixels
 	//uint8_t servo_ids[] = {81,82,1};
@@ -161,6 +165,10 @@ void ArmsTask::go_to_position(uint8_t pos_id, uint16_t speed_percent, int torque
 	}
 
 	uint32_t time_ms = (tim * 100) / speed_percent;
+	if(time_ms > 5000)
+	{
+		time_ms = 5000;
+	}
 	for(int i=0; i< m_config.num_servos;i++)
 	{
 		uint16_t buff[3];
@@ -184,6 +192,10 @@ void ArmsTask::go_to_position(uint8_t pos_id, uint16_t speed_percent, int torque
 			break;
 		default:
 			break;
+		}
+		if(buff[1] < 32)
+		{
+			buff[1] = 32;
 		}
 		// write new register values
 		dynamixels_reg_write(m_config.servos[i].id,0x1E,(unsigned char*)buff, 6);

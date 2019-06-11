@@ -35,7 +35,10 @@ static GPIODescriptor s_gpio_descriptors[] ={
 	{GPIOC, GPIO_PIN_9},//match start //tmp: blue button on nucleo. //C9 in robot
 	{GPIOC, GPIO_PIN_14}, // adversary detection on C14
 	{GPIOC, GPIO_PIN_5}, //dynamixels direction
-	{GPIOC, GPIO_PIN_6} //side selection
+	{GPIOC, GPIO_PIN_6}, //side selection
+	{GPIOC, GPIO_PIN_8}, //autoconfig
+	{GPIOA, GPIO_PIN_11}, //ev 1
+	{GPIOB, GPIO_PIN_0} //ev 2
 };
 
 

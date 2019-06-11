@@ -21,7 +21,7 @@ namespace goldobot
 		//! \brief Update current pose to be on specified line, with yaw normal to line.
 		//! Used for repositioning on table borders
 		void measureLineNormal(Vector2D normal, float distance);
-
+		void measurePerpendicularPoint(float angle, float offset, Vector2D point);
 		void reset(uint16_t left_encoder, uint16_t right_encoder);
 		void update(uint16_t left_encoder, uint16_t right_encoder);
 

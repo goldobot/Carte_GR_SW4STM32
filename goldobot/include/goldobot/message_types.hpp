@@ -35,6 +35,7 @@ namespace goldobot
 		MainSequenceStartSequence=43,
 		SetMatchState=44,
 		MainSequenceAbortSequence=45,
+		MainSequenceLoadStatus=46,
 		// Debug mode messages
 		// Robot configuration
 		DbgGetOdometryConfig=64,
@@ -69,11 +70,13 @@ namespace goldobot
 		PropulsionSetTargetPose=94,
 		PropulsionSetControlLevels=95,
 		PropulsionExecuteFaceDirection=96,
+		PropulsionMeasureNormal=97,
 		PropulsionClearCommandQueue=98,
 		PropulsionClearError=99,
+		PropulsionSetAdversaryDetectionEnable=100,
+		PropulsionMeasurePoint=101,
 
 
-		DbgMiscRepositionStartGreen=100,
 		DbgReset=127,
 
 		DbgArmsSetPose=160,
@@ -105,6 +108,7 @@ namespace goldobot
 		FpgaColumnsCalib=320,
 		FpgaColumnsMove=321,
 		FpgaColumnsSetOffset=322,
+		FpgaServoState=323,
 
 		RobotBeginLoadConfig=400,
 		RobotLoadConfig=401,

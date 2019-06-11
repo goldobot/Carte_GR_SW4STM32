@@ -6,8 +6,14 @@
 #include "task.h"
 
 #include <cstring>
+uint16_t update_crc16(const unsigned char* data_p, size_t length, uint16_t crc = 0xFFFF);
+
+#define FLAG_Z (1 << 0)
+#define FLAG_N (1 << 1)
+
 namespace goldobot
 {
+
 
 enum Opcode
 {
@@ -83,6 +89,18 @@ bool SequenceEngine::execOp(const Op& op)
 		*(int32_t*)(m_vars + 4 * (op.arg1 + 2)) = *(int32_t*)(m_vars + 4 * (op.arg2 + 2));
 		m_pc++;
 		break;
+	case 4: // movi
+		*(int32_t*)(m_vars + 4 * op.arg1) = op.arg2;
+		m_pc++;
+		break;
+	case 8: // addi
+		*(int32_t*)(m_vars + 4 * op.arg1) += op.arg2;
+		m_pc++;
+		break;
+	case 9: // subi
+		*(int32_t*)(m_vars + 4 * op.arg1) -= op.arg2;
+		m_pc++;
+		break;
 	case 32: // DELAY
 		if(m_end_delay == 0)
 		{
@@ -104,6 +122,7 @@ bool SequenceEngine::execOp(const Op& op)
 	{
 		uint8_t b = true;
 		Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DbgSetPropulsionEnable, (unsigned char*)&b, 1);
+		m_propulsion_state_dirty = true;
 		m_pc++;
 		return true;
 	}
@@ -115,19 +134,27 @@ bool SequenceEngine::execOp(const Op& op)
 		{
 			uint8_t b = false;
 			Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DbgSetPropulsionEnable, (unsigned char*)&b, 1);
+			m_propulsion_state_dirty = true;
 			m_pc++;
 			return true;
 		}
 
 	case 125: // WAIT_ARM_FINISHED
-		if(m_arm_moving == false)
+		if(m_arm_state == ArmState::Idle && !m_arm_state_dirty)
 			{
 				m_pc++;
 				return true;
 			}
 		return false;
 	case 126: // WAIT_MOVEMENT_FINISHED
-		if(m_moving == false)
+		if(!m_propulsion_state_dirty && m_propulsion_state == PropulsionState::Stopped)
+			{
+				m_pc++;
+				return true;
+			}
+		return false;
+	case 146: // wait_for_servo_finished
+		if(!m_servo_moving[op.arg1])
 			{
 				m_pc++;
 				return true;
@@ -153,7 +180,7 @@ bool SequenceEngine::execOp(const Op& op)
 				CommMessageType::DbgPropulsionExecutePointTo,
 				(unsigned char*) params, sizeof(params));
 	}
-		m_moving = true;
+		m_propulsion_state_dirty = true;
 		m_pc++;
 		return false;
 	case 129: // PROPULSION.MOVE_TO
@@ -168,10 +195,28 @@ bool SequenceEngine::execOp(const Op& op)
 		Robot::instance().mainExchangeIn().pushMessage(
 				CommMessageType::DbgPropulsionExecuteMoveTo,
 				(unsigned char*) params, sizeof(params));
-		m_moving = true;
+		m_propulsion_state_dirty = true;
 		m_pc++;
 		return false;
 	}
+	case 120://propulsion.trajectory
+		{
+			unsigned char buff[76];//12 for traj params and 8*8 for points
+			*(float*)(buff) = get_var_float(op.arg3);
+			*(float*)(buff+4) = get_var_float(op.arg3+1);
+			*(float*)(buff+8) = get_var_float(op.arg3 + 2);
+
+			memcpy(buff+12, m_vars + 4 * op.arg1, op.arg2 * 8);
+
+
+			Robot::instance().mainExchangeIn().pushMessage(
+					CommMessageType::DbgPropulsionExecuteTrajectory,
+					buff, 12 + op.arg2 * 8);
+
+			m_propulsion_state_dirty = true;
+			m_pc++;
+			return false;
+		}
 	case 130: // PROPULSION.ROTATE
 	{
 		float params[4];
@@ -183,7 +228,7 @@ bool SequenceEngine::execOp(const Op& op)
 		Robot::instance().mainExchangeIn().pushMessage(
 				CommMessageType::DbgPropulsionExecuteRotation,
 				(unsigned char*) params, sizeof(params));
-		m_moving = true;
+		m_propulsion_state_dirty = true;
 		m_pc++;
 		return false;
 	}
@@ -197,7 +242,7 @@ bool SequenceEngine::execOp(const Op& op)
 			Robot::instance().mainExchangeIn().pushMessage(
 					CommMessageType::PropulsionExecuteTranslation,
 					(unsigned char*) params, sizeof(params));
-			m_moving = true;
+			m_propulsion_state_dirty = true;
 			m_pc++;
 			return false;
 		}
@@ -209,7 +254,7 @@ bool SequenceEngine::execOp(const Op& op)
 			Robot::instance().mainExchangeIn().pushMessage(
 					CommMessageType::DbgPropulsionExecuteReposition,
 					(unsigned char*) params, sizeof(params));
-			m_moving = true;
+			m_propulsion_state_dirty = true;
 			m_pc++;
 			return false;
 		}
@@ -218,6 +263,7 @@ bool SequenceEngine::execOp(const Op& op)
 				Robot::instance().mainExchangeIn().pushMessage(
 						CommMessageType::PropulsionEnterManualControl,nullptr, 0);
 				m_pc++;
+				m_propulsion_state_dirty = true;
 				return false;
 			}
 	case 134: // PROPULSION.EXIT_MANUAL
@@ -225,6 +271,7 @@ bool SequenceEngine::execOp(const Op& op)
 				Robot::instance().mainExchangeIn().pushMessage(
 						CommMessageType::PropulsionExitManualControl,nullptr, 0);
 				m_pc++;
+				m_propulsion_state_dirty = true;
 				return false;
 			}
 	case 135: // PROPULSION.SET_CONTROL_LEVELS
@@ -260,7 +307,41 @@ bool SequenceEngine::execOp(const Op& op)
 			Robot::instance().mainExchangeIn().pushMessage(
 					CommMessageType::PropulsionExecuteFaceDirection,
 					(unsigned char*) params, sizeof(params));
-			m_moving = true;
+			m_propulsion_state_dirty = true;
+			m_pc++;
+			return false;
+		}
+	case 138: // set adversary detection enable
+		{
+			unsigned char buff;
+			buff = op.arg1;
+
+			Robot::instance().mainExchangeIn().pushMessage(
+					CommMessageType::PropulsionSetAdversaryDetectionEnable,
+					&buff,
+					1);
+		}
+		m_pc++;
+		return true;
+	case 139://propulsion.measure_normal
+		{
+			//arg: vector(border normal angle, projection of border point on normal
+			float buff[2] = {get_var_float(op.arg1), get_var_float(op.arg1+1)};
+			Robot::instance().mainExchangeIn().pushMessage(
+					CommMessageType::PropulsionMeasureNormal,(unsigned char*)&buff, sizeof(buff));
+			m_pc++;
+			return false;
+		}
+	case 147://propulsion.measure_normal
+		{
+			//arg: vector(border normal angle, projection of border point on normal
+			float buff[4] = {get_var_float(op.arg1),
+							get_var_float(op.arg1+1),
+							get_var_float(op.arg2),
+							get_var_float(op.arg2+1)
+			};
+			Robot::instance().mainExchangeIn().pushMessage(
+					CommMessageType::PropulsionMeasurePoint,(unsigned char*)&buff, sizeof(buff));
 			m_pc++;
 			return false;
 		}
@@ -308,6 +389,22 @@ bool SequenceEngine::execOp(const Op& op)
 		}
 		m_pc++;
 		return true;
+	case 144://dc motor
+		{
+			unsigned char buff[3];
+			buff[0] = op.arg1;
+			*(int16_t*)(buff+1) = *(int*)(m_vars + 4 * op.arg2);
+			Robot::instance().mainExchangeIn().pushMessage(
+					CommMessageType::FpgaCmdDCMotor,
+					buff,
+					3);
+		}
+		m_pc++;
+		return true;
+	case 145://gpio out
+		Hal::set_gpio(op.arg1,op.arg2);
+		m_pc++;
+		return true;
 	case 141: // ARM.GO_TO_POSITION
 		{
 			unsigned char buff[4];
@@ -318,12 +415,13 @@ bool SequenceEngine::execOp(const Op& op)
 					CommMessageType::DbgArmsGoToPosition,
 					buff,
 					4);
-			m_arm_moving = true;
+			m_arm_state_dirty = true;
 		}
 		m_pc++;
 		return true;
 	case 142: // SET_SERVO
 		{
+			m_servo_state_dirty[op.arg1] = true;
 			unsigned char buff[4];
 			buff[0] = op.arg1;
 			*(uint16_t*)(buff+1) = *(int*)(m_vars + 4 * op.arg2);
@@ -345,18 +443,6 @@ bool SequenceEngine::execOp(const Op& op)
 		}
 		m_pc++;
 		return true;
-	case 144: // DC_MOTOR
-		{
-			unsigned char buff[3];
-			buff[0] = op.arg1;
-			*(int16_t*)(buff+1) = *(int*)(m_vars + 4 * op.arg2);
-			Robot::instance().mainExchangeIn().pushMessage(
-					CommMessageType::FpgaCmdDCMotor,
-					buff,
-					3);
-		}
-		m_pc++;
-		return true;
 	case 150: // CHECK_SENSOR
 		if(Robot::instance().sensorsState() & (1 << op.arg1))
 		{
@@ -367,11 +453,54 @@ bool SequenceEngine::execOp(const Op& op)
 		}
 		m_pc++;
 		return true;
+	case 151: // check propulsion state
+		// Set zero flag if equality
+		if(!m_propulsion_state_dirty && (uint8_t)m_propulsion_state ==  op.arg1)
+		{
+			m_status_register &= (0xffff-FLAG_Z);
+		} else
+		{
+			m_status_register |= FLAG_Z;
+		}
+		m_pc++;
+		return true;
+	case 152: // propulsion.get_pose
+		{
+		auto pose = Robot::instance().odometry().pose();
+		*(float*)(m_vars + 4 * op.arg1) = pose.position.x;
+		*(float*)(m_vars + 4 * (op.arg1 + 1)) = pose.position.y;
+		*(float*)(m_vars + 4 * (op.arg1 + 2)) = pose.yaw;
+		}
+		m_pc++;
+		return true;
+	case 160: // cmp
+	{
+		// Set zero flag if equality
+		int v1 = *(int*)(m_vars + 4 * op.arg1);
+		int v2 = *(int*)(m_vars + 4 * op.arg2);
+		if(v1 == v2)
+		{
+			m_status_register |= FLAG_Z;
+		} else
+		{
+			m_status_register &= (0xffff-FLAG_Z);
+		}
+		if(v1 >= v2)
+		{
+			m_status_register &= (0xffff-FLAG_N);
+		} else
+		{
+			m_status_register |= FLAG_N;
+		}
+	}
+
+		m_pc++;
+		return true;
 	case 200://JMP
 		m_pc = (uint16_t)op.arg1 | ((uint16_t)op.arg2 << 8);
 		return true;
 	case 201://JZ
-		if(m_status_register & 0x01)
+		if(m_status_register & FLAG_Z)
 		{
 			m_pc++;
 		} else
@@ -380,12 +509,23 @@ bool SequenceEngine::execOp(const Op& op)
 		}
 		return true;
 	case 202://JNZ
-		if(m_status_register & 0x01)
+		if(m_status_register & FLAG_Z)
 		{
 			m_pc = (uint16_t)op.arg1 | ((uint16_t)op.arg2 << 8);
 		} else
 		{
 			m_pc++;
+		}
+		return true;
+	case 203://JGE
+		// jump if last comparison was posive (has negative flag to 0
+		if(m_status_register & FLAG_N)
+		{
+			m_pc++;
+		} else
+		{
+			m_pc = (uint16_t)op.arg1 | ((uint16_t)op.arg2 << 8);
+
 		}
 		return true;
 
@@ -406,6 +546,27 @@ void SequenceEngine::endLoad()
 	m_state = SequenceState::Idle;
 	//decode header
 	SequenceHeader* header = (SequenceHeader*)(m_buffer);
+
+    //check crc
+	uint16_t crc = update_crc16(m_buffer + 4, header->size, 0);
+
+	if(crc == header->crc16)
+	{
+		unsigned char buff[1];
+		buff[0] = 1;
+		Robot::instance().mainExchangeOut().pushMessage(
+							CommMessageType::MainSequenceLoadStatus,
+							buff,
+							1);
+	} else
+	{
+		unsigned char buff[1];
+		buff[0] = 0;
+		Robot::instance().mainExchangeOut().pushMessage(
+							CommMessageType::MainSequenceLoadStatus,
+							buff,
+							1);
+	}
 	m_num_vars = header->num_vars;
 	m_num_seqs = header->num_seqs;
 	m_vars = m_buffer + sizeof(SequenceHeader);
@@ -430,14 +591,30 @@ void SequenceEngine::abortSequence()
 	m_state = SequenceState::Idle;
 }
 
+void SequenceEngine::updateArmState(ArmState sta)
+{
+	m_arm_state = sta;
+	m_arm_state_dirty = false;
+}
+
+void SequenceEngine::updatePropulsionState(PropulsionState state)
+{
+	m_propulsion_state = state;
+	m_propulsion_state_dirty = false;
+}
+void SequenceEngine::updateServoState(int id, bool moving)
+{
+	m_servo_moving[id] = moving;
+	m_servo_state_dirty[id] = false;
+}
+
 /* FIXME : TODO : traiter d'autres causes d'interruption (pour l'instant on a : irq_id=1:="obstacle") */
 void SequenceEngine::IRQ(int /*irq_id*/)
 {
-	if(m_moving && (m_ops[m_pc].opcode==126) && ((m_ops[m_pc-1].opcode==129)) ) // WAIT_MOVEMENT_FINISHED && PROPULSION.MOVE_TO
+	if((m_propulsion_state == PropulsionState::FollowTrajectory) && (m_ops[m_pc].opcode==126) && ((m_ops[m_pc-1].opcode==129)) ) // WAIT_MOVEMENT_FINISHED && PROPULSION.MOVE_TO
 	{
 		m_state = SequenceState::Interruption;
 		Robot::instance().mainExchangeIn().pushMessage(CommMessageType::CmdEmergencyStop, nullptr, 0);
-		m_moving = false;
 	}
 }
 
@@ -534,7 +711,7 @@ void SequenceEngine::IRQ_END(int irq_id)
 
 		Robot::instance().mainExchangeIn().pushMessage(CommMessageType::PropulsionClearError, nullptr, 0);
 
-		m_moving = true;
+		m_propulsion_state_dirty = true; /* FIXME : TODO : OK? */
 		m_state = SequenceState::Executing;
 
 		Hal::set_motors_enable(true);
@@ -547,7 +724,7 @@ void SequenceEngine::IRQ_END(int irq_id)
 
 		Robot::instance().mainExchangeIn().pushMessage(CommMessageType::PropulsionClearError, nullptr, 0);
 
-		m_moving = true;
+		m_propulsion_state_dirty = true; /* FIXME : TODO : OK? */
 		m_state = SequenceState::Executing;
 
 		Hal::set_motors_enable(true);

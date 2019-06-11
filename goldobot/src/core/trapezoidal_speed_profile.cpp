@@ -55,6 +55,13 @@ void TrapezoidalSpeedProfile::update(float distance, float speed, float accel, f
 	m_c2[1] = 0;
 	m_c2[2] = -0.5 * deccel;
 	m_c2[3] = 0;
+
+	m_c3[0] = 0;
+	m_c3[1] = 0;
+	m_c3[2] = 0;
+	m_c3[3] = 0;
+
+	m_num_points = 4;
 }
 
 float TrapezoidalSpeedProfile::begin_time()
@@ -71,7 +78,7 @@ void TrapezoidalSpeedProfile::compute(float t, float* val, float* deriv, float* 
 {
 	int index = 0;
 
-	while (index + 1 < 4 && t > m_t[index + 1])
+	while (index + 1 < m_num_points && t > m_t[index + 1])
 	{
 		index++;
 	};
@@ -80,18 +87,19 @@ void TrapezoidalSpeedProfile::compute(float t, float* val, float* deriv, float* 
 	float c0 = m_c0[index];
 	float c1 = m_c1[index];
 	float c2 = m_c2[index];
+	float c3 = m_c3[index];
 
 
 	if (val != nullptr)
 	{
-		*val = c0 + u * (c1 + u * c2);
+		*val = c0 + u * (c1 + u * (c2 + u* c3));
 	}
 	if (deriv != nullptr)
 	{
-		*deriv = c1 + u * 2 * c2;
+		*deriv = c1 + u * (2 * c2 + u * 3 * c3);
 	}
 	if (accel != nullptr)
 	{
-		*accel = c2;
+		*accel = 2 * c2 + 6 * u * c3;
 	}
 }

@@ -130,15 +130,40 @@ void SimpleOdometry::measureLineNormal(Vector2D normal, float distance)
 
 	// Select sign of new yaw to be consistent with current
 	float dp = normal.x * cos(m_yaw) + normal.y * sin(m_yaw);
-	double new_yaw = atan2(normal.y, normal.x) * (dp >= 0 ? 1 : -1);
+	if(dp >= 0)
+	{
+		m_yaw = atan2(normal.y, normal.x);
+	} else
+	{
+		m_yaw = atan2(-normal.y, -normal.x);
+	}
 
 	m_x = new_x;
 	m_y = new_y;
-	m_yaw = new_yaw;
 
 	m_pose.position.x = static_cast<float>(m_x);
 	m_pose.position.y = static_cast<float>(m_y);
 	m_pose.yaw = static_cast<float>(m_yaw);
+}
+
+
+void SimpleOdometry::measurePerpendicularPoint(float angle, float offset, Vector2D point)
+{
+	// update longitudinal position so that the line having angle angle from robot x axis and intersection offset
+	// with robot x axis is coincident with point
+
+	double ux = cos(m_yaw);
+	double uy = sin(m_yaw);
+
+	double pt_xrel = (point.x - m_x) * ux + (point.y - m_y) * uy;
+
+	// todo : now only look perpendicular to robot axis
+    //double pt_yrel = point.x * uy - point.y * ux;
+
+	m_x += ux * (pt_xrel - offset);
+	m_y += uy * (pt_xrel - offset);
+	m_pose.position.x = static_cast<float>(m_x);
+	m_pose.position.y = static_cast<float>(m_y);
 }
 
 

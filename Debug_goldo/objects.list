@@ -41,6 +41,7 @@
 "goldobot/src/robot_simulator.o"
 "goldobot/src/trajectory_planner.o"
 "goldobot/src/sequence_engine.o"
+"goldobot/src/strategy_engine.o"
 "goldobot/src/core/dynamixels_interface.o"
 "goldobot/src/core/low_pass_filter.o"
 "goldobot/src/core/message_exchange.o"

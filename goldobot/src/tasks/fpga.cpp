@@ -88,17 +88,28 @@ void FpgaTask::taskFunction()
 				continue;
 			}
 
+			bool was_moving=false;
+
 			if(m_servos_positions[i] > m_servos_target_positions[i])
 			{
 				m_servos_positions[i] = std::max<float>(m_servos_target_positions[i], m_servos_positions[i] - m_servos_speeds[i] * delta_t);
 				goldo_fpga_cmd_servo(m_servos_config->servos[i].id, (unsigned int)m_servos_positions[i]);
+				was_moving =true;
 			}
 
 			if(m_servos_positions[i] < m_servos_target_positions[i])
 			{
 				m_servos_positions[i] = std::min<float>(m_servos_target_positions[i], m_servos_positions[i] + m_servos_speeds[i] * delta_t);
 				goldo_fpga_cmd_servo(m_servos_config->servos[i].id, (unsigned int)m_servos_positions[i]);
+				was_moving = true;
 			}
+
+			if(was_moving && m_servos_positions[i] == m_servos_target_positions[i])
+			{
+				unsigned char buff[2] = {i, false};
+				Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaServoState, (unsigned char *)buff, 2);
+			}
+
 		}
 
 		delay(1);
@@ -360,6 +371,16 @@ void FpgaTask::process_message()
 		{
 			m_servos_positions[motor_id] = pwm;
 			goldo_fpga_cmd_servo(m_servos_config->servos[motor_id].id, pwm);
+		}
+		// Send message when servo start moving
+		if(m_servos_target_positions[motor_id] != pwm)
+		{
+			unsigned char buff[2] = {motor_id, true};
+			Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaServoState, (unsigned char *)buff, 2);
+		} else
+		{
+			unsigned char buff[2] = {motor_id, false};
+			Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaServoState, (unsigned char *)buff, 2);
 		}
 		m_servos_target_positions[motor_id] = pwm;
 		m_servos_speeds[motor_id] = (m_servos_config->servos[motor_id].max_speed * buff[3])/100;

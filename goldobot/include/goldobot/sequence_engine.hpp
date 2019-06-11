@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include "goldobot/enums.hpp"
 
 
 namespace goldobot
@@ -39,8 +40,9 @@ public:
 
 	SequenceState state() const {return m_state;};
 
-	void finishedMovement() {m_moving = false;};
-	void finishedArmMovement() {m_arm_moving = false;};
+	void updateArmState(ArmState sta);
+	void updatePropulsionState(PropulsionState state);
+	void updateServoState(int id, bool moving);
 
 private:
 	SequenceState m_state{SequenceState::WaitForInit};
@@ -59,14 +61,28 @@ private:
 	int m_stack_level{0};
 	uint32_t m_status_register{0};
 
-	bool m_moving{false};
-	bool m_arm_moving{false};
 	uint32_t m_end_delay{0};
 
 	bool execOp(const Op& op);
 
 	bool m_prev_obstacle{false};
 	int m_obstacle_count{0};
+
+
+	bool m_propulsion_state_dirty{false};
+	PropulsionState m_propulsion_state{PropulsionState::Inactive};
+
+
+	bool m_arm_state_dirty{false};
+	ArmState m_arm_state{ArmState::Unconfigured};
+
+	bool m_servo_state_dirty[16];
+	bool m_servo_moving[16];
+
+	float get_var_float(int index)
+	{
+		return *(float*)(m_vars + 4 * index);
+	}
 
 
 	//organisation of buffer:
