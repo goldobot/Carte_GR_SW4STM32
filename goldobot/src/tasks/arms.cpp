@@ -197,9 +197,13 @@ void ArmsTask::go_to_position(uint8_t pos_id, uint16_t speed_percent, int torque
 		{
 			buff[1] = 32;
 		}
-		// write new register values
+		// Write new register values
+		dynamixels_reg_write(m_config.servos[i].id,0x1E,(unsigned char*)buff, 6);
+		// Do it twice in case of error
 		dynamixels_reg_write(m_config.servos[i].id,0x1E,(unsigned char*)buff, 6);
 	}
+	dynamixels_action();
+	// Do it twice in case of error
 	dynamixels_action();
 
 	// Set time of end

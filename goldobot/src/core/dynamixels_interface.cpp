@@ -51,6 +51,8 @@ bool ArmsTask::dynamixels_receive_packet()
 	for(unsigned i=0;i<20;i++)
 	{
 		uint16_t bytes_received = Hal::uart_bytes_received(1);
+
+		// search for magic 0xFF
 		if(bytes_received >= 4 && bytes_received >= m_dynamixels_buffer[3] + 4)
 		{
 			// Check checksum

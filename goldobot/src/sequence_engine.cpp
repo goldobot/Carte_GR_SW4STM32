@@ -73,6 +73,22 @@ bool SequenceEngine::execOp(const Op& op)
 		*(int32_t*)(m_vars + 4 * op.arg1) -= op.arg2;
 		m_pc++;
 		break;
+	case 10: // add
+	{
+		auto a = *(int32_t*)(m_vars + 4 * op.arg2);
+		auto b = *(int32_t*)(m_vars + 4 * op.arg3);
+		*(int32_t*)(m_vars + 4 * op.arg1) = a + b;
+	}
+		m_pc++;
+		break;
+	case 11: // sub
+	{
+		auto a = *(int32_t*)(m_vars + 4 * op.arg2);
+		auto b = *(int32_t*)(m_vars + 4 * op.arg3);
+		*(int32_t*)(m_vars + 4 * op.arg1) = a - b;
+	}
+		m_pc++;
+		break;
 	case 32:
 		if(m_end_delay == 0)
 		{
@@ -338,13 +354,14 @@ bool SequenceEngine::execOp(const Op& op)
 		return false;
 	case 34: // sequence event
 		{
-			unsigned char buff[2];
+			unsigned char buff[41];
 			buff[0] = op.arg1;
-			buff[1] = op.arg2;
+			memcpy(buff+1, m_vars + 4 * op.arg2, 4 * op.arg3);
+
 			Robot::instance().mainExchangeOut().pushMessage(
 					CommMessageType::SequenceEvent,
 					buff,
-					2);
+					1 + 4 * op.arg3);
 		}
 		m_pc++;
 		return true;
