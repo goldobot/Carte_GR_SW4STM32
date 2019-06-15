@@ -205,13 +205,6 @@ int main(void)
   goldobot_main();
   /* USER CODE END RTOS_THREADS */
 
-  /* USER CODE BEGIN RTOS_QUEUES */
-  /* add queues, ... */
-  char test_buf[] = "TEST_GOLDO";
-  HAL_UART_Transmit_IT(&huart3, test_buf, 10);
-  /* USER CODE END RTOS_QUEUES */
- 
-
   /* Start scheduler */
   osKernelStart();
   
@@ -980,16 +973,16 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOC, MAXON_EN_Pin|NUCLEO_DYNA_DIR_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(MAXON2_DIR_GPIO_Port, MAXON2_DIR_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, MAXON2_DIR_Pin|GPIO_PIN_11, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(MAXON1_DIR_GPIO_Port, MAXON1_DIR_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|MAXON1_DIR_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin : NUCLEO_GPIO_PC13_Pin */
-  GPIO_InitStruct.Pin = NUCLEO_GPIO_PC13_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  /*Configure GPIO pin : PC13 */
+  GPIO_InitStruct.Pin = GPIO_PIN_13;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(NUCLEO_GPIO_PC13_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pins : NUCLEO_GPIO_PC14_Pin NUCLEO_ADC1_9_GPIO_Pin NUCLEO_ADC1_8_GPIO_Pin NUCLEO_GPIO_PC6_Pin 
                            NUCLEO_GPIO_PC8_Pin NUCLEO_GPIO_PC9_Pin OLD_UART4_RX_Pin */
@@ -1006,33 +999,19 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : MAXON2_DIR_Pin */
-  GPIO_InitStruct.Pin = MAXON2_DIR_Pin;
+  /*Configure GPIO pins : MAXON2_DIR_Pin PA11 */
+  GPIO_InitStruct.Pin = MAXON2_DIR_Pin|GPIO_PIN_11;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(MAXON2_DIR_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : NUCLEO_GPIO_PB0_Pin */
-  GPIO_InitStruct.Pin = NUCLEO_GPIO_PB0_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(NUCLEO_GPIO_PB0_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : MAXON1_DIR_Pin */
-  GPIO_InitStruct.Pin = MAXON1_DIR_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(MAXON1_DIR_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PA11 */
-  GPIO_InitStruct.Pin = GPIO_PIN_11;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF9_CAN;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PB0 MAXON1_DIR_Pin */
+  GPIO_InitStruct.Pin = GPIO_PIN_0|MAXON1_DIR_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pin : FPGA_A7_Pin */
   GPIO_InitStruct.Pin = FPGA_A7_Pin;
