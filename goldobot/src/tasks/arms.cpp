@@ -41,7 +41,7 @@ const char* ArmsTask::name() const
 
 void ArmsTask::taskFunction()
 {
-	Robot::instance().mainExchangeIn().subscribe({72,78,&m_message_queue});
+	Robot::instance().mainExchangeIn().subscribe({72,80,&m_message_queue});
 	Robot::instance().mainExchangeIn().subscribe({160,170,&m_message_queue});
 
 	// \todo hack,for now we are using a harcoded configuration
@@ -52,6 +52,7 @@ void ArmsTask::taskFunction()
 	buff[1] = (unsigned char)m_arm_state;
 	Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ArmsStateChange, buff, 2);
 
+	int servo_idx = 0;
 	while(1)
 	{
 		uint32_t clock = xTaskGetTickCount();
@@ -64,6 +65,19 @@ void ArmsTask::taskFunction()
 		{
 			process_message();
 			// Periodically check servo positions and torques
+		}
+
+		dynamixels_read_data(m_config.servos[servo_idx].id,0x24,(unsigned char*)&m_current_state[servo_idx], 6);
+		unsigned char buff[8];
+		buff[0] = m_config.servos[servo_idx].id;
+		buff[1] = 0x24;
+		memcpy(buff+2, &m_current_state[servo_idx], 6);
+		Robot::instance().mainExchangeOut().pushMessage(CommMessageType::DbgDynamixelGetRegisters, buff, 8);
+
+		servo_idx++;
+		if(servo_idx == m_config.num_servos)
+		{
+			servo_idx = 0;
 		}
 
 		if(m_arm_state != prev_state)
@@ -90,12 +104,12 @@ bool ArmsTask::dynamixels_read_data(uint8_t id, uint8_t address, unsigned char* 
 	tmp_buff[0] = address;
 	tmp_buff[1] = size;
 	dynamixels_transmit_packet(id, AX_READ_DATA, tmp_buff, 2);
-	bool received = dynamixels_receive_packet();
-	if(received)
+	auto received = dynamixels_receive_packet();
+	if(received == DynamixelStatusError::Ok)
 	{
 		memcpy(buffer, m_dynamixels_buffer + 5, size);
 	}
-	return received;
+	return received == DynamixelStatusError::Ok;
 }
 
 bool ArmsTask::dynamixels_write_data(uint8_t id, uint8_t address, unsigned char* buffer, uint8_t size)
@@ -104,7 +118,7 @@ bool ArmsTask::dynamixels_write_data(uint8_t id, uint8_t address, unsigned char*
 	tmp_buff[0] = address;
 	memcpy(tmp_buff+1, buffer, size);
 	dynamixels_transmit_packet(id, AX_WRITE_DATA, tmp_buff, size + 1);
-	bool received = dynamixels_receive_packet();
+	bool received = dynamixels_receive_packet() == DynamixelStatusError::Ok && m_dynamixels_receive_error==0;
 	return received;
 }
 
@@ -114,7 +128,7 @@ bool ArmsTask::dynamixels_reg_write(uint8_t id, uint8_t address, unsigned char* 
 	tmp_buff[0] = address;
 	memcpy(tmp_buff+1, buffer, size);
 	dynamixels_transmit_packet(id, AX_REG_WRITE, tmp_buff, size + 1);
-	bool received = dynamixels_receive_packet();
+	bool received = dynamixels_receive_packet() == DynamixelStatusError::Ok && m_dynamixels_receive_error == 0;
 	return received;
 }
 
@@ -198,9 +212,12 @@ void ArmsTask::go_to_position(uint8_t pos_id, uint16_t speed_percent, int torque
 			buff[1] = 32;
 		}
 		// Write new register values
-		dynamixels_reg_write(m_config.servos[i].id,0x1E,(unsigned char*)buff, 6);
-		// Do it twice in case of error
-		dynamixels_reg_write(m_config.servos[i].id,0x1E,(unsigned char*)buff, 6);
+		int k = 0;
+		while(!dynamixels_reg_write(m_config.servos[i].id,0x1E,(unsigned char*)buff, 6) && k < 5)
+		{
+			k++;
+			delay(2);
+		}
 	}
 	dynamixels_action();
 	// Do it twice in case of error
@@ -213,6 +230,7 @@ void ArmsTask::go_to_position(uint8_t pos_id, uint16_t speed_percent, int torque
 
 void ArmsTask::process_message()
 {
+	auto message_size = m_message_queue.message_size();
 	switch(m_message_queue.message_type())
 	{
 
@@ -301,6 +319,25 @@ void ArmsTask::process_message()
 	case CommMessageType::ArmsShutdown:
 		m_message_queue.pop_message(nullptr, 0);
 		shutdown();
+		break;
+	case CommMessageType::DynamixelSendPacket:
+		{
+			unsigned char buff[64];
+			unsigned char data_read[64];
+
+			m_message_queue.pop_message(buff, 64);
+			memcpy(data_read, buff, 2);
+
+			dynamixels_transmit_packet(buff[0], buff[1], buff+2, message_size-2);
+			auto status = dynamixels_receive_packet();
+
+			buff[0] = (unsigned char) status;
+			memcpy(buff+1, m_dynamixels_buffer, 20);
+
+
+			Robot::instance().mainExchangeOut().pushMessage(CommMessageType::DynamixelStatusPacket, (unsigned char*)buff, 21);
+
+		}
 		break;
 	default:
 		m_message_queue.pop_message(nullptr, 0);

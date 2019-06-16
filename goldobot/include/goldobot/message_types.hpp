@@ -51,6 +51,8 @@ namespace goldobot
 		DbgDynamixelSetTorqueLimit=76,
 		DbgDynamixelGetRegisters=77,
 		DbgDynamixelSetRegisters=78,
+		DynamixelSendPacket=79,
+		DynamixelStatusPacket=200,
 
 		// Propulsion debug
 		DbgSetMotorsEnable=80,
