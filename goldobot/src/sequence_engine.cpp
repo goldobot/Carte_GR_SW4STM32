@@ -43,19 +43,19 @@ bool SequenceEngine::execOp(const Op& op)
 {
 	switch(op.opcode)
 	{
-	case 0:
+	case 0: // nop
 		m_pc++;
 		break;
-	case 1:
+	case 1: // mov1
 		*(int32_t*)(m_vars + 4 * op.arg1) = *(int32_t*)(m_vars + 4 * op.arg2);
 		m_pc++;
 		break;
-	case 2:
+	case 2: // mov2
 		*(int32_t*)(m_vars + 4 * op.arg1) = *(int32_t*)(m_vars + 4 * op.arg2);
 		*(int32_t*)(m_vars + 4 * (op.arg1 + 1)) = *(int32_t*)(m_vars + 4 * (op.arg2 + 1));
 		m_pc++;
 		break;
-	case 3:
+	case 3: // mov3
 		*(int32_t*)(m_vars + 4 * op.arg1) = *(int32_t*)(m_vars + 4 * op.arg2);
 		*(int32_t*)(m_vars + 4 * (op.arg1 + 1)) = *(int32_t*)(m_vars + 4 * (op.arg2 + 1));
 		*(int32_t*)(m_vars + 4 * (op.arg1 + 2)) = *(int32_t*)(m_vars + 4 * (op.arg2 + 2));
@@ -89,7 +89,7 @@ bool SequenceEngine::execOp(const Op& op)
 	}
 		m_pc++;
 		break;
-	case 32:
+	case 32: // delay
 		if(m_end_delay == 0)
 		{
 			m_end_delay = xTaskGetTickCount() + *(int*)(m_vars + 4 * op.arg1);
@@ -102,7 +102,7 @@ bool SequenceEngine::execOp(const Op& op)
 			return true;
 		}
 		return false;
-	case 64: //propulsion.motors_enable
+	case 64: // propulsion.motors_enable
 		Hal::set_motors_enable(true);
 		m_pc++;
 		return true;
@@ -114,7 +114,7 @@ bool SequenceEngine::execOp(const Op& op)
 		m_pc++;
 		return true;
 	}
-	case 66: //propulsion.motors_disable
+	case 66: // propulsion.motors_disable
 		Hal::set_motors_enable(false);
 		m_pc++;
 		return true;
@@ -127,28 +127,28 @@ bool SequenceEngine::execOp(const Op& op)
 			return true;
 		}
 
-	case 125: // wait_for_end_of_arm_movement
+	case 125: // wait_arm_finished
 		if(m_arm_state == ArmState::Idle && !m_arm_state_dirty)
 			{
 				m_pc++;
 				return true;
 			}
 		return false;
-	case 126: // wait for movement finished
+	case 126: // wait_movement_finished
 		if(!m_propulsion_state_dirty && m_propulsion_state == PropulsionState::Stopped)
 			{
 				m_pc++;
 				return true;
 			}
 		return false;
-	case 146: // wait_for_servo_finished
+	case 146: // wait_servo_finished
 		if(!m_servo_moving[op.arg1])
 			{
 				m_pc++;
 				return true;
 			}
 		return false;
-	case 127://propulsion.setPose
+	case 127: // propulsion.set_pose
 		{
 			Robot::instance().mainExchangeIn().pushMessage(
 					CommMessageType::DbgPropulsionSetPose,
@@ -156,7 +156,7 @@ bool SequenceEngine::execOp(const Op& op)
 		}
 			m_pc++;
 			return true;
-	case 128://propulsion.pointTo
+	case 128: // propulsion.point_to
 	{
 		float params[5];
 		params[0] = *(float*)(m_vars + 4 * op.arg1);
@@ -171,7 +171,7 @@ bool SequenceEngine::execOp(const Op& op)
 		m_propulsion_state_dirty = true;
 		m_pc++;
 		return false;
-	case 129://propulsion.move_to
+	case 129: // propulsion.move_to
 	{
 		float params[5];
 		params[0] = *(float*)(m_vars + 4 * op.arg1);
@@ -187,7 +187,7 @@ bool SequenceEngine::execOp(const Op& op)
 		m_pc++;
 		return false;
 	}
-	case 120://propulsion.trajectory
+	case 120: // propulsion.trajectory
 		{
 			unsigned char buff[76];//12 for traj params and 8*8 for points
 			*(float*)(buff) = get_var_float(op.arg3);
@@ -205,7 +205,7 @@ bool SequenceEngine::execOp(const Op& op)
 			m_pc++;
 			return false;
 		}
-	case 130://propulsion.rotate
+	case 130: // propulsion.rotate
 	{
 		float params[4];
 		params[0] = *(float*)(m_vars + 4 * op.arg1);
@@ -220,7 +220,7 @@ bool SequenceEngine::execOp(const Op& op)
 		m_pc++;
 		return false;
 	}
-	case 131://propulsion.translate
+	case 131: // propulsion.translate
 		{
 			float params[4];
 			params[0] = *(float*)(m_vars + 4 * op.arg1);
@@ -234,7 +234,7 @@ bool SequenceEngine::execOp(const Op& op)
 			m_pc++;
 			return false;
 		}
-	case 132://propulsion.reposition
+	case 132: // propulsion.reposition
 		{
 			float params[2];
 			params[0] = *(float*)(m_vars + 4 * op.arg1);
@@ -246,7 +246,7 @@ bool SequenceEngine::execOp(const Op& op)
 			m_pc++;
 			return false;
 		}
-	case 133://propulsion.enter_manual
+	case 133: // propulsion.enter_manual
 			{
 				Robot::instance().mainExchangeIn().pushMessage(
 						CommMessageType::PropulsionEnterManualControl,nullptr, 0);
@@ -254,7 +254,7 @@ bool SequenceEngine::execOp(const Op& op)
 				m_propulsion_state_dirty = true;
 				return false;
 			}
-	case 134://propulsion.enter_manual
+	case 134: // propulsion.exit_manual
 			{
 				Robot::instance().mainExchangeIn().pushMessage(
 						CommMessageType::PropulsionExitManualControl,nullptr, 0);
@@ -262,14 +262,14 @@ bool SequenceEngine::execOp(const Op& op)
 				m_propulsion_state_dirty = true;
 				return false;
 			}
-	case 135://propulsion.set_control_levels
+	case 135: // propulsion.set_control_levels
 			{
 				Robot::instance().mainExchangeIn().pushMessage(
 						CommMessageType::PropulsionSetControlLevels,&(op.arg1), 2);
 				m_pc++;
 				return false;
 			}
-	case 136://propulsion.set_target_pose
+	case 136: // propulsion.set_target_pose
 			{
 				RobotPose pose;
 				pose.position.x = *(float*)(m_vars + 4 * op.arg1);
@@ -284,7 +284,7 @@ bool SequenceEngine::execOp(const Op& op)
 				m_pc++;
 				return false;
 			}
-	case 137://propulsion.face_direction
+	case 137: // propulsion.face_direction
 		{
 			float params[4];
 			params[0] = *(float*)(m_vars + 4 * op.arg1);
@@ -299,7 +299,7 @@ bool SequenceEngine::execOp(const Op& op)
 			m_pc++;
 			return false;
 		}
-	case 138: // set adversary detection enable
+	case 138: // propulsion.set_adversary_detection_enable
 		{
 			unsigned char buff;
 			buff = op.arg1;
@@ -311,7 +311,7 @@ bool SequenceEngine::execOp(const Op& op)
 		}
 		m_pc++;
 		return true;
-	case 139://propulsion.measure_normal
+	case 139: // propulsion.measure_normal
 		{
 			//arg: vector(border normal angle, projection of border point on normal
 			float buff[2] = {get_var_float(op.arg1), get_var_float(op.arg1+1)};
@@ -320,7 +320,7 @@ bool SequenceEngine::execOp(const Op& op)
 			m_pc++;
 			return false;
 		}
-	case 147://propulsion.measure_normal
+	case 147: // propulsion.measure_point
 		{
 			//arg: vector(border normal angle, projection of border point on normal
 			float buff[4] = {get_var_float(op.arg1),
@@ -344,15 +344,16 @@ bool SequenceEngine::execOp(const Op& op)
 			m_pc = m_call_stack[m_stack_level]+1;
 		}
 		return true;
-	case 31: //call
+	case 31: // call
 		m_call_stack[m_stack_level] = m_pc;
 		m_stack_level++;
 		m_pc = m_sequence_offsets[op.arg1];
 		return true;
-	case 33: // yield. Do nothing and wait for next task tick. use for polling loop
+	case 33: // yield
+		/* Do nothing and wait for next task tick. use for polling loop */
 		m_pc++;
 		return false;
-	case 34: // sequence event
+	case 34: // send_event
 		{
 			unsigned char buff[41];
 			buff[0] = op.arg1;
@@ -366,7 +367,7 @@ bool SequenceEngine::execOp(const Op& op)
 		m_pc++;
 		return true;
 
-	case 140://pump
+	case 140: // pump.set_pwm
 		{
 			unsigned char buff[3];
 			buff[0] = 0;
@@ -378,7 +379,7 @@ bool SequenceEngine::execOp(const Op& op)
 		}
 		m_pc++;
 		return true;
-	case 144://dc motor
+	case 144: // dc_motor.set_pwm
 		{
 			unsigned char buff[3];
 			buff[0] = op.arg1;
@@ -390,11 +391,11 @@ bool SequenceEngine::execOp(const Op& op)
 		}
 		m_pc++;
 		return true;
-	case 145://gpio out
+	case 145: // gpio.set
 		Hal::set_gpio(op.arg1,op.arg2);
 		m_pc++;
 		return true;
-	case 141: //arms go to position
+	case 141: // arm.go_to_position
 		{
 			unsigned char buff[4];
 			buff[0] = op.arg1;
@@ -408,7 +409,7 @@ bool SequenceEngine::execOp(const Op& op)
 		}
 		m_pc++;
 		return true;
-	case 142: //servo move
+	case 142: // set_servo
 		{
 			m_servo_state_dirty[op.arg1] = true;
 			unsigned char buff[4];
@@ -432,7 +433,7 @@ bool SequenceEngine::execOp(const Op& op)
 		}
 		m_pc++;
 		return true;
-	case 150: // check sensor
+	case 150: // check_sensor
 		if(Robot::instance().sensorsState() & (1 << op.arg1))
 		{
 			m_status_register |= 1;
@@ -442,7 +443,7 @@ bool SequenceEngine::execOp(const Op& op)
 		}
 		m_pc++;
 		return true;
-	case 151: // check propulsion state
+	case 151: // check_propulsion_state
 		// Set zero flag if equality
 		if(!m_propulsion_state_dirty && (uint8_t)m_propulsion_state ==  op.arg1)
 		{
@@ -463,32 +464,32 @@ bool SequenceEngine::execOp(const Op& op)
 		m_pc++;
 		return true;
 	case 160: // cmp
-	{
-		// Set zero flag if equality
-		int v1 = *(int*)(m_vars + 4 * op.arg1);
-		int v2 = *(int*)(m_vars + 4 * op.arg2);
-		if(v1 == v2)
 		{
-			m_status_register |= FLAG_Z;
-		} else
-		{
-			m_status_register &= (0xffff-FLAG_Z);
+			// Set zero flag if equality
+			int v1 = *(int*)(m_vars + 4 * op.arg1);
+			int v2 = *(int*)(m_vars + 4 * op.arg2);
+			if(v1 == v2)
+			{
+				m_status_register |= FLAG_Z;
+			} else
+			{
+				m_status_register &= (0xffff-FLAG_Z);
+			}
+			if(v1 >= v2)
+			{
+				m_status_register &= (0xffff-FLAG_N);
+			} else
+			{
+				m_status_register |= FLAG_N;
+			}
 		}
-		if(v1 >= v2)
-		{
-			m_status_register &= (0xffff-FLAG_N);
-		} else
-		{
-			m_status_register |= FLAG_N;
-		}
-	}
 
 		m_pc++;
 		return true;
-	case 200://jmp
+	case 200: // jmp
 		m_pc = (uint16_t)op.arg1 | ((uint16_t)op.arg2 << 8);
 		return true;
-	case 201://jz
+	case 201: // jz,je
 		if(m_status_register & FLAG_Z)
 		{
 			m_pc++;
@@ -497,7 +498,7 @@ bool SequenceEngine::execOp(const Op& op)
 			m_pc = (uint16_t)op.arg1 | ((uint16_t)op.arg2 << 8);
 		}
 		return true;
-	case 202://jnz
+	case 202: // jnz,jne
 		if(m_status_register & FLAG_Z)
 		{
 			m_pc = (uint16_t)op.arg1 | ((uint16_t)op.arg2 << 8);
@@ -506,7 +507,7 @@ bool SequenceEngine::execOp(const Op& op)
 			m_pc++;
 		}
 		return true;
-	case 203://jge
+	case 203: // jge
 		// jump if last comparison was posive (has negative flag to 0
 		if(m_status_register & FLAG_N)
 		{
