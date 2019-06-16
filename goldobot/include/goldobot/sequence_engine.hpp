@@ -36,7 +36,9 @@ public:
 	void abortSequence();
 
 	void IRQ(int irq_id);
-	void IRQ_END(int irq_id);
+	void beginIrqSeq(int obstacle_state);
+	void doStepIrqSeq();
+	void calculateEscapePoint();
 
 	SequenceState state() const {return m_state;};
 
@@ -61,10 +63,19 @@ private:
 	int m_stack_level{0};
 	uint32_t m_status_register{0};
 
+	uint16_t m_irq_pc{0xffff};
+	double m_anti_escape_x_m{0.8};
+	double m_anti_escape_y_m{0.0};
+	double m_escape_x_m{0.8};
+	double m_escape_y_m{0.0};
+	double m_saved_target_x{0.8};
+	double m_saved_target_y{0.0};
+
 	uint32_t m_end_delay{0};
 
 	bool execOp(const Op& op);
 
+	bool m_adversary_detection_enabled{false};
 	bool m_prev_obstacle{false};
 	int m_obstacle_count{0};
 

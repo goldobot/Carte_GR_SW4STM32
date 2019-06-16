@@ -13,6 +13,20 @@ struct DynamixelsConfig
 	uint16_t m_torque_settings[3*8];
 };
 
+enum class DynamixelStatusError
+{
+	Ok,
+	ChecksumError,
+	TimeoutError
+};
+
+struct DynamixelState
+{
+	uint16_t position;
+	uint16_t speed;
+	uint16_t torque;
+};
+
 
 
 class ArmsTask : public Task
@@ -38,13 +52,14 @@ public:
 
 //private:
 	void dynamixels_transmit_packet(uint8_t id,  uint8_t command,  unsigned char* parameters, uint8_t num_parameters);
-	bool dynamixels_receive_packet();
+	DynamixelStatusError dynamixels_receive_packet();
 	void taskFunction() override;
 
 	ArmConfig m_config;
 
 	uint16_t m_current_position[8];
 	uint16_t m_current_load[8];
+	DynamixelState m_current_state[8];
 
 
 	unsigned char m_dynamixels_buffer[256];
@@ -52,7 +67,7 @@ public:
 	uint8_t m_dynamixels_receive_id;
 	uint8_t m_dynamixels_receive_num_parameters;
 	uint8_t m_dynamixels_receive_error;
-	uint8_t m_dynamixels_receive_offset;
+	uint8_t* m_dynamixels_receive_params;
 
 	MessageQueue m_message_queue;
 	unsigned char m_message_queue_buffer[256];

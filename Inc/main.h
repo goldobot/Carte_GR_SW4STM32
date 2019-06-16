@@ -60,8 +60,6 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define NUCLEO_GPIO_PC13_Pin GPIO_PIN_13
-#define NUCLEO_GPIO_PC13_GPIO_Port GPIOC
 #define NUCLEO_GPIO_PC14_Pin GPIO_PIN_14
 #define NUCLEO_GPIO_PC14_GPIO_Port GPIOC
 #define MAXON_EN_Pin GPIO_PIN_15
@@ -86,8 +84,6 @@ void Error_Handler(void);
 #define NUCLEO_DYNA_TX_GPIO_Port GPIOC
 #define NUCLEO_DYNA_DIR_Pin GPIO_PIN_5
 #define NUCLEO_DYNA_DIR_GPIO_Port GPIOC
-#define NUCLEO_GPIO_PB0_Pin GPIO_PIN_0
-#define NUCLEO_GPIO_PB0_GPIO_Port GPIOB
 #define NUCLEO_PWM_T3_4_Pin GPIO_PIN_1
 #define NUCLEO_PWM_T3_4_GPIO_Port GPIOB
 #define MAXON1_DIR_Pin GPIO_PIN_2

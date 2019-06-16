@@ -30,23 +30,27 @@ void SequenceEngine::doStep()
 {
 	bool act_obstacle = (Hal::get_gpio(2)!=0);
 
-	if ((act_obstacle) && (!m_prev_obstacle) && (m_obstacle_count==0))
+	if (m_adversary_detection_enabled)
 	{
-		m_obstacle_count = 4000;
-		IRQ (1);
+		if ((act_obstacle) && (!m_prev_obstacle) && (m_obstacle_count==0))
+		{
+			m_obstacle_count = 3000;
+			IRQ (1);
+		}
 	}
 
-	if ((m_obstacle_count==2000))
+	if ((m_obstacle_count==1000))
 	{
 		if ((act_obstacle))
 		{
-			IRQ_END (1);
+			// FIXME : DEBUG
+			m_obstacle_count = 1200;
+			//beginIrqSeq (1);
 		}
 		else
 		{
-			IRQ_END (0);
+			beginIrqSeq (0);
 		}
-
 	}
 
 	if (m_obstacle_count>0)
@@ -63,7 +67,11 @@ void SequenceEngine::doStep()
 		break;
 	default:
 		return;
+	}
 
+	if (m_irq_pc != 0xffff)
+	{
+		doStepIrqSeq();
 	}
 }
 
@@ -71,19 +79,19 @@ bool SequenceEngine::execOp(const Op& op)
 {
 	switch(op.opcode)
 	{
-	case 0: // NOP
+	case 0: // nop
 		m_pc++;
 		break;
-	case 1: // MOV1
+	case 1: // mov1
 		*(int32_t*)(m_vars + 4 * op.arg1) = *(int32_t*)(m_vars + 4 * op.arg2);
 		m_pc++;
 		break;
-	case 2: // MOV2
+	case 2: // mov2
 		*(int32_t*)(m_vars + 4 * op.arg1) = *(int32_t*)(m_vars + 4 * op.arg2);
 		*(int32_t*)(m_vars + 4 * (op.arg1 + 1)) = *(int32_t*)(m_vars + 4 * (op.arg2 + 1));
 		m_pc++;
 		break;
-	case 3: // MOV3
+	case 3: // mov3
 		*(int32_t*)(m_vars + 4 * op.arg1) = *(int32_t*)(m_vars + 4 * op.arg2);
 		*(int32_t*)(m_vars + 4 * (op.arg1 + 1)) = *(int32_t*)(m_vars + 4 * (op.arg2 + 1));
 		*(int32_t*)(m_vars + 4 * (op.arg1 + 2)) = *(int32_t*)(m_vars + 4 * (op.arg2 + 2));
@@ -101,7 +109,23 @@ bool SequenceEngine::execOp(const Op& op)
 		*(int32_t*)(m_vars + 4 * op.arg1) -= op.arg2;
 		m_pc++;
 		break;
-	case 32: // DELAY
+	case 10: // add
+	{
+		auto a = *(int32_t*)(m_vars + 4 * op.arg2);
+		auto b = *(int32_t*)(m_vars + 4 * op.arg3);
+		*(int32_t*)(m_vars + 4 * op.arg1) = a + b;
+	}
+		m_pc++;
+		break;
+	case 11: // sub
+	{
+		auto a = *(int32_t*)(m_vars + 4 * op.arg2);
+		auto b = *(int32_t*)(m_vars + 4 * op.arg3);
+		*(int32_t*)(m_vars + 4 * op.arg1) = a - b;
+	}
+		m_pc++;
+		break;
+	case 32: // delay
 		if(m_end_delay == 0)
 		{
 			m_end_delay = xTaskGetTickCount() + *(int*)(m_vars + 4 * op.arg1);
@@ -114,11 +138,11 @@ bool SequenceEngine::execOp(const Op& op)
 			return true;
 		}
 		return false;
-	case 64: // PROPULSION.MOTORS_ENABLE
+	case 64: // propulsion.motors_enable
 		Hal::set_motors_enable(true);
 		m_pc++;
 		return true;
-	case 65: // PROPULSION.ENABLE
+	case 65: // propulsion.enable
 	{
 		uint8_t b = true;
 		Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DbgSetPropulsionEnable, (unsigned char*)&b, 1);
@@ -126,11 +150,11 @@ bool SequenceEngine::execOp(const Op& op)
 		m_pc++;
 		return true;
 	}
-	case 66: //PROPULSION.MOTORS_DISABLE
+	case 66: // propulsion.motors_disable
 		Hal::set_motors_enable(false);
 		m_pc++;
 		return true;
-	case 67: // PROPULSION.DISABLE
+	case 67: // propulsion.disable
 		{
 			uint8_t b = false;
 			Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DbgSetPropulsionEnable, (unsigned char*)&b, 1);
@@ -139,28 +163,38 @@ bool SequenceEngine::execOp(const Op& op)
 			return true;
 		}
 
-	case 125: // WAIT_ARM_FINISHED
+	case 125: // wait_arm_finished
 		if(m_arm_state == ArmState::Idle && !m_arm_state_dirty)
 			{
 				m_pc++;
 				return true;
 			}
 		return false;
-	case 126: // WAIT_MOVEMENT_FINISHED
+	case 126: // wait_movement_finished
+		if (m_irq_pc != 0xffff)
+		{
+			return false;
+		}
+
 		if(!m_propulsion_state_dirty && m_propulsion_state == PropulsionState::Stopped)
 			{
 				m_pc++;
 				return true;
 			}
 		return false;
-	case 146: // wait_for_servo_finished
+	case 146: // wait_servo_finished
 		if(!m_servo_moving[op.arg1])
 			{
 				m_pc++;
 				return true;
 			}
 		return false;
-	case 127: // PROPULSION.SETPOSE
+	case 127: // propulsion.set_pose
+		if (m_irq_pc != 0xffff)
+		{
+			return false;
+		}
+
 		{
 			Robot::instance().mainExchangeIn().pushMessage(
 					CommMessageType::DbgPropulsionSetPose,
@@ -168,8 +202,13 @@ bool SequenceEngine::execOp(const Op& op)
 		}
 			m_pc++;
 			return true;
-	case 128: // PROPULSION.POINTTO
-	{
+	case 128: // propulsion.point_to
+		if (m_irq_pc != 0xffff)
+		{
+			return false;
+		}
+
+		{
 		float params[5];
 		params[0] = *(float*)(m_vars + 4 * op.arg1);
 		params[1] = *(float*)(m_vars + 4 * (op.arg1+1));
@@ -179,12 +218,19 @@ bool SequenceEngine::execOp(const Op& op)
 		Robot::instance().mainExchangeIn().pushMessage(
 				CommMessageType::DbgPropulsionExecutePointTo,
 				(unsigned char*) params, sizeof(params));
-	}
+
 		m_propulsion_state_dirty = true;
 		m_pc++;
 		return false;
-	case 129: // PROPULSION.MOVE_TO
-	{
+		}
+		break;
+	case 129: // propulsion.move_to
+		if (m_irq_pc != 0xffff)
+		{
+			return false;
+		}
+
+		{
 		float params[5];
 		params[0] = *(float*)(m_vars + 4 * op.arg1);
 		params[1] = *(float*)(m_vars + 4 * (op.arg1+1));
@@ -192,14 +238,23 @@ bool SequenceEngine::execOp(const Op& op)
 		params[3] = *(float*)(m_vars + 4 * (op.arg2+1));
 		params[4] = *(float*)(m_vars + 4 * (op.arg2+2));
 
+		m_saved_target_x = params[0];
+		m_saved_target_y = params[1];
+
 		Robot::instance().mainExchangeIn().pushMessage(
 				CommMessageType::DbgPropulsionExecuteMoveTo,
 				(unsigned char*) params, sizeof(params));
 		m_propulsion_state_dirty = true;
 		m_pc++;
 		return false;
-	}
-	case 120://propulsion.trajectory
+		}
+		break;
+	case 120: // propulsion.trajectory
+		if (m_irq_pc != 0xffff)
+		{
+			return false;
+		}
+
 		{
 			unsigned char buff[76];//12 for traj params and 8*8 for points
 			*(float*)(buff) = get_var_float(op.arg3);
@@ -217,8 +272,14 @@ bool SequenceEngine::execOp(const Op& op)
 			m_pc++;
 			return false;
 		}
-	case 130: // PROPULSION.ROTATE
-	{
+		break;
+	case 130: // propulsion.rotate
+		if (m_irq_pc != 0xffff)
+		{
+			return false;
+		}
+
+		{
 		float params[4];
 		params[0] = *(float*)(m_vars + 4 * op.arg1);
 		params[1] = *(float*)(m_vars + 4 * (op.arg2));
@@ -231,8 +292,14 @@ bool SequenceEngine::execOp(const Op& op)
 		m_propulsion_state_dirty = true;
 		m_pc++;
 		return false;
-	}
-	case 131: // PROPULSION.TRANSLATE
+		}
+		break;
+	case 131: // propulsion.translate
+		if (m_irq_pc != 0xffff)
+		{
+			return false;
+		}
+
 		{
 			float params[4];
 			params[0] = *(float*)(m_vars + 4 * op.arg1);
@@ -246,7 +313,13 @@ bool SequenceEngine::execOp(const Op& op)
 			m_pc++;
 			return false;
 		}
-	case 132: // PROPULSION.REPOSITION
+		break;
+	case 132: // propulsion.reposition
+		if (m_irq_pc != 0xffff)
+		{
+			return false;
+		}
+
 		{
 			float params[2];
 			params[0] = *(float*)(m_vars + 4 * op.arg1);
@@ -258,7 +331,8 @@ bool SequenceEngine::execOp(const Op& op)
 			m_pc++;
 			return false;
 		}
-	case 133: // PROPULSION.ENTER_MANUAL
+		break;
+	case 133: // propulsion.enter_manual
 			{
 				Robot::instance().mainExchangeIn().pushMessage(
 						CommMessageType::PropulsionEnterManualControl,nullptr, 0);
@@ -266,7 +340,7 @@ bool SequenceEngine::execOp(const Op& op)
 				m_propulsion_state_dirty = true;
 				return false;
 			}
-	case 134: // PROPULSION.EXIT_MANUAL
+	case 134: // propulsion.exit_manual
 			{
 				Robot::instance().mainExchangeIn().pushMessage(
 						CommMessageType::PropulsionExitManualControl,nullptr, 0);
@@ -274,14 +348,19 @@ bool SequenceEngine::execOp(const Op& op)
 				m_propulsion_state_dirty = true;
 				return false;
 			}
-	case 135: // PROPULSION.SET_CONTROL_LEVELS
+	case 135: // propulsion.set_control_levels
 			{
 				Robot::instance().mainExchangeIn().pushMessage(
 						CommMessageType::PropulsionSetControlLevels,&(op.arg1), 2);
 				m_pc++;
 				return false;
 			}
-	case 136: // PROPULSION.SET_TARGET_POSE
+	case 136: // propulsion.set_target_pose
+		if (m_irq_pc != 0xffff)
+		{
+			return false;
+		}
+
 			{
 				RobotPose pose;
 				pose.position.x = *(float*)(m_vars + 4 * op.arg1);
@@ -296,7 +375,12 @@ bool SequenceEngine::execOp(const Op& op)
 				m_pc++;
 				return false;
 			}
-	case 137://PROPULSION.FACE_DIRECTION
+	case 137: // propulsion.face_direction
+		if (m_irq_pc != 0xffff)
+		{
+			return false;
+		}
+
 		{
 			float params[4];
 			params[0] = *(float*)(m_vars + 4 * op.arg1);
@@ -311,10 +395,12 @@ bool SequenceEngine::execOp(const Op& op)
 			m_pc++;
 			return false;
 		}
-	case 138: // set adversary detection enable
+	case 138: // propulsion.set_adversary_detection_enable
 		{
 			unsigned char buff;
 			buff = op.arg1;
+
+			m_adversary_detection_enabled = (bool)buff;
 
 			Robot::instance().mainExchangeIn().pushMessage(
 					CommMessageType::PropulsionSetAdversaryDetectionEnable,
@@ -323,7 +409,7 @@ bool SequenceEngine::execOp(const Op& op)
 		}
 		m_pc++;
 		return true;
-	case 139://propulsion.measure_normal
+	case 139: // propulsion.measure_normal
 		{
 			//arg: vector(border normal angle, projection of border point on normal
 			float buff[2] = {get_var_float(op.arg1), get_var_float(op.arg1+1)};
@@ -332,7 +418,7 @@ bool SequenceEngine::execOp(const Op& op)
 			m_pc++;
 			return false;
 		}
-	case 147://propulsion.measure_normal
+	case 147: // propulsion.measure_point
 		{
 			//arg: vector(border normal angle, projection of border point on normal
 			float buff[4] = {get_var_float(op.arg1),
@@ -345,7 +431,7 @@ bool SequenceEngine::execOp(const Op& op)
 			m_pc++;
 			return false;
 		}
-	case 30: // RET
+	case 30: // ret
 		if(m_stack_level == 0)
 		{
 			m_state = SequenceState::Idle;
@@ -356,28 +442,30 @@ bool SequenceEngine::execOp(const Op& op)
 			m_pc = m_call_stack[m_stack_level]+1;
 		}
 		return true;
-	case 31: // CALL
+	case 31: // call
 		m_call_stack[m_stack_level] = m_pc;
 		m_stack_level++;
 		m_pc = m_sequence_offsets[op.arg1];
 		return true;
-	case 33: // YIELD. Do nothing and wait for next task tick. use for polling loop
+	case 33: // yield
+		/* Do nothing and wait for next task tick. use for polling loop */
 		m_pc++;
 		return false;
-	case 34: // SEQUENCE EVENT
+	case 34: // send_event
 		{
-			unsigned char buff[2];
+			unsigned char buff[41];
 			buff[0] = op.arg1;
-			buff[1] = op.arg2;
+			memcpy(buff+1, m_vars + 4 * op.arg2, 4 * op.arg3);
+
 			Robot::instance().mainExchangeOut().pushMessage(
 					CommMessageType::SequenceEvent,
 					buff,
-					2);
+					1 + 4 * op.arg3);
 		}
 		m_pc++;
 		return true;
 
-	case 140: // PUMP.SET_PWM
+	case 140: // pump.set_pwm
 		{
 			unsigned char buff[3];
 			buff[0] = 0;
@@ -389,7 +477,7 @@ bool SequenceEngine::execOp(const Op& op)
 		}
 		m_pc++;
 		return true;
-	case 144://dc motor
+	case 144: // dc_motor.set_pwm
 		{
 			unsigned char buff[3];
 			buff[0] = op.arg1;
@@ -401,11 +489,11 @@ bool SequenceEngine::execOp(const Op& op)
 		}
 		m_pc++;
 		return true;
-	case 145://gpio out
+	case 145: // gpio.set
 		Hal::set_gpio(op.arg1,op.arg2);
 		m_pc++;
 		return true;
-	case 141: // ARM.GO_TO_POSITION
+	case 141: // arm.go_to_position
 		{
 			unsigned char buff[4];
 			buff[0] = op.arg1;
@@ -419,7 +507,7 @@ bool SequenceEngine::execOp(const Op& op)
 		}
 		m_pc++;
 		return true;
-	case 142: // SET_SERVO
+	case 142: // set_servo
 		{
 			m_servo_state_dirty[op.arg1] = true;
 			unsigned char buff[4];
@@ -433,7 +521,7 @@ bool SequenceEngine::execOp(const Op& op)
 		}
 		m_pc++;
 		return true;
-	case 143: // ARMS.SHUTDOWN
+	case 143: // arms.shutdown
 		{
 			Robot::instance().mainExchangeIn().pushMessage(
 					CommMessageType::ArmsShutdown,
@@ -443,7 +531,7 @@ bool SequenceEngine::execOp(const Op& op)
 		}
 		m_pc++;
 		return true;
-	case 150: // CHECK_SENSOR
+	case 150: // check_sensor
 		if(Robot::instance().sensorsState() & (1 << op.arg1))
 		{
 			m_status_register |= 1;
@@ -453,7 +541,7 @@ bool SequenceEngine::execOp(const Op& op)
 		}
 		m_pc++;
 		return true;
-	case 151: // check propulsion state
+	case 151: // check_propulsion_state
 		// Set zero flag if equality
 		if(!m_propulsion_state_dirty && (uint8_t)m_propulsion_state ==  op.arg1)
 		{
@@ -474,32 +562,32 @@ bool SequenceEngine::execOp(const Op& op)
 		m_pc++;
 		return true;
 	case 160: // cmp
-	{
-		// Set zero flag if equality
-		int v1 = *(int*)(m_vars + 4 * op.arg1);
-		int v2 = *(int*)(m_vars + 4 * op.arg2);
-		if(v1 == v2)
 		{
-			m_status_register |= FLAG_Z;
-		} else
-		{
-			m_status_register &= (0xffff-FLAG_Z);
+			// Set zero flag if equality
+			int v1 = *(int*)(m_vars + 4 * op.arg1);
+			int v2 = *(int*)(m_vars + 4 * op.arg2);
+			if(v1 == v2)
+			{
+				m_status_register |= FLAG_Z;
+			} else
+			{
+				m_status_register &= (0xffff-FLAG_Z);
+			}
+			if(v1 >= v2)
+			{
+				m_status_register &= (0xffff-FLAG_N);
+			} else
+			{
+				m_status_register |= FLAG_N;
+			}
 		}
-		if(v1 >= v2)
-		{
-			m_status_register &= (0xffff-FLAG_N);
-		} else
-		{
-			m_status_register |= FLAG_N;
-		}
-	}
 
 		m_pc++;
 		return true;
-	case 200://JMP
+	case 200: // jmp
 		m_pc = (uint16_t)op.arg1 | ((uint16_t)op.arg2 << 8);
 		return true;
-	case 201://JZ
+	case 201: // jz,je
 		if(m_status_register & FLAG_Z)
 		{
 			m_pc++;
@@ -508,7 +596,7 @@ bool SequenceEngine::execOp(const Op& op)
 			m_pc = (uint16_t)op.arg1 | ((uint16_t)op.arg2 << 8);
 		}
 		return true;
-	case 202://JNZ
+	case 202: // jnz,jne
 		if(m_status_register & FLAG_Z)
 		{
 			m_pc = (uint16_t)op.arg1 | ((uint16_t)op.arg2 << 8);
@@ -517,7 +605,7 @@ bool SequenceEngine::execOp(const Op& op)
 			m_pc++;
 		}
 		return true;
-	case 203://JGE
+	case 203: // jge
 		// jump if last comparison was posive (has negative flag to 0
 		if(m_status_register & FLAG_N)
 		{
@@ -528,8 +616,7 @@ bool SequenceEngine::execOp(const Op& op)
 
 		}
 		return true;
-
-	default: //NOP (?)
+	default: // nop (?)
 		m_pc++;
 		return false;
 	}
@@ -608,127 +695,176 @@ void SequenceEngine::updateServoState(int id, bool moving)
 	m_servo_state_dirty[id] = false;
 }
 
-/* FIXME : TODO : traiter d'autres causes d'interruption (pour l'instant on a : irq_id=1:="obstacle") */
 void SequenceEngine::IRQ(int /*irq_id*/)
 {
-	if((m_propulsion_state == PropulsionState::FollowTrajectory) && (m_ops[m_pc].opcode==126) && ((m_ops[m_pc-1].opcode==129)) ) // WAIT_MOVEMENT_FINISHED && PROPULSION.MOVE_TO
+	if((m_propulsion_state == PropulsionState::FollowTrajectory))
 	{
-		m_state = SequenceState::Interruption;
+		//m_state = SequenceState::Interruption;
 		Robot::instance().mainExchangeIn().pushMessage(CommMessageType::CmdEmergencyStop, nullptr, 0);
 	}
 }
 
-void SequenceEngine::IRQ_END(int irq_id)
+void SequenceEngine::beginIrqSeq(int obstacle_state)
 {
-	if ((irq_id==1)) /* obstacle encore present */
+	if ((obstacle_state==1)) /* obstacle encore present */
 	{
-		uint16_t irq_seq_pc = m_sequence_offsets[5];
-
-		if (((irq_seq_pc+4)!=(m_pc)) || (m_saved_irq_pc==0xffff)) m_saved_irq_pc = m_pc-1;
-
-		Op& old_op = m_ops[m_saved_irq_pc];
-
-		//Op& op0 = m_ops[irq_seq_pc]; // DELAY : raf
-
-
-		RobotPose my_pose = Robot::instance().odometry().pose();
-		double my_x_m = my_pose.position.x;
-		double my_y_m = my_pose.position.y;
-		double my_theta_rad = my_pose.yaw;
-		double my_cos_theta = cos(my_theta_rad);
-		double my_sin_theta = sin(my_theta_rad);
-
-		double new_theta_right_rad =  my_theta_rad - (M_PI/2.0);
-		double new_theta_left_rad  =  my_theta_rad + (M_PI/2.0);
-
-		double cos_new_theta_right =  my_sin_theta;
-		double sin_new_theta_right = -my_cos_theta;
-
-		double cos_new_theta_left  = -my_sin_theta;
-		double sin_new_theta_left  =  my_cos_theta;
-
-		double x_right_m = my_x_m + 0.3*cos_new_theta_right;
-		double y_right_m = my_y_m + 0.3*sin_new_theta_right;
-
-		double x_left_m  = my_x_m + 0.3*cos_new_theta_left;
-		double y_left_m  = my_y_m + 0.3*sin_new_theta_left;
-
-		double x_center_m  = 0.8;
-		double y_center_m  = 0.0;
-
-		double new_x_m = x_center_m;
-		double new_y_m = y_center_m;
-
-		double anti_new_x_m = x_center_m;
-		double anti_new_y_m = y_center_m;
-
-		double D2_right  = (x_right_m-x_center_m)*(x_right_m-x_center_m) + 
-                           (y_right_m-y_center_m)*(y_right_m-y_center_m);
-
-		double D2_left   = (x_left_m-x_center_m)*(x_left_m-x_center_m) + 
-                           (y_left_m-y_center_m)*(y_left_m-y_center_m);
-
-        if (D2_right<D2_left)
-        {
-            new_x_m = x_right_m;
-            new_y_m = y_right_m;
-            anti_new_x_m = x_left_m;
-            anti_new_y_m = y_left_m;
-        }
-        else
-        {
-            new_x_m = x_left_m;
-            new_y_m = y_left_m;
-            anti_new_x_m = x_right_m;
-            anti_new_y_m = y_right_m;
-        }
-
-		Op& op1 = m_ops[irq_seq_pc+1]; // PROPULSION.POINT_TO parking
-		*(float*)(m_vars + 4 * op1.arg1)     = anti_new_x_m;
-		*(float*)(m_vars + 4 * (op1.arg1+1)) = anti_new_y_m;
-
-		//Op& op2 = m_ops[irq_seq_pc+2]; // WAIT_MOVEMENT_FINISHED point_to parking : raf
-
-		Op& op3 = m_ops[irq_seq_pc+3]; // PROPULSION.MOVE_TO parking : raf
-		*(float*)(m_vars + 4 * op3.arg1)     = new_x_m;
-		*(float*)(m_vars + 4 * (op3.arg1+1)) = new_y_m;
-
-		//Op& op4 = m_ops[irq_seq_pc+4]; // WAIT_MOVEMENT_FINISHED move_to parking : raf
-
-		Op& op5 = m_ops[irq_seq_pc+5]; // PROPULSION.POINT_TO cible
-		op5.arg1 = old_op.arg1;
-		op5.arg2 = old_op.arg2;
-
-		//Op& op6 = m_ops[irq_seq_pc+6]; // WAIT_MOVEMENT_FINISHED point_to cible : raf
-
-		Op& op7 = m_ops[irq_seq_pc+7]; // JMP
-		uint16_t dummy = m_saved_irq_pc & 0x00ff;
-		op7.arg1 = (uint8_t) dummy;
-		dummy = (m_saved_irq_pc >> 8) & 0x00ff;
-		op7.arg2 = (uint8_t) dummy;
-
-		m_pc = irq_seq_pc;
-
 		Robot::instance().mainExchangeIn().pushMessage(CommMessageType::PropulsionClearError, nullptr, 0);
 
 		m_propulsion_state_dirty = true; /* FIXME : TODO : OK? */
-		m_state = SequenceState::Executing;
+		//m_state = SequenceState::Executing;
+
+		m_irq_pc = 0x0000;
 
 		Hal::set_motors_enable(true);
 	}
 	else /* l'adversaire s'est barre */
 	{
-		uint16_t irq_seq_pc = m_sequence_offsets[5];
-
-		m_pc = m_pc-1;
-
 		Robot::instance().mainExchangeIn().pushMessage(CommMessageType::PropulsionClearError, nullptr, 0);
 
 		m_propulsion_state_dirty = true; /* FIXME : TODO : OK? */
-		m_state = SequenceState::Executing;
+		//m_state = SequenceState::Executing;
+
+		m_irq_pc = 0x0006;
 
 		Hal::set_motors_enable(true);
 	}
+}
+
+void SequenceEngine::doStepIrqSeq()
+{
+	float params[5];
+
+	switch(m_irq_pc)
+	{
+	case 0x0000: // calculate escape_point & point to anti_escape_point
+		calculateEscapePoint();
+		params[0] = m_anti_escape_x_m;
+		params[1] = m_anti_escape_y_m;
+		params[2] = 3.1415;
+		params[3] = 3.1415;
+		params[4] = 3.1415;
+		Robot::instance().mainExchangeIn().pushMessage(
+				CommMessageType::DbgPropulsionExecutePointTo,
+				(unsigned char*) params, sizeof(params));
+		m_propulsion_state_dirty = true;
+		m_irq_pc = 0x0001;
+		break;
+	case 0x0001: // wait point_to finished
+		if(!m_propulsion_state_dirty && m_propulsion_state == PropulsionState::Stopped)
+		{
+			m_irq_pc = 0x0002;
+		}
+		break;
+	case 0x0002: // move to escape_point
+		params[0] = m_escape_x_m;
+		params[1] = m_escape_y_m;
+		params[2] = 0.3;
+		params[3] = 0.3;
+		params[4] = 0.3;
+		Robot::instance().mainExchangeIn().pushMessage(
+				CommMessageType::DbgPropulsionExecuteMoveTo,
+				(unsigned char*) params, sizeof(params));
+		m_propulsion_state_dirty = true;
+		m_irq_pc = 0x0003;
+		break;
+	case 0x0003: // wait move_to finished
+		if(!m_propulsion_state_dirty && m_propulsion_state == PropulsionState::Stopped)
+		{
+			m_irq_pc = 0x0004;
+		}
+		break;
+	case 0x0004: // point to target_point
+		params[0] = m_saved_target_x;
+		params[1] = m_saved_target_y;
+		params[2] = 3.1415;
+		params[3] = 3.1415;
+		params[4] = 3.1415;
+		Robot::instance().mainExchangeIn().pushMessage(
+				CommMessageType::DbgPropulsionExecutePointTo,
+				(unsigned char*) params, sizeof(params));
+		m_propulsion_state_dirty = true;
+		m_irq_pc = 0x0005;
+		break;
+	case 0x0005: // wait point_to finished
+		if(!m_propulsion_state_dirty && m_propulsion_state == PropulsionState::Stopped)
+		{
+			m_irq_pc = 0x0006;
+		}
+		break;
+	case 0x0006: // move to target_point
+		params[0] = m_saved_target_x;
+		params[1] = m_saved_target_y;
+		params[2] = 0.3;
+		params[3] = 0.3;
+		params[4] = 0.3;
+		Robot::instance().mainExchangeIn().pushMessage(
+				CommMessageType::DbgPropulsionExecuteMoveTo,
+				(unsigned char*) params, sizeof(params));
+		m_propulsion_state_dirty = true;
+		m_irq_pc = 0x0007;
+		break;
+	case 0x0007: // wait move_to finished
+		if(!m_propulsion_state_dirty && m_propulsion_state == PropulsionState::Stopped)
+		{
+			m_irq_pc = 0x0008;
+		}
+		break;
+	case 0x0008: // end irq
+		m_irq_pc = 0xffff;
+		break;
+	default:
+		m_irq_pc = 0xffff;
+	}
+}
+
+void SequenceEngine::calculateEscapePoint()
+{
+	RobotPose my_pose = Robot::instance().odometry().pose();
+	double my_x_m = my_pose.position.x;
+	double my_y_m = my_pose.position.y;
+	double my_theta_rad = my_pose.yaw;
+	double my_cos_theta = cos(my_theta_rad);
+	double my_sin_theta = sin(my_theta_rad);
+
+	double new_theta_right_rad =  my_theta_rad - (M_PI/2.0);
+	double new_theta_left_rad  =  my_theta_rad + (M_PI/2.0);
+
+	double cos_new_theta_right =  my_sin_theta;
+	double sin_new_theta_right = -my_cos_theta;
+
+	double cos_new_theta_left  = -my_sin_theta;
+	double sin_new_theta_left  =  my_cos_theta;
+
+	double x_right_m = my_x_m + 0.3*cos_new_theta_right;
+	double y_right_m = my_y_m + 0.3*sin_new_theta_right;
+
+	double x_left_m  = my_x_m + 0.3*cos_new_theta_left;
+	double y_left_m  = my_y_m + 0.3*sin_new_theta_left;
+
+	double x_center_m  = 0.8;
+	double y_center_m  = 0.0;
+
+	double D2_right  = (x_right_m-x_center_m)*(x_right_m-x_center_m) + 
+                       (y_right_m-y_center_m)*(y_right_m-y_center_m);
+
+	double D2_left   = (x_left_m-x_center_m)*(x_left_m-x_center_m) + 
+                       (y_left_m-y_center_m)*(y_left_m-y_center_m);
+
+	if (D2_right<D2_left)
+	{
+		m_escape_x_m = x_right_m;
+		m_escape_y_m = y_right_m;
+		m_anti_escape_x_m = x_left_m;
+		m_anti_escape_y_m = y_left_m;
+	}
+	else
+	{
+		m_escape_x_m = x_left_m;
+		m_escape_y_m = y_left_m;
+		m_anti_escape_x_m = x_right_m;
+		m_anti_escape_y_m = y_right_m;
+	}
+
 }
 
 }

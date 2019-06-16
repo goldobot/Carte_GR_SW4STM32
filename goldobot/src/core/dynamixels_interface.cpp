@@ -45,23 +45,45 @@ void ArmsTask::dynamixels_transmit_packet(uint8_t id,  uint8_t command,  unsigne
 	Hal::set_gpio(3, 0);
 }
 
-bool ArmsTask::dynamixels_receive_packet()
+DynamixelStatusError ArmsTask::dynamixels_receive_packet()
 {
+	memset(m_dynamixels_buffer, 0, 255);
 	Hal::uart_receive(1,(char*)m_dynamixels_buffer,256, false);
-	for(unsigned i=0;i<20;i++)
+	uint16_t bytes_received = 0;
+	for(unsigned i=0;i<10;i++)
 	{
-		uint16_t bytes_received = Hal::uart_bytes_received(1);
+		bytes_received = Hal::uart_bytes_received(1);
+
+		// search for magic 0xFF
 		if(bytes_received >= 4 && bytes_received >= m_dynamixels_buffer[3] + 4)
 		{
-			// Check checksum
-			m_dynamixels_receive_num_parameters = m_dynamixels_buffer[3] - 1;
 			Hal::uart_receive_abort(1);
-			return true;
+
+			// Check checksum
+			m_dynamixels_receive_id = m_dynamixels_buffer[2];
+			m_dynamixels_receive_num_parameters = m_dynamixels_buffer[3] - 2;
+			m_dynamixels_receive_error = m_dynamixels_buffer[4];
+			m_dynamixels_receive_params = m_dynamixels_buffer + 5;
+
+			uint8_t checksum = 0;
+			for(unsigned i = 2; i < 5 + m_dynamixels_receive_num_parameters;i++)
+			{
+				checksum += m_dynamixels_buffer[i];
+			}
+			checksum = ~checksum;
+
+			if(checksum == m_dynamixels_buffer[5 + m_dynamixels_receive_num_parameters])
+			{
+				return DynamixelStatusError::Ok;
+			} else
+			{
+				return DynamixelStatusError::ChecksumError;
+			}
 		}
 		delay(1);
 	}
 	Hal::uart_receive_abort(1);
-	return false;
+	return DynamixelStatusError::TimeoutError;
 }
 
 
