@@ -44,8 +44,8 @@ void SequenceEngine::doStep()
 		if ((act_obstacle))
 		{
 			// FIXME : DEBUG
-			m_obstacle_count = 1200;
-			//beginIrqSeq (1);
+			//m_obstacle_count = 1200;
+			beginIrqSeq (1);
 		}
 		else
 		{
