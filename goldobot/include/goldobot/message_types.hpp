@@ -24,6 +24,8 @@ namespace goldobot
 		SequenceEvent=22,
 		MatchRemainingTime=23,
 
+		DebugGoldo=31,
+
 		// Commands
 		CmdEmergencyStop=32, // Order an emergency stop
 		CmdSelectSide=33, // Select side. payload is an unsigned byte, 0=green, 1=orange

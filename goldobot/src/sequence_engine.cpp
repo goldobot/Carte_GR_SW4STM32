@@ -14,6 +14,7 @@ uint16_t update_crc16(const unsigned char* data_p, size_t length, uint16_t crc =
 namespace goldobot
 {
 
+extern unsigned int g_dbg_goldo;
 
 enum Opcode
 {
@@ -30,35 +31,180 @@ void SequenceEngine::doStep()
 {
 	bool act_obstacle = (Hal::get_gpio(2)!=0);
 
-	if (m_adversary_detection_enabled)
+	//goldobot::g_dbg_goldo = m_obstacle_count;
+
+	if (m_adversary_detection_enabled && (m_obstacle_count==0))
 	{
-		if ((act_obstacle) && (!m_prev_obstacle) && (m_obstacle_count==0))
+		switch(m_irq_pc)
 		{
-			m_obstacle_count = 3000;
-			IRQ (1);
+		case 0x0000: // calculate escape_point & point to (anti_)escape_point
+			break;
+		case 0x0001: // wait point_to finished
+			break;
+		case 0x0002: // move to escape_point
+			break;
+		case 0x0003: // wait move_to finished
+			if ((act_obstacle))
+			{
+				Robot::instance().mainExchangeIn().pushMessage(CommMessageType::CmdEmergencyStop, nullptr, 0);
+				m_obstacle_count = 1000;
+			}
+			break;
+
+		case 0x0004: // point to final_escape_point
+			break;
+		case 0x0005: // wait point_to finished
+			break;
+		case 0x0006: // move to final_escape_point
+			break;
+		case 0x0007: // wait move_to finished
+			if ((act_obstacle))
+			{
+				Robot::instance().mainExchangeIn().pushMessage(CommMessageType::CmdEmergencyStop, nullptr, 0);
+				m_obstacle_count = 1000;
+			}
+			break;
+
+		case 0x0008: // point to target_point
+			break;
+		case 0x0009: // wait point_to finished
+			break;
+		case 0x000a: // move to target_point
+			break;
+		case 0x000b: // wait move_to finished
+			if ((act_obstacle))
+			{
+				Robot::instance().mainExchangeIn().pushMessage(CommMessageType::CmdEmergencyStop, nullptr, 0);
+				m_obstacle_count = 1000;
+			}
+			break;
+		case 0x000c: // end irq
+			break;
+
+		case 0xffff: // not executing irq sequence
+			if ((act_obstacle))
+			{
+				m_obstacle_count = 3000;
+				IRQ (1);
+			}
+			break;
 		}
 	}
 
-	if ((m_obstacle_count==1000))
+
+	if ((m_obstacle_count==1))
 	{
-		if ((act_obstacle))
+		switch(m_irq_pc)
 		{
-			// FIXME : DEBUG
-			//m_obstacle_count = 1200;
-			beginIrqSeq (1);
-		}
-		else
-		{
-			beginIrqSeq (0);
+		case 0x0000: // calculate escape_point & point to (anti_)escape_point
+			break;
+		case 0x0001: // wait point_to finished
+			break;
+		case 0x0002: // move to escape_point
+			break;
+		case 0x0003: // wait move_to finished
+			if ((act_obstacle))
+			{
+				m_obstacle_count = 200;
+			}
+			else
+			{
+				Robot::instance().mainExchangeIn().pushMessage(CommMessageType::PropulsionClearError, nullptr, 0);
+				m_propulsion_state_dirty = true;
+				Hal::set_motors_enable(true);
+				m_irq_pc = 0x0002;
+				goldobot::g_dbg_goldo = m_irq_pc;
+			}
+			break;
+
+		case 0x0004: // point to final_escape_point
+			break;
+		case 0x0005: // wait point_to finished
+			break;
+		case 0x0006: // move to final_escape_point
+			break;
+		case 0x0007: // wait move_to finished
+			if ((act_obstacle))
+			{
+				m_obstacle_count = 200;
+			}
+			else
+			{
+				Robot::instance().mainExchangeIn().pushMessage(CommMessageType::PropulsionClearError, nullptr, 0);
+				m_propulsion_state_dirty = true;
+				Hal::set_motors_enable(true);
+				m_irq_pc = 0x0006;
+				goldobot::g_dbg_goldo = m_irq_pc;
+			}
+			break;
+
+		case 0x0008: // point to target_point
+			break;
+		case 0x0009: // wait point_to finished
+			break;
+		case 0x000a: // move to target_point
+			break;
+		case 0x000b: // wait move_to finished
+			if ((act_obstacle))
+			{
+				m_obstacle_count = 200;
+			}
+			else
+			{
+				Robot::instance().mainExchangeIn().pushMessage(CommMessageType::PropulsionClearError, nullptr, 0);
+				m_propulsion_state_dirty = true;
+				Hal::set_motors_enable(true);
+				m_irq_pc = 0x000a;
+				goldobot::g_dbg_goldo = m_irq_pc;
+			}
+			break;
+		case 0x000c: // end irq
+			break;
+
+		case 0xffff: // not executing irq sequence
+			if ((act_obstacle))
+			{
+				if (m_escape_impossible) // on peut rien faire, on bouge pas et.. on attend..
+				{
+					m_obstacle_count = 200;
+				}
+				else
+				{
+					Robot::instance().mainExchangeIn().pushMessage(CommMessageType::PropulsionClearError, nullptr, 0);
+					m_propulsion_state_dirty = true; /* FIXME : TODO : OK? */
+					Hal::set_motors_enable(true);
+					m_irq_pc = 0x0000;
+					goldobot::g_dbg_goldo = m_irq_pc;
+				}
+			}
+			else
+			{
+				Robot::instance().mainExchangeIn().pushMessage(CommMessageType::PropulsionClearError, nullptr, 0);
+				m_propulsion_state_dirty = true; /* FIXME : TODO : OK? */
+				Hal::set_motors_enable(true);
+				m_irq_pc = 0x000a;
+				goldobot::g_dbg_goldo = m_irq_pc;
+			}
+			break;
 		}
 	}
+
+
+	m_prev_obstacle = act_obstacle;
+
 
 	if (m_obstacle_count>0)
 	{
 		m_obstacle_count--;
+		return;
 	}
 
-	m_prev_obstacle = act_obstacle;
+
+	if ((m_irq_pc != 0xffff))
+	{
+		doStepIrqSeq();
+	}
+
 
 	switch(m_state)
 	{
@@ -67,11 +213,6 @@ void SequenceEngine::doStep()
 		break;
 	default:
 		return;
-	}
-
-	if (m_irq_pc != 0xffff)
-	{
-		doStepIrqSeq();
 	}
 }
 
@@ -671,6 +812,7 @@ void SequenceEngine::startSequence(int id)
 {
 	m_state = SequenceState::Executing;
 	m_pc = m_sequence_offsets[id];
+	goldobot::g_dbg_goldo = m_irq_pc;
 }
 
 void SequenceEngine::abortSequence()
@@ -714,6 +856,7 @@ void SequenceEngine::beginIrqSeq(int obstacle_state)
 		//m_state = SequenceState::Executing;
 
 		m_irq_pc = 0x0000;
+		goldobot::g_dbg_goldo = m_irq_pc;
 
 		Hal::set_motors_enable(true);
 	}
@@ -724,7 +867,8 @@ void SequenceEngine::beginIrqSeq(int obstacle_state)
 		m_propulsion_state_dirty = true; /* FIXME : TODO : OK? */
 		//m_state = SequenceState::Executing;
 
-		m_irq_pc = 0x0006;
+		m_irq_pc = 0x000a;
+		goldobot::g_dbg_goldo = m_irq_pc;
 
 		Hal::set_motors_enable(true);
 	}
@@ -736,10 +880,13 @@ void SequenceEngine::doStepIrqSeq()
 
 	switch(m_irq_pc)
 	{
-	case 0x0000: // calculate escape_point & point to anti_escape_point
+	case 0x0000: // calculate escape_point & point to (anti_)escape_point
+		m_adversary_detection_enabled = false;
 		calculateEscapePoint();
-		params[0] = m_anti_escape_x_m;
-		params[1] = m_anti_escape_y_m;
+		//params[0] = m_anti_escape_x_m;
+		//params[1] = m_anti_escape_y_m;
+		params[0] = m_escape_x_m;
+		params[1] = m_escape_y_m;
 		params[2] = 3.1415;
 		params[3] = 3.1415;
 		params[4] = 3.1415;
@@ -748,14 +895,17 @@ void SequenceEngine::doStepIrqSeq()
 				(unsigned char*) params, sizeof(params));
 		m_propulsion_state_dirty = true;
 		m_irq_pc = 0x0001;
+		goldobot::g_dbg_goldo = m_irq_pc;
 		break;
 	case 0x0001: // wait point_to finished
 		if(!m_propulsion_state_dirty && m_propulsion_state == PropulsionState::Stopped)
 		{
 			m_irq_pc = 0x0002;
+			goldobot::g_dbg_goldo = m_irq_pc;
 		}
 		break;
 	case 0x0002: // move to escape_point
+		m_adversary_detection_enabled = true;
 		params[0] = m_escape_x_m;
 		params[1] = m_escape_y_m;
 		params[2] = 0.3;
@@ -766,14 +916,58 @@ void SequenceEngine::doStepIrqSeq()
 				(unsigned char*) params, sizeof(params));
 		m_propulsion_state_dirty = true;
 		m_irq_pc = 0x0003;
+		goldobot::g_dbg_goldo = m_irq_pc;
 		break;
 	case 0x0003: // wait move_to finished
 		if(!m_propulsion_state_dirty && m_propulsion_state == PropulsionState::Stopped)
 		{
 			m_irq_pc = 0x0004;
+			goldobot::g_dbg_goldo = m_irq_pc;
 		}
 		break;
-	case 0x0004: // point to target_point
+
+	case 0x0004: // point to final_escape_point
+		params[0] = m_final_escape_x_m;
+		params[1] = m_final_escape_y_m;
+		params[2] = 3.1415;
+		params[3] = 3.1415;
+		params[4] = 3.1415;
+		Robot::instance().mainExchangeIn().pushMessage(
+				CommMessageType::DbgPropulsionExecutePointTo,
+				(unsigned char*) params, sizeof(params));
+		m_propulsion_state_dirty = true;
+		m_irq_pc = 0x0005;
+		goldobot::g_dbg_goldo = m_irq_pc;
+		break;
+	case 0x0005: // wait point_to finished
+		if(!m_propulsion_state_dirty && m_propulsion_state == PropulsionState::Stopped)
+		{
+			m_irq_pc = 0x0006;
+			goldobot::g_dbg_goldo = m_irq_pc;
+		}
+		break;
+	case 0x0006: // move to final_escape_point
+		params[0] = m_final_escape_x_m;
+		params[1] = m_final_escape_y_m;
+		params[2] = 0.3;
+		params[3] = 0.3;
+		params[4] = 0.3;
+		Robot::instance().mainExchangeIn().pushMessage(
+				CommMessageType::DbgPropulsionExecuteMoveTo,
+				(unsigned char*) params, sizeof(params));
+		m_propulsion_state_dirty = true;
+		m_irq_pc = 0x0007;
+		goldobot::g_dbg_goldo = m_irq_pc;
+		break;
+	case 0x0007: // wait move_to finished
+		if(!m_propulsion_state_dirty && m_propulsion_state == PropulsionState::Stopped)
+		{
+			m_irq_pc = 0x0008;
+			goldobot::g_dbg_goldo = m_irq_pc;
+		}
+		break;
+
+	case 0x0008: // point to target_point
 		params[0] = m_saved_target_x;
 		params[1] = m_saved_target_y;
 		params[2] = 3.1415;
@@ -783,15 +977,17 @@ void SequenceEngine::doStepIrqSeq()
 				CommMessageType::DbgPropulsionExecutePointTo,
 				(unsigned char*) params, sizeof(params));
 		m_propulsion_state_dirty = true;
-		m_irq_pc = 0x0005;
+		m_irq_pc = 0x0009;
+		goldobot::g_dbg_goldo = m_irq_pc;
 		break;
-	case 0x0005: // wait point_to finished
+	case 0x0009: // wait point_to finished
 		if(!m_propulsion_state_dirty && m_propulsion_state == PropulsionState::Stopped)
 		{
-			m_irq_pc = 0x0006;
+			m_irq_pc = 0x000a;
+			goldobot::g_dbg_goldo = m_irq_pc;
 		}
 		break;
-	case 0x0006: // move to target_point
+	case 0x000a: // move to target_point
 		params[0] = m_saved_target_x;
 		params[1] = m_saved_target_y;
 		params[2] = 0.3;
@@ -801,19 +997,25 @@ void SequenceEngine::doStepIrqSeq()
 				CommMessageType::DbgPropulsionExecuteMoveTo,
 				(unsigned char*) params, sizeof(params));
 		m_propulsion_state_dirty = true;
-		m_irq_pc = 0x0007;
+		m_irq_pc = 0x000b;
+		goldobot::g_dbg_goldo = m_irq_pc;
 		break;
-	case 0x0007: // wait move_to finished
+	case 0x000b: // wait move_to finished
 		if(!m_propulsion_state_dirty && m_propulsion_state == PropulsionState::Stopped)
 		{
-			m_irq_pc = 0x0008;
+			m_irq_pc = 0x000c;
+			goldobot::g_dbg_goldo = m_irq_pc;
 		}
 		break;
-	case 0x0008: // end irq
+	case 0x000c: // end irq
+		m_escape_impossible = false;
+		m_adversary_detection_enabled = true;
 		m_irq_pc = 0xffff;
+		goldobot::g_dbg_goldo = m_irq_pc;
 		break;
 	default:
 		m_irq_pc = 0xffff;
+		goldobot::g_dbg_goldo = m_irq_pc;
 	}
 }
 
@@ -835,36 +1037,135 @@ void SequenceEngine::calculateEscapePoint()
 	double cos_new_theta_left  = -my_sin_theta;
 	double sin_new_theta_left  =  my_cos_theta;
 
-	double x_right_m = my_x_m + 0.3*cos_new_theta_right;
-	double y_right_m = my_y_m + 0.3*sin_new_theta_right;
+	double remaining_dx = m_saved_target_x - my_x_m;
+	double remaining_dy = m_saved_target_y - my_y_m;
+	double remaining_dist = sqrt(remaining_dx*remaining_dx + remaining_dy*remaining_dy);
+	remaining_dist = remaining_dist<0.4?remaining_dist:0.4;
 
-	double x_left_m  = my_x_m + 0.3*cos_new_theta_left;
-	double y_left_m  = my_y_m + 0.3*sin_new_theta_left;
+	double x_right_m = my_x_m + 0.4*cos_new_theta_right;
+	double y_right_m = my_y_m + 0.4*sin_new_theta_right;
+
+	double final_x_right_m = x_right_m + remaining_dist*my_cos_theta;
+	double final_y_right_m = y_right_m + remaining_dist*my_sin_theta;
+
+	double x_left_m  = my_x_m + 0.4*cos_new_theta_left;
+	double y_left_m  = my_y_m + 0.4*sin_new_theta_left;
+
+	double final_x_left_m = x_left_m + remaining_dist*my_cos_theta;
+	double final_y_left_m = y_left_m + remaining_dist*my_sin_theta;
 
 	double x_center_m  = 0.8;
 	double y_center_m  = 0.0;
 
+    bool right_invalid = (!insideMovingZone(x_right_m, y_right_m)) || (!insideMovingZone(final_x_right_m,final_y_right_m));
+    bool left_invalid = (!insideMovingZone(x_left_m, y_left_m)) || (!insideMovingZone(final_x_left_m,final_y_left_m));
+
+#if 0
 	double D2_right  = (x_right_m-x_center_m)*(x_right_m-x_center_m) + 
                        (y_right_m-y_center_m)*(y_right_m-y_center_m);
 
 	double D2_left   = (x_left_m-x_center_m)*(x_left_m-x_center_m) + 
                        (y_left_m-y_center_m)*(y_left_m-y_center_m);
+#else
+	double D2_right  = distToBorders(x_right_m, y_right_m);
 
-	if (D2_right<D2_left)
-	{
+	double D2_left   = distToBorders(x_left_m, y_left_m);
+#endif
+
+	if ((D2_left<D2_right) && (!right_invalid))
+	{ /* le cote droit est + eloigne de la bordure donc moins dangereux */
+		m_escape_impossible = false;
 		m_escape_x_m = x_right_m;
 		m_escape_y_m = y_right_m;
 		m_anti_escape_x_m = x_left_m;
 		m_anti_escape_y_m = y_left_m;
+		m_final_escape_x_m = final_x_right_m;
+		m_final_escape_y_m = final_y_right_m;
 	}
-	else
-	{
+	else if (!left_invalid)
+	{ /* le cote gauche est + eloigne de la bordure donc moins dangereux */
+		m_escape_impossible = false;
 		m_escape_x_m = x_left_m;
 		m_escape_y_m = y_left_m;
 		m_anti_escape_x_m = x_right_m;
 		m_anti_escape_y_m = y_right_m;
+		m_final_escape_x_m = final_x_left_m;
+		m_final_escape_y_m = final_y_left_m;
+	}
+	else // (right_invalid && left_invalid)
+	{ /* les deux cotes sont bloques, on peut rien faire.. */
+		m_escape_impossible = true;
+		m_escape_x_m = my_x_m;
+		m_escape_y_m = my_y_m;
+		m_anti_escape_x_m = my_x_m;
+		m_anti_escape_y_m = my_y_m;
+		m_final_escape_x_m = my_x_m;
+		m_final_escape_y_m = my_y_m;
+	}
+}
+
+bool SequenceEngine::insideMovingZone(double x_m, double y_m)
+{
+	if ((x_m<0.12) || (x_m>1.88))
+	{
+		return false;
 	}
 
+	if ((y_m<-1.38) || (y_m>1.38))
+	{
+		return false;
+	}
+
+	if ((x_m>1.423) && (y_m>-0.33) && (y_m<0.33))
+	{
+		return false;
+	}
+
+	if ((x_m>1.223) && (y_m>-0.14) && (y_m<0.14))
+	{
+		return false;
+	}
+
+	return true;
+}
+
+double SequenceEngine::distToBorders(double x_m, double y_m)
+{
+	double d1_x_m, d2_x_m, d1_y_m, d2_y_m;
+	double d_x_m, d_y_m;
+
+	d1_x_m = x_m - 0.0;
+	d2_x_m = 2.0 - x_m;
+	d1_y_m = y_m - (-1.5);
+	d2_y_m = 1.5 - y_m;
+
+	if ((d1_x_m<d2_x_m) && (d1_x_m>0.0))
+	{
+		d_x_m = d1_x_m;
+	}
+	else if ((d2_x_m>0.0))
+	{
+		d_x_m = d2_x_m;
+	}
+	else // should never happen..
+	{
+		d_x_m = 10.0;
+	}
+
+	if ((d1_y_m<d2_y_m) && (d1_y_m>0.0))
+	{
+		d_y_m = d1_y_m;
+	}
+	else if ((d2_y_m>0.0))
+	{
+		d_y_m = d2_y_m;
+	}
+	else // should never happen..
+	{
+		d_y_m = 10.0;
+	}
+
+	return ((d_x_m<d_y_m)?d_x_m:d_y_m);
 }
 
 }

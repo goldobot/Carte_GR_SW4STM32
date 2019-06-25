@@ -22,6 +22,7 @@ bool g_goldo_megakill_switch = false;
 namespace goldobot {
 	bool g_goldo_debug6 = false;
 	bool g_goldo_debug7 = false;
+    unsigned int g_dbg_goldo = 0;
 };
 #endif
 
@@ -31,6 +32,7 @@ void HeartbeatTask::taskFunction()
 	g_goldo_megakill_switch = false;
     goldobot::g_goldo_debug6 = true;
     goldobot::g_goldo_debug7 = true;
+    goldobot::g_dbg_goldo = 0;
 #endif
 
 	while(1)
@@ -65,6 +67,8 @@ void HeartbeatTask::taskFunction()
 		messages::MsgMatchStateChange post_state{Robot::instance().matchState(), Robot::instance().side()};
 		Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&post_state, sizeof(post_state));
 
+		//Robot::instance().mainExchangeOut().pushMessage(CommMessageType::DebugGoldo,
+		//	(unsigned char*)&g_dbg_goldo, sizeof(g_dbg_goldo));
 
 #if 0 /* FIXME : DEBUG */
 		g_goldo_megakill_switch = (Hal::get_gpio(2)!=0);

@@ -39,6 +39,8 @@ public:
 	void beginIrqSeq(int obstacle_state);
 	void doStepIrqSeq();
 	void calculateEscapePoint();
+	bool insideMovingZone(double x_m, double y_m);
+	double distToBorders(double x_m, double y_m);
 
 	SequenceState state() const {return m_state;};
 
@@ -64,12 +66,15 @@ private:
 	uint32_t m_status_register{0};
 
 	uint16_t m_irq_pc{0xffff};
+	bool m_escape_impossible{false};
 	double m_anti_escape_x_m{0.8};
 	double m_anti_escape_y_m{0.0};
 	double m_escape_x_m{0.8};
 	double m_escape_y_m{0.0};
 	double m_saved_target_x{0.8};
 	double m_saved_target_y{0.0};
+	double m_final_escape_x_m{0.8};
+	double m_final_escape_y_m{0.0};
 
 	uint32_t m_end_delay{0};
 
