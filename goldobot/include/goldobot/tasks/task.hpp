@@ -1,6 +1,7 @@
 #pragma once
 #include <atomic>
-typedef void* TaskHandle_t;
+#include "FreeRTOS.h"
+#include "task.h"
 typedef uint32_t TickType_t;
 
 namespace goldobot
