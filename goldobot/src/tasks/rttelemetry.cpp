@@ -1,3 +1,5 @@
+#include <cstring>
+
 #include "goldobot/core/geometry.hpp"
 #include "goldobot/tasks/rttelemetry.hpp"
 #include "goldobot/hal.hpp"
@@ -21,6 +23,34 @@ bool debug_traj_flag = false;
 int debug_num_points = 0;
 short debug_traj_x_mm[16];
 short debug_traj_y_mm[16];
+bool debug_receiving = false;
+#define DEBUG_RECEIVE_BUFF_SZ 256
+unsigned char debug_receive_buff[DEBUG_RECEIVE_BUFF_SZ];
+
+
+
+#if 1 /* FIXME : DEBUG : TEST */
+void rt_telemetry_cb(void)
+{
+  int i;
+  if ((debug_receive_buff[0]==0x55) && 
+      (debug_receive_buff[1]==0x23) &&
+      (debug_receive_buff[2]==0x00) &&
+      (debug_receive_buff[3]> 0x04)) {
+    debug_traj_flag = true;
+    debug_num_points = (debug_receive_buff[3]-4)>>2;
+    if (debug_num_points>16) debug_num_points=16;
+    for (i=0; i<debug_num_points; i++) {
+      debug_traj_x_mm[i] = 
+        debug_receive_buff[4+4*i] + 256*debug_receive_buff[5+4*i];
+      debug_traj_y_mm[i] =
+        debug_receive_buff[6+4*i] + 256*debug_receive_buff[7+4*i];
+    }
+  }
+
+  debug_receiving = false;
+}
+#endif
 
 void RtTelemetryTask::taskFunction()
 {
@@ -28,6 +58,7 @@ void RtTelemetryTask::taskFunction()
   int n_char = 0;
   unsigned char odo_send_buf[64];
   debug_traj_flag = false;
+  debug_receiving = false;
 
   while(1)
   {
@@ -116,13 +147,16 @@ void RtTelemetryTask::taskFunction()
       Hal::uart_transmit_dma(2, (const char *) odo_send_buf, n_char);
 
       debug_traj_flag = false;
+    }
 
-      delay_periodic(50);
+    if (!debug_receiving) {
+      debug_receiving = true;
+      std::memset(debug_receive_buff,0,DEBUG_RECEIVE_BUFF_SZ);
+      Hal::uart_receive_dma(2, (const char *) debug_receive_buff, 
+                            DEBUG_RECEIVE_BUFF_SZ);
     }
-    else
-    {
-      delay_periodic(50);
-    }
+
+    delay_periodic(50);
 
   }
 }

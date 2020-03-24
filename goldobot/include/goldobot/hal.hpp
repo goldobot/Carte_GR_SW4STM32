@@ -52,6 +52,9 @@ namespace goldobot
 		bool uart_receive(int uart_index, const char* buffer, uint16_t size, bool blocking = true);
 
 		static
+		bool uart_receive_dma(int uart_index, const char* buffer, uint16_t size);
+
+		static
 		bool uart_receive_finished(int uart_index);
 
 		static

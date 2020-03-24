@@ -44,6 +44,10 @@ static GPIODescriptor s_gpio_descriptors[] ={
 
 static SemaphoreHandle_t s_uart_semaphore;
 
+#if 1 /* FIXME : DEBUG : TEST */
+	extern void rt_telemetry_cb(void);
+#endif
+
 extern "C"
 {
 	extern UART_HandleTypeDef huart1;
@@ -58,16 +62,25 @@ extern "C"
 
 	void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart)
 	{
-		BaseType_t xHigherPriorityTaskWoken;
-		xSemaphoreGiveFromISR(s_uart_semaphore, &xHigherPriorityTaskWoken);
-		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+		if (huart!=&huart3) {
+			BaseType_t xHigherPriorityTaskWoken;
+			xSemaphoreGiveFromISR(s_uart_semaphore, &xHigherPriorityTaskWoken);
+			portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+		}
 	}
 
 	void HAL_UART_RxCpltCallback(UART_HandleTypeDef* huart)
 	{
-		BaseType_t xHigherPriorityTaskWoken;
-		xSemaphoreGiveFromISR(s_uart_semaphore, &xHigherPriorityTaskWoken);
-		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+		if (huart!=&huart3) {
+			BaseType_t xHigherPriorityTaskWoken;
+			xSemaphoreGiveFromISR(s_uart_semaphore, &xHigherPriorityTaskWoken);
+			portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+		}
+#if 1 /* FIXME : DEBUG : TEST */
+		if (huart==&huart3) {
+			rt_telemetry_cb();
+		}
+#endif
 	}
 }
 
@@ -247,6 +260,19 @@ bool Hal::uart_receive(int uart_index, const char* buffer, uint16_t size, bool b
 	}
 	return true;
 }
+
+bool Hal::uart_receive_dma(int uart_index, const char* buffer, uint16_t size)
+{
+	auto huart_ptr = g_uart_handles[uart_index];
+
+	if(HAL_UART_Receive_DMA(huart_ptr, (uint8_t*)buffer, size)!= HAL_OK)
+	{
+		return false;
+	}
+
+	return true;
+}
+
 
 bool Hal::uart_receive_finished(int uart_index)
 {
