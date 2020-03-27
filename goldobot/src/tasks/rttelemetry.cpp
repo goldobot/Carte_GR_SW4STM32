@@ -23,36 +23,22 @@ bool debug_traj_flag = false;
 int debug_num_points = 0;
 short debug_traj_x_mm[16];
 short debug_traj_y_mm[16];
-bool debug_receiving = false;
-#define RT_RCV_BUFF_SZ 256
-unsigned char rt_rcv_buff[RT_RCV_BUFF_SZ];
-
 
 
 #if 1 /* FIXME : TODO : refactor/improve */
+#define RT_RCV_IDLE         0
+#define RT_RCV_RECEIVING    1
+#define RT_RCV_WAIT_PROCESS 2
+unsigned int rt_rcv_state = RT_RCV_IDLE;
+#define RT_RCV_BUFF_SZ 256
+unsigned char rt_rcv_buff[RT_RCV_BUFF_SZ];
+
 void rt_telemetry_cb(void)
 {
-  int i;
-  int frame_len = 0;
-
-  /* Cmd msg : [x55 x24 x00 <frame_len> <seq_cnt> <msg_type> <msg_payload>] */
-  /*  - <frame_len> : 1 byte , includes header */
-  /*  - <seq_cnt>   : 4 bytes, little endian   */
-  /*  - <msg_type>  : 2 bytes, little endian   */
-  if ((rt_rcv_buff[0]==0x55) && 
-      (rt_rcv_buff[1]==0x24) &&
-      (rt_rcv_buff[2]==0x00) &&
-      (rt_rcv_buff[3]> 0x0a)) {
-    frame_len = rt_rcv_buff[3];
-    uint16_t msg_type = *((uint16_t *)((uint8_t *)(&rt_rcv_buff[8])));
-    size_t msg_size = frame_len - 8 - 2;
-    uint8_t *msg_payload = &rt_rcv_buff[10];
-    Robot::instance().mainExchangeIn().pushMessage((CommMessageType)msg_type, msg_payload, msg_size);
-  }
-
-  debug_receiving = false;
+  rt_rcv_state = RT_RCV_WAIT_PROCESS;
 }
 #endif
+
 
 void RtTelemetryTask::taskFunction()
 {
@@ -60,7 +46,7 @@ void RtTelemetryTask::taskFunction()
   int n_char = 0;
   unsigned char odo_send_buf[64];
   debug_traj_flag = false;
-  debug_receiving = false;
+  rt_rcv_state = RT_RCV_IDLE;
 
   while(1)
   {
@@ -151,14 +137,38 @@ void RtTelemetryTask::taskFunction()
       debug_traj_flag = false;
     }
 
-    if (!debug_receiving) {
-      debug_receiving = true;
+#if 1 /* FIXME : TODO : refactor/improve */
+    switch (rt_rcv_state) {
+    case RT_RCV_IDLE:
       std::memset(rt_rcv_buff,0,RT_RCV_BUFF_SZ);
-      Hal::uart_receive_dma(2, (const char *) rt_rcv_buff, 
-                            RT_RCV_BUFF_SZ);
+      Hal::uart_receive_dma(2, (const char *)rt_rcv_buff, RT_RCV_BUFF_SZ);
+      rt_rcv_state = RT_RCV_RECEIVING;
+      break;
+    case RT_RCV_RECEIVING:
+      /* receive completion is detected in rt_telemetry_cb() */
+      break;
+    case RT_RCV_WAIT_PROCESS:
+      /* Cmd msg : [x55 x24 x00 <frame_len> <seq_cnt> <msg_type> <msg_pload>] */
+      /*  - <frame_len> : 1 byte , includes header */
+      /*  - <seq_cnt>   : 4 bytes, little endian   */
+      /*  - <msg_type>  : 2 bytes, little endian   */
+      if ((rt_rcv_buff[0]==0x55) && 
+          (rt_rcv_buff[1]==0x24) &&
+          (rt_rcv_buff[2]==0x00) &&
+          (rt_rcv_buff[3]> 0x0a)) {
+        int frame_len = rt_rcv_buff[3];
+        uint16_t msg_type = *((uint16_t *)((uint8_t *)(&rt_rcv_buff[8])));
+        size_t msg_size = frame_len - 8 - 2;
+        uint8_t *msg_payload = &rt_rcv_buff[10];
+        Robot::instance().mainExchangeIn().pushMessage((CommMessageType)msg_type, msg_payload, msg_size);
+      }
+      rt_rcv_state = RT_RCV_IDLE;
+      break;
+    default:
+      rt_rcv_state = RT_RCV_IDLE;
     }
+#endif
 
     delay_periodic(50);
-
   }
 }
