@@ -359,7 +359,7 @@ void PropulsionTask::onMsgExecuteTrajectory()
     m_message_queue.pop_message(NULL,140);
   }
 
-#if 0 /* FIXME : DEBUG : GOLDO */
+#if 1 /* FIXME : DEBUG : GOLDO */
   /*if (!debug_traj_flag)*/
   {
     debug_traj_flag = false;
@@ -385,8 +385,10 @@ void PropulsionTask::onMsgExecuteTrajectory()
   }
 #endif
 
+#if 0 /* FIXME : DEBUG : GOLDO */
   if (num_points>0)
-    m_controller.executeTrajectory(points,num_points,speed, accel, deccel);
+    m_controller.executeTrajectory(points, num_points, speed, accel, deccel);
+#endif
 }
 
 

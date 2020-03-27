@@ -24,28 +24,30 @@ int debug_num_points = 0;
 short debug_traj_x_mm[16];
 short debug_traj_y_mm[16];
 bool debug_receiving = false;
-#define DEBUG_RECEIVE_BUFF_SZ 256
-unsigned char debug_receive_buff[DEBUG_RECEIVE_BUFF_SZ];
+#define RT_RCV_BUFF_SZ 256
+unsigned char rt_rcv_buff[RT_RCV_BUFF_SZ];
 
 
 
-#if 1 /* FIXME : DEBUG : TEST */
+#if 1 /* FIXME : TODO : refactor/improve */
 void rt_telemetry_cb(void)
 {
   int i;
-  if ((debug_receive_buff[0]==0x55) && 
-      (debug_receive_buff[1]==0x23) &&
-      (debug_receive_buff[2]==0x00) &&
-      (debug_receive_buff[3]> 0x04)) {
-    debug_traj_flag = true;
-    debug_num_points = (debug_receive_buff[3]-4)>>2;
-    if (debug_num_points>16) debug_num_points=16;
-    for (i=0; i<debug_num_points; i++) {
-      debug_traj_x_mm[i] = 
-        debug_receive_buff[4+4*i] + 256*debug_receive_buff[5+4*i];
-      debug_traj_y_mm[i] =
-        debug_receive_buff[6+4*i] + 256*debug_receive_buff[7+4*i];
-    }
+  int frame_len = 0;
+
+  /* Cmd msg : [x55 x24 x00 <frame_len> <seq_cnt> <msg_type> <msg_payload>] */
+  /*  - <frame_len> : 1 byte , includes header */
+  /*  - <seq_cnt>   : 4 bytes, little endian   */
+  /*  - <msg_type>  : 2 bytes, little endian   */
+  if ((rt_rcv_buff[0]==0x55) && 
+      (rt_rcv_buff[1]==0x24) &&
+      (rt_rcv_buff[2]==0x00) &&
+      (rt_rcv_buff[3]> 0x0a)) {
+    frame_len = rt_rcv_buff[3];
+    uint16_t msg_type = *((uint16_t *)((uint8_t *)(&rt_rcv_buff[8])));
+    size_t msg_size = frame_len - 8 - 2;
+    uint8_t *msg_payload = &rt_rcv_buff[10];
+    Robot::instance().mainExchangeIn().pushMessage((CommMessageType)msg_type, msg_payload, msg_size);
   }
 
   debug_receiving = false;
@@ -151,9 +153,9 @@ void RtTelemetryTask::taskFunction()
 
     if (!debug_receiving) {
       debug_receiving = true;
-      std::memset(debug_receive_buff,0,DEBUG_RECEIVE_BUFF_SZ);
-      Hal::uart_receive_dma(2, (const char *) debug_receive_buff, 
-                            DEBUG_RECEIVE_BUFF_SZ);
+      std::memset(rt_rcv_buff,0,RT_RCV_BUFF_SZ);
+      Hal::uart_receive_dma(2, (const char *) rt_rcv_buff, 
+                            RT_RCV_BUFF_SZ);
     }
 
     delay_periodic(50);
