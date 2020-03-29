@@ -12,6 +12,7 @@ namespace goldobot
 		Reset=2, // Sent once on startup
 		CommStats=3,
 		DbgPrintf=4,
+		GetNucleoFirmwareVersion=5,
 		// Propulsion telemetry
 		PropulsionTelemetry=8, //
 		PropulsionTelemetryEx=9,
