@@ -16,10 +16,46 @@
 
 using namespace goldobot;
 
+class UARTCommHal : public goldo_comm::CommHal
+{
+public:
+	UARTCommHal() = default;
+	~UARTCommHal() override;
+	uint8_t* lock_read(size_t& buffer_size) override;
+    void unlock_read(size_t buffer_size) override;
+	uint8_t* lock_write(size_t& buffer_size) override;
+	void unlock_write(size_t buffer_size) override;
+	uint8_t foo[8];
+};
+
+UARTCommHal::~UARTCommHal()
+{
+
+}
+
+uint8_t* UARTCommHal::lock_read(size_t& buffer_size)
+{
+	return Hal::uart_lock_read(buffer_size);
+}
+
+void UARTCommHal::unlock_read(size_t buffer_size)
+{
+	Hal::uart_unlock_read(buffer_size);
+}
+
+uint8_t* UARTCommHal::lock_write(size_t& buffer_size)
+{
+	return Hal::uart_lock_write(buffer_size);
+}
+
+void UARTCommHal::unlock_write(size_t buffer_size)
+{
+	Hal::uart_unlock_write(buffer_size);
+}
+
+
 
 UARTCommTask::UARTCommTask() :
-    m_serializer(m_serialize_buffer, sizeof(m_serialize_buffer)),
-	m_deserializer(m_deserialize_buffer, sizeof(m_deserialize_buffer)),
 	m_out_queue(m_out_buffer, sizeof(m_out_buffer))
 {
 }
@@ -40,10 +76,38 @@ void UARTCommTask::taskFunction()
 	set_priority(5);
 
 	m_last_timestamp = xTaskGetTickCount();
-	m_bytes_sent = 0;
-	m_serialize_buffer_high_watermark = 0;
+	UARTCommHal comm_hal;
+	m_comm.setHal(&comm_hal);
 
-	Hal::uart_receive(0, m_recv_buffer, sizeof(m_recv_buffer), false);
+	Robot::instance().mainExchangeOut().pushMessage(CommMessageType::DbgPrintf, (const unsigned char*)"goldorak", 8);
+
+	while(1)
+	{
+		while(m_out_queue.message_ready() && m_out_queue.message_size())
+		{
+			auto msg_type = m_out_queue.message_type();
+			auto msg_size = m_out_queue.message_size();
+			*(uint16_t*)m_tmp_buffer = (uint16_t)msg_type;
+			m_out_queue.pop_message(m_tmp_buffer + 2, msg_size);
+			m_comm.send(m_tmp_buffer, msg_size + 2);
+		}
+
+		m_comm.spin(std::chrono::milliseconds(0));
+		while(1)
+		{
+			auto recv_size = m_comm.recv(m_tmp_buffer, sizeof(m_tmp_buffer));
+			if(recv_size>0)
+			{
+				int a = 1;
+			} else
+			{
+				break;
+			}
+		}
+		delay(1);
+	}
+
+	/*
 	while(1)
 	{
 		// If current transmission is finished, send next chunk of data from ring buffer
@@ -114,19 +178,19 @@ void UARTCommTask::taskFunction()
 		}
 		// Wait for next tick
 		delay(1);
-	}
+	}*/
 }
 
 bool UARTCommTask::send_message(CommMessageType type, const char* buffer, uint16_t size)
 {
-	m_serializer.push_message((uint16_t)type, (const unsigned char*)(buffer), size);
+	//m_serializer.push_message((uint16_t)type, (const unsigned char*)(buffer), size);
 	return true;
 }
 
 void UARTCommTask::process_message(uint16_t message_type)
 {
-	uint16_t msg_type = m_deserializer.message_type();
-	size_t msg_size = m_deserializer.message_size();
-	m_deserializer.pop_message(m_tmp_buffer, msg_size);
-	Robot::instance().mainExchangeIn().pushMessage((CommMessageType)msg_type, m_tmp_buffer, msg_size);
+	//uint16_t msg_type = m_deserializer.message_type();
+	//size_t msg_size = m_deserializer.message_size();
+	//m_deserializer.pop_message(m_tmp_buffer, msg_size);
+	//Robot::instance().mainExchangeIn().pushMessage((CommMessageType)msg_type, m_tmp_buffer, msg_size);
 }

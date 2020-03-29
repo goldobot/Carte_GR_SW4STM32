@@ -4,9 +4,7 @@
 #include "goldobot/config.hpp"
 #include "goldobot/tasks/propulsion.hpp"
 #include "goldobot/tasks/uart_comm.hpp"
-#include "goldobot/tasks/uart2_comm.hpp"
 #include "goldobot/tasks/heartbeat.hpp"
-#include "goldobot/tasks/rttelemetry.hpp"
 #include "goldobot/tasks/arms.hpp"
 #include "goldobot/tasks/main.hpp"
 #include "goldobot/tasks/fpga.hpp"
@@ -76,9 +74,8 @@ namespace goldobot
 
 		PropulsionTask m_propulsion_task;
 		UARTCommTask m_comm_task;
-		//UART2CommTask m_comm2_task;
 		HeartbeatTask m_heartbeat_task;
-		RtTelemetryTask m_rt_telemetry_task;
+
 
 
 		OdometryConfig* m_odometry_config;

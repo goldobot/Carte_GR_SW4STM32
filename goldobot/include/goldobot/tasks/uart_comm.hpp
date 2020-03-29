@@ -1,7 +1,6 @@
 #pragma once
 #include "goldobot/tasks/task.hpp"
-#include "goldobot/comm_serializer.hpp"
-#include "goldobot/comm_deserializer.hpp"
+#include "goldo_comm/comm.hpp"
 #include "goldobot/core/message_queue.hpp"
 #include <cstdint>
 
@@ -24,18 +23,13 @@ namespace goldobot
 		bool send_message(CommMessageType msg_type, const char* buffer, uint16_t size);
 
 		uint32_t m_last_timestamp;
-		uint16_t m_bytes_sent;
-		uint16_t m_serialize_buffer_high_watermark;
 
-		char m_send_buffer[128];
-		char m_recv_buffer[128];
-		unsigned char m_tmp_buffer[768];
-
-		unsigned char m_serialize_buffer[1024];
-		unsigned char m_deserialize_buffer[1024];
+		unsigned char m_tmp_buffer[1024];
 		unsigned char m_out_buffer[1024];
-		CommSerializer m_serializer;
-		CommDeserializer m_deserializer;
+
+		goldo_comm::Comm m_comm;
+
+
 		MessageQueue m_out_queue;
 	};
 }

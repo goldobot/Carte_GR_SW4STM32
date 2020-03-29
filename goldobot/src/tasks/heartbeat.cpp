@@ -21,13 +21,12 @@ void HeartbeatTask::taskFunction()
 {
 	while(1)
 	{
+		Robot::instance().mainExchangeOut().pushMessage(CommMessageType::DbgPrintf, (const unsigned char*)"goldorak", 8);
+		/*
 		uint32_t clock = xTaskGetTickCount();
 		auto& exchange = Robot::instance().mainExchangeOut();
-		exchange.pushMessage(CommMessageType::Sync,(unsigned char*)"goldobot",8);
 		exchange.pushMessage(CommMessageType::Heartbeat,(unsigned char*)&clock,sizeof(clock));
 
-		uint16_t remaining_time = Robot::instance().remainingMatchTime();
-		exchange.pushMessage(CommMessageType::MatchRemainingTime,(unsigned char*)&remaining_time, 2);
 
 
 		//gpio debug
@@ -37,11 +36,8 @@ void HeartbeatTask::taskFunction()
 			if(Hal::get_gpio(i)) gpio |= (1 << i);
 		}
 		Robot::instance().mainExchangeOut().pushMessage(
-						CommMessageType::GPIODebug,
-						(unsigned char*)&gpio, sizeof(gpio));
-
-		messages::MsgMatchStateChange post_state{Robot::instance().matchState(), Robot::instance().side()};
-		Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&post_state, sizeof(post_state));
+						CommMessageType::GPIO,
+						(unsigned char*)&gpio, sizeof(gpio));*/
 
 
 		delay_periodic(100);

@@ -7,22 +7,27 @@ namespace goldobot
 	enum class CommMessageType : uint16_t
 	{
 		// General messages
-		Sync=0, // "goldobot" synchronization message, used to synchronize stream parser
 		Heartbeat=1, // Current OS time in ms as uint32, sent every 10th of second
-		Reset=2, // Sent once on startup
+		Reset=2, // Sent once on startup, trigger board reset if received
 		CommStats=3,
 		DbgPrintf=4,
+
+		//Odometry
+		OdometryPose=16,
+		OdometryConfig=17,
+
+
 		// Propulsion telemetry
 		PropulsionTelemetry=8, //
 		PropulsionTelemetryEx=9,
-		PropulsionStateChange=10,
+		PropulsionState=10,
 		PropulsionPose=11,
-		// Match events
-		MatchStateChange=15,
-		SensorsChange=20,
-		GPIODebug=21,
-		SequenceEvent=22,
-		MatchRemainingTime=23,
+
+
+		// Sensors
+		Sensors=20,
+		GPIO=21,
+
 
 		// Commands
 		CmdEmergencyStop=32, // Order an emergency stop
@@ -117,8 +122,7 @@ namespace goldobot
 		RobotEndLoadConfig=402,
 		RobotEndLoadConfigStatus=403,
 
-		RplidarStart=1024,
-		RplidarStop=1025,
+
 
 		RplidarRobotDetection=1280,
 

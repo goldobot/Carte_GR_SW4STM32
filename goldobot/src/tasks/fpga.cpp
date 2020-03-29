@@ -74,7 +74,7 @@ void FpgaTask::taskFunction()
 		{
 			m_sensors_state = apb_data;
 			Robot::instance().setSensorsState(apb_data),
-			Robot::instance().mainExchangeOut().pushMessage(CommMessageType::SensorsChange, (unsigned char *)&m_sensors_state, 4);
+			Robot::instance().mainExchangeOut().pushMessage(CommMessageType::Sensors, (unsigned char *)&m_sensors_state, 4);
 		}
 
 		//Recompute servo targets

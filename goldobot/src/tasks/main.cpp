@@ -45,8 +45,6 @@ void MainTask::taskFunction()
 	Robot::instance().mainExchangeIn().subscribe({322,322,&m_message_queue});
 
 	messages::MsgMatchStateChange msg{Robot::instance().matchState(), Robot::instance().side()};
-	Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&msg, sizeof(msg));
-	Robot::instance().mainExchangeOut().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&msg, sizeof(msg));
 
 	// Config loop
 	while(Robot::instance().matchState() == MatchState::Unconfigured)
@@ -59,8 +57,7 @@ void MainTask::taskFunction()
 	}
 	{
 		messages::MsgMatchStateChange post_state{Robot::instance().matchState(), Robot::instance().side()};
-		Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&post_state, sizeof(post_state));
-			Robot::instance().mainExchangeOut().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&post_state, sizeof(post_state));
+
 	}
 
 
@@ -148,10 +145,7 @@ void MainTask::taskFunction()
 		messages::MsgMatchStateChange post_state{Robot::instance().matchState(), Robot::instance().side()};
 		if(post_state.match_state != prev_state.match_state ||
 		   post_state.side != prev_state.side)
-		{
-			Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&post_state, sizeof(post_state));
-			Robot::instance().mainExchangeOut().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&post_state, sizeof(post_state));
-		}
+		{	}
 
 		vTaskDelay(1);
 	}

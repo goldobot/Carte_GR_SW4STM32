@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <cstddef>
 
 namespace goldobot
 {
@@ -30,7 +31,16 @@ namespace goldobot
 		void set_motors_pwm(float left, float right);
 
 		static
-		bool uart_read_char(int uart_index, char* c, bool blocking);
+		uint8_t* uart_lock_read(size_t& buffer_size);
+
+		static
+	    void uart_unlock_read(size_t read_size);
+
+		static
+		uint8_t* uart_lock_write(size_t& buffer_size);
+
+		static
+		void uart_unlock_write(size_t written_size);
 
 		static
 		bool uart_transmit(int uart_index, const char* buffer, uint16_t size, bool blocking = true);
@@ -39,16 +49,10 @@ namespace goldobot
 		bool uart_transmit_dma(int uart_index, const char* buffer, uint16_t size);
 
 		static
-		bool uart_transmit_finished(int uart_index);
-
-		static
 		void uart_wait_for_transmit(int uart_index);
 
 		static
 		bool uart_receive(int uart_index, const char* buffer, uint16_t size, bool blocking = true);
-
-		static
-		bool uart_receive_finished(int uart_index);
 
 		static
 		void uart_wait_for_receive(int uart_index);
@@ -64,14 +68,5 @@ namespace goldobot
 
 		static
 		bool get_gpio(int gpio_index);
-
-		static
-		bool user_flash_erase(int start_page, int num_pages);
-
-		static
-		bool user_flash_read(uint16_t start_offset, char* buffer, uint16_t size);
-
-		static
-		void simulation_step();
 	};
 }

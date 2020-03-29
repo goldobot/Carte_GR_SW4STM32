@@ -40,7 +40,7 @@ void PIDController::set_ki(float ki)
 
 void PIDController::set_feedforward(float feedforward)
 {
-
+	m_config.feed_forward = feedforward;
 }
 
 

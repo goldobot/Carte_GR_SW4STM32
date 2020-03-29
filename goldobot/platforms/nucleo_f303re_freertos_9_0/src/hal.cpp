@@ -1,5 +1,4 @@
 #include "goldobot/hal.hpp"
-#include "goldobot/robot_simulator.hpp"
 #include "stm32f3xx_hal.h"
 
 #include "FreeRTOS.h"
@@ -9,9 +8,6 @@
 #include <sys/unistd.h> // STDOUT_FILENO, STDERR_FILENO
 #include <errno.h>
 #include <math.h>
-
-//#define SIMULATE_ROBOT
-
 
 #define MAXON_EN_Pin GPIO_PIN_15
 #define MAXON_EN_GPIO_Port GPIOC
@@ -23,6 +19,23 @@
 #define MAXON1_DIR_GPIO_Port GPIOB
 
 using namespace goldobot;
+
+uint8_t g_uart2_rx_buffer[512];
+
+//! \brief tx circular buffer
+uint8_t g_uart2_tx_buffer[512];
+
+
+unsigned g_uart2_rx_read_idx = 0;
+
+//! \brief index of next byte to write in tx buffer
+unsigned g_uart2_tx_write_idx=0;
+
+//! \brief index of last byte in circular buffer
+unsigned g_uart2_tx_read_idx=0;
+
+//! \brief index of last byte of current dma transfer
+unsigned g_uart2_tx_dma_end_idx=0;
 
 struct GPIODescriptor
 {
@@ -49,6 +62,8 @@ extern "C"
 	extern UART_HandleTypeDef huart1;
 	extern UART_HandleTypeDef huart2;
 	extern UART_HandleTypeDef huart3;
+
+	extern DMA_HandleTypeDef hdma_usart2_tx;
 
 	extern TIM_HandleTypeDef htim1;
 	extern TIM_HandleTypeDef htim2;
@@ -77,9 +92,26 @@ UART_HandleTypeDef* g_uart_handles[] ={
 		&huart3
 };
 
-#ifdef SIMULATE_ROBOT
-static RobotSimulator s_robot_simulator;
-#endif
+extern "C" {
+	void goldo_hal_foo();
+}
+
+void goldo_hal_foo()
+{
+}
+
+void hal_on_dma_cplt (struct __DMA_HandleTypeDef * hdma)
+{
+	USART2->CR3 &= ~USART_CR3_DMAT;
+	g_uart2_tx_read_idx = g_uart2_tx_dma_end_idx < sizeof(g_uart2_tx_buffer) ? g_uart2_tx_dma_end_idx : 0;
+	if(g_uart2_tx_write_idx > g_uart2_tx_read_idx)
+	{
+		g_uart2_tx_dma_end_idx = g_uart2_tx_write_idx > g_uart2_tx_read_idx ? g_uart2_tx_write_idx : sizeof(g_uart2_tx_buffer);
+		HAL_DMA_Start_IT(&hdma_usart2_tx, (uint32_t)(g_uart2_tx_buffer + g_uart2_tx_read_idx), (uint32_t)&USART2->TDR, g_uart2_tx_dma_end_idx - g_uart2_tx_read_idx);
+	    USART2->ICR = USART_ICR_TCCF;
+	    USART2->CR3 |= USART_CR3_DMAT;
+	}
+}
 
 void Hal::init()
 {
@@ -96,25 +128,24 @@ void Hal::init()
 
 	s_uart_semaphore = xSemaphoreCreateBinary();
 
-#ifdef SIMULATE_ROBOT
-	// Init simulator
-	RobotSimulatorConfig simulator_config;
-	simulator_config.speed_coeff = 1.7f; // Measured on big robot
-	simulator_config.wheels_spacing = 0.2f;
-	simulator_config.encoders_spacing = 0.3f;
-	simulator_config.encoders_counts_per_m = 1 / 1.5e-05f;
-	s_robot_simulator.m_config = simulator_config;
-#endif
+	// Setup uart2 for DMA circular read
+	DMA1_Channel6->CPAR = (uint32_t)&USART2->RDR;
+	DMA1_Channel6->CMAR = (uint32_t)g_uart2_rx_buffer;
+	DMA1_Channel6->CNDTR = 256;
+	DMA1_Channel6->CCR = DMA_CCR_PL_0 | DMA_CCR_MINC | DMA_CCR_CIRC | DMA_CCR_EN;
+
+
+	// Setup uart2 for write
+	DMA1_Channel7->CPAR = (uint32_t)&USART2->TDR;
+	DMA1_Channel7->CMAR = (uint32_t)g_uart2_tx_buffer;
+	DMA1_Channel7->CCR = DMA_CCR_PL_0 | DMA_CCR_MINC | DMA_CCR_DIR;
+
+	//USART2->CR3 |= USART_CR3_DMAR | USART_CR3_DMAT;
 }
 
 
 void Hal::read_encoders(uint16_t& left, uint16_t& right)
 {
-#ifdef SIMULATE_ROBOT
-	left = s_robot_simulator.m_left_encoder;
-	right = s_robot_simulator.m_right_encoder;
-	return;
-#endif
 	left = 8192 - htim4.Instance->CNT;
 	right = 8192 - htim1.Instance->CNT;
 }
@@ -136,11 +167,6 @@ void Hal::set_servo_pwm(uint16_t pwm)
 }
 void Hal::set_motors_pwm(float left, float right)
 {
-#ifdef SIMULATE_ROBOT
-	s_robot_simulator.m_left_pwm = left;
-	s_robot_simulator.m_right_pwm = right;
-	s_robot_simulator.do_step();
-#endif
 	int left_pwm = 0;
 	int right_pwm = 0;
 	if(left > 0)
@@ -175,6 +201,72 @@ void Hal::set_motors_pwm(float left, float right)
 	__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, right_pwm);
 }
 
+
+uint8_t* Hal::uart_lock_read(size_t& buffer_size)
+{
+	int idx = sizeof(g_uart2_rx_buffer) - DMA1_Channel6->CNDTR;
+
+	if(idx >= g_uart2_rx_read_idx)
+	{
+		if(buffer_size > idx - g_uart2_rx_read_idx)
+		{
+			buffer_size = idx - g_uart2_rx_read_idx;
+		}
+		return g_uart2_rx_buffer + g_uart2_rx_read_idx;
+	} else
+	{
+		if(buffer_size > sizeof(g_uart2_rx_buffer) - idx)
+		{
+			buffer_size = sizeof(g_uart2_rx_buffer) - idx;
+		}
+		return g_uart2_rx_buffer + g_uart2_rx_read_idx;
+	}
+}
+
+
+void Hal::uart_unlock_read(size_t buffer_size)
+{
+	g_uart2_rx_read_idx += buffer_size;
+	if(g_uart2_rx_read_idx == sizeof(g_uart2_rx_buffer))
+	{
+		g_uart2_rx_read_idx = 0;
+	}
+}
+
+
+uint8_t* Hal::uart_lock_write(size_t& buffer_size)
+{
+	size_t max_size = g_uart2_tx_write_idx >= g_uart2_tx_read_idx ? sizeof(g_uart2_tx_buffer) - g_uart2_tx_write_idx : g_uart2_tx_read_idx - g_uart2_tx_write_idx -1;
+
+	if(buffer_size > max_size)
+	{
+		buffer_size = max_size;
+	}
+	return g_uart2_tx_buffer + g_uart2_tx_write_idx;
+}
+
+
+void Hal::uart_unlock_write(size_t written_size)
+{
+	g_uart2_tx_write_idx += written_size;
+	if(g_uart2_tx_write_idx == sizeof(g_uart2_tx_buffer))
+	{
+		g_uart2_tx_write_idx = 0;
+	}
+
+	// If no DMA transfer is currently occuring, start DMA transfer
+	if(hdma_usart2_tx.State == HAL_DMA_STATE_READY && g_uart2_tx_write_idx != g_uart2_tx_read_idx)
+	{
+		hdma_usart2_tx.XferCpltCallback = &hal_on_dma_cplt;
+		g_uart2_tx_dma_end_idx = g_uart2_tx_write_idx > g_uart2_tx_read_idx ? g_uart2_tx_write_idx : sizeof(g_uart2_tx_buffer);
+		HAL_DMA_Start_IT(&hdma_usart2_tx, (uint32_t)(g_uart2_tx_buffer + g_uart2_tx_read_idx), (uint32_t)&USART2->TDR, g_uart2_tx_dma_end_idx - g_uart2_tx_read_idx);
+
+	    //USART2->ICR = USART_ICR_TCCF;
+	    USART2->CR3 |= USART_CR3_DMAT;
+	}
+
+}
+
 bool Hal::uart_transmit(int uart_index, const char* buffer, uint16_t size, bool blocking)
 {
 	auto huart_ptr = g_uart_handles[uart_index];
@@ -199,12 +291,6 @@ bool Hal::uart_transmit_dma(int uart_index, const char* buffer, uint16_t size)
 	return true;
 }
 
-bool Hal::uart_transmit_finished(int uart_index)
-{
-	auto huart_ptr = g_uart_handles[uart_index];
-	return huart_ptr->gState != HAL_UART_STATE_BUSY_TX;
-}
-
 void Hal::uart_wait_for_transmit(int uart_index)
 {
 	auto huart_ptr = g_uart_handles[uart_index];
@@ -217,6 +303,7 @@ void Hal::uart_wait_for_transmit(int uart_index)
 
 bool Hal::uart_receive(int uart_index, const char* buffer, uint16_t size, bool blocking)
 {
+	return true;
 	auto huart_ptr = g_uart_handles[uart_index];
 	if(HAL_UART_Receive_IT(huart_ptr, (uint8_t*)buffer, size)!= HAL_OK)
 	{
@@ -227,12 +314,6 @@ bool Hal::uart_receive(int uart_index, const char* buffer, uint16_t size, bool b
 		Hal::uart_wait_for_receive(uart_index);
 	}
 	return true;
-}
-
-bool Hal::uart_receive_finished(int uart_index)
-{
-	auto huart_ptr = g_uart_handles[uart_index];
-	return huart_ptr->RxState != HAL_UART_STATE_BUSY_RX;
 }
 
 void Hal::uart_wait_for_receive(int uart_index)
@@ -284,11 +365,3 @@ bool Hal::get_gpio(int gpio_index)
 	auto& desc = s_gpio_descriptors[gpio_index];
 	return HAL_GPIO_ReadPin(desc.port, desc.pin) == GPIO_PIN_SET;
 }
-
-bool Hal::user_flash_erase(int start_page, int num_pages)
-{
-	return true;
-}
-
-
-
