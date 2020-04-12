@@ -103,6 +103,18 @@ void RtTelemetryTask::taskFunction()
     odo_send_buf[n_char++] = *(pc++);
     odo_send_buf[n_char++] = *(pc++);
 
+    uint32_t gpio = 0;
+    for(int i=0; i<6; i++)
+    {
+      if(Hal::get_gpio(i)) gpio |= (1 << i);
+    }
+    pw = (unsigned int *) &gpio;
+    pc = (unsigned char *) pw;
+    odo_send_buf[n_char++] = *(pc++);
+    odo_send_buf[n_char++] = *(pc++);
+    odo_send_buf[n_char++] = *(pc++);
+    odo_send_buf[n_char++] = *(pc++);
+
     //Hal::uart_transmit(2, (const char *) odo_send_buf, n_char, false);
     Hal::uart_transmit_dma(2, (const char *) odo_send_buf, n_char);
 
