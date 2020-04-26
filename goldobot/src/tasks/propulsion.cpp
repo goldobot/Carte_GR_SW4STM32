@@ -153,11 +153,7 @@ void PropulsionTask::processMessage()
 			}
 			break;
 	case CommMessageType::DbgPropulsionExecutePointTo:
-		{
-			float params[5];
-			m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
-			m_controller.executePointTo(*(Vector2D*)(params), params[2], params[3], params[4]);
-		}
+		onMsgExecutePointTo();
 		break;
 	case CommMessageType::PropulsionExecuteFaceDirection:
 		{
@@ -389,6 +385,31 @@ void PropulsionTask::onMsgExecuteTrajectory()
   if (num_points>0)
     m_controller.executeTrajectory(points, num_points, speed, accel, deccel);
 #endif
+}
+
+void PropulsionTask::onMsgExecutePointTo()
+{
+  float params[5];
+  m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
+
+#if 1 /* FIXME : DEBUG : GOLDO */
+  /*if (!debug_traj_flag)*/
+  {
+    debug_traj_flag = false;
+    {
+      int i;
+      double tmp_f;
+      debug_num_points = 1;
+      tmp_f = 1000.0*params[0];
+      debug_traj_x_mm[0] = tmp_f;
+      tmp_f = 1000.0*params[1];
+      debug_traj_y_mm[0] = tmp_f;
+    }
+    debug_traj_flag = true;
+  }
+#endif
+
+  m_controller.executePointTo(*(Vector2D*)(params), params[2], params[3], params[4]);
 }
 
 
