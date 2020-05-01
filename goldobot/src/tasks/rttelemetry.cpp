@@ -108,6 +108,15 @@ void RtTelemetryTask::taskFunction()
     {
       if(Hal::get_gpio(i)) gpio |= (1 << i);
     }
+    PropulsionController::State prop_state= Robot::instance().propulsionState();
+    if(prop_state!=PropulsionController::State::Stopped)
+    {
+      gpio |= (1 << 16);
+    }
+    if(prop_state==PropulsionController::State::Error)
+    {
+      gpio |= (1 << 17);
+    }
     pw = (unsigned int *) &gpio;
     pc = (unsigned char *) pw;
     odo_send_buf[n_char++] = *(pc++);
