@@ -25,6 +25,8 @@ namespace goldobot
 		SequenceEvent=22,
 		MatchRemainingTime=23,
 
+		NucleoLog=30,
+
 		DebugGoldo=31,
 
 		// Commands

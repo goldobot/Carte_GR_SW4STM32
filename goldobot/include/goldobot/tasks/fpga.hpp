@@ -58,14 +58,16 @@ namespace goldobot
     unsigned char swap_bits(unsigned char IN);
     unsigned char CalculateCRC(unsigned char INCRC, unsigned char INBYTE);
     int goldo_fpga_check_crc(unsigned char *buf5, unsigned char recv_crc);
+    void goldo_send_log_uint32(const char *msg, unsigned int val);
 
     int m_total_spi_frame_cnt;
-    int m_soft_err_cnt;
+    int m_strange_err_cnt;
     int m_addr1_crc_err_cnt;
     int m_addr2_crc_err_cnt;
     int m_write1_crc_err_cnt;
     int m_write2_crc_err_cnt;
     int m_read1_crc_err_cnt;
     int m_read2_crc_err_cnt;
+    int m_apb_err_cnt;
   };
 }

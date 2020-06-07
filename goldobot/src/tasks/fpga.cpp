@@ -29,13 +29,14 @@ FpgaTask::FpgaTask():
   generate_crc_table();
   m_last_crc                = 0;
   m_total_spi_frame_cnt     = 0;
-  m_soft_err_cnt            = 0;
+  m_strange_err_cnt         = 0;
   m_addr1_crc_err_cnt       = 0;
   m_addr2_crc_err_cnt       = 0;
   m_write1_crc_err_cnt      = 0;
   m_write2_crc_err_cnt      = 0;
   m_read1_crc_err_cnt       = 0;
   m_read2_crc_err_cnt       = 0;
+  m_apb_err_cnt             = 0;
   m_last_dbg                = 0;
 }
 
@@ -79,10 +80,10 @@ void FpgaTask::taskFunction()
       continue;
     }
 
-    /* Little workaround to filter out bad data due to spi bus glitches */
+    /* Little workaround to filter out bad data due to "unknown" fpga bugs */
     if ((apb_data & 0xffffffc0) != 0x00000000) {
       m_last_dbg = apb_data;
-      m_soft_err_cnt++;
+      m_strange_err_cnt++;
       delay(1);
       continue;
     }
@@ -230,9 +231,8 @@ int FpgaTask::goldo_fpga_master_spi_read_word (unsigned int apb_addr, unsigned i
 
   result = goldo_fpga_check_crc(spi_buf_in, spi_buf_in[5]);
   if (result!=0) {
-    if (result==-1) m_addr1_crc_err_cnt++;
-    /* FIXME : TODO : add new error type */
-    if (result==-2) m_soft_err_cnt++;
+    if (result==-1) m_read1_crc_err_cnt++;
+    if (result==-2) m_apb_err_cnt++;
     result = goldo_fpga_send_spi_frame();
     m_last_crc &= 0x0000ffff;
     m_last_crc |= (spi_buf_in[0]<<8) | (spi_buf_in[5]);
@@ -242,9 +242,8 @@ int FpgaTask::goldo_fpga_master_spi_read_word (unsigned int apb_addr, unsigned i
 
     result = goldo_fpga_check_crc(spi_buf_in, spi_buf_in[5]);
     if (result!=0) {
-      if (result==-1) m_addr1_crc_err_cnt++;
-      /* FIXME : TODO : add new error type */
-      if (result==-2) m_soft_err_cnt++;
+      if (result==-1) m_read2_crc_err_cnt++;
+      if (result==-2) m_apb_err_cnt++;
       return result;
     }
   }
@@ -319,8 +318,7 @@ int FpgaTask::goldo_fpga_master_spi_write_word (unsigned int apb_addr, unsigned 
   result = goldo_fpga_check_crc(spi_buf_out, spi_buf_in[5]);
   if (result!=0) {
     if (result==-1) m_write1_crc_err_cnt++;
-    /* FIXME : TODO : add new error type */
-    if (result==-2) m_soft_err_cnt++;
+    if (result==-2) m_apb_err_cnt++;
     result = goldo_fpga_send_spi_frame();
     m_last_crc = (spi_buf_in[0]<<24) | (spi_buf_in[5]<<16);
     if (result!=0) {
@@ -330,8 +328,7 @@ int FpgaTask::goldo_fpga_master_spi_write_word (unsigned int apb_addr, unsigned 
     result = goldo_fpga_check_crc(spi_buf_out, spi_buf_in[5]);
     if (result!=0) {
       if (result==-1) m_write2_crc_err_cnt++;
-      /* FIXME : TODO : add new error type */
-      if (result==-2) m_soft_err_cnt++;
+      if (result==-2) m_apb_err_cnt++;
       return result;
     }
   }
@@ -473,18 +470,39 @@ void FpgaTask::process_message()
     break;
   case CommMessageType::FpgaDbgGetErrCnt:
     {
-#define ERR_CNT_SZ (4*8)
+#define ERR_CNT_SZ (16*4)
       unsigned char buff[ERR_CNT_SZ];
+      std::memset(buff, 0, ERR_CNT_SZ);
       m_message_queue.pop_message(nullptr, 0);
-      std::memcpy(buff+0, (unsigned char *)&m_total_spi_frame_cnt, 4);
-      std::memcpy(buff+4, (unsigned char *)&m_soft_err_cnt, 4);
-      std::memcpy(buff+8, (unsigned char *)&m_addr1_crc_err_cnt, 4);
-      std::memcpy(buff+12, (unsigned char *)&m_addr2_crc_err_cnt, 4);
-      std::memcpy(buff+16, (unsigned char *)&m_write1_crc_err_cnt, 4);
-      std::memcpy(buff+20, (unsigned char *)&m_write2_crc_err_cnt, 4);
-      std::memcpy(buff+24, (unsigned char *)&m_read1_crc_err_cnt, 4);
-      std::memcpy(buff+28, (unsigned char *)&m_read2_crc_err_cnt, 4);
+      std::memcpy(buff+ 0, (unsigned char *)&m_total_spi_frame_cnt, 4);
+      std::memcpy(buff+ 4, (unsigned char *)&m_strange_err_cnt    , 4);
+      std::memcpy(buff+ 8, (unsigned char *)&m_addr1_crc_err_cnt  , 4);
+      std::memcpy(buff+12, (unsigned char *)&m_addr2_crc_err_cnt  , 4);
+      std::memcpy(buff+16, (unsigned char *)&m_write1_crc_err_cnt , 4);
+      std::memcpy(buff+20, (unsigned char *)&m_write2_crc_err_cnt , 4);
+      std::memcpy(buff+24, (unsigned char *)&m_read1_crc_err_cnt  , 4);
+      std::memcpy(buff+28, (unsigned char *)&m_read2_crc_err_cnt  , 4);
+      std::memcpy(buff+32, (unsigned char *)&m_apb_err_cnt        , 4);
+      std::memcpy(buff+36, (unsigned char *)&m_last_dbg           , 4);
       Robot::instance().mainExchangeOut().pushMessage(CommMessageType::FpgaDbgGetErrCnt, (unsigned char *)buff, ERR_CNT_SZ);
+      goldo_send_log_uint32("m_total_spi_frame_cnt=%u", 
+                            (uint32_t)m_total_spi_frame_cnt);
+      goldo_send_log_uint32("m_strange_err_cnt=%u ", 
+                            (uint32_t)m_strange_err_cnt);
+      goldo_send_log_uint32("m_addr1_crc_err_cnt=%u ", 
+                            (uint32_t)m_addr1_crc_err_cnt);
+      goldo_send_log_uint32("m_addr2_crc_err_cnt=%u ", 
+                            (uint32_t)m_addr2_crc_err_cnt);
+      goldo_send_log_uint32("m_write1_crc_err_cnt=%u ", 
+                            (uint32_t)m_write1_crc_err_cnt);
+      goldo_send_log_uint32("m_write2_crc_err_cnt=%u ", 
+                            (uint32_t)m_write2_crc_err_cnt);
+      goldo_send_log_uint32("m_read1_crc_err_cnt=%u ", 
+                            (uint32_t)m_read1_crc_err_cnt);
+      goldo_send_log_uint32("m_read2_crc_err_cnt=%u ", 
+                            (uint32_t)m_read2_crc_err_cnt);
+      goldo_send_log_uint32("m_apb_err_cnt=%u ", 
+                            (uint32_t)m_apb_err_cnt);
     }
     break;
   case CommMessageType::FpgaCmdDCMotor:
@@ -609,3 +627,12 @@ int FpgaTask::goldo_fpga_check_crc(unsigned char *buf5, unsigned char recv_crc)
   if (calc_crc!=0x00) return -1; /* spi bus glitch */
   return 0;
 }
+
+void FpgaTask::goldo_send_log_uint32(const char *msg, unsigned int val)
+{
+  char dbg_log[64];
+  std::memset(dbg_log, 0, 64);
+  sprintf(dbg_log, msg, val);
+  Robot::instance().mainExchangeOut().pushMessage(CommMessageType::NucleoLog, (unsigned char *)dbg_log, std::strlen(dbg_log));
+}
+
