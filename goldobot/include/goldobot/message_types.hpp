@@ -12,6 +12,7 @@ namespace goldobot
 		Reset=2, // Sent once on startup
 		CommStats=3,
 		DbgPrintf=4,
+		GetNucleoFirmwareVersion=5,
 		// Propulsion telemetry
 		PropulsionTelemetry=8, //
 		PropulsionTelemetryEx=9,
@@ -23,6 +24,10 @@ namespace goldobot
 		GPIODebug=21,
 		SequenceEvent=22,
 		MatchRemainingTime=23,
+
+		NucleoLog=30,
+
+		DebugGoldo=31,
 
 		// Commands
 		CmdEmergencyStop=32, // Order an emergency stop
@@ -100,6 +105,8 @@ namespace goldobot
 		FpgaGetVersion=256,
 		FpgaDbgReadReg=257,
 		FpgaDbgWriteReg=258,
+		FpgaDbgReadRegCrc=259,
+		FpgaDbgGetErrCnt=260,
 		FpgaCmdServo=272,
 		FpgaCmdDCMotor=288,
 		FpgaCmdPumpR=289,

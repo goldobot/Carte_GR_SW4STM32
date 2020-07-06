@@ -359,10 +359,10 @@ bool SequenceEngine::execOp(const Op& op)
 			buff[0] = op.arg1;
 			memcpy(buff+1, m_vars + 4 * op.arg2, 4 * op.arg3);
 
-			Robot::instance().mainExchangeOut().pushMessage(
-					CommMessageType::SequenceEvent,
-					buff,
-					1 + 4 * op.arg3);
+		//	Robot::instance().mainExchangeOut().pushMessage(
+			//		CommMessageType::SequenceEvent,
+			//		buff,
+			//		1 + 4 * op.arg3);
 		}
 		m_pc++;
 		return true;
@@ -537,8 +537,8 @@ void SequenceEngine::endLoad()
 	SequenceHeader* header = (SequenceHeader*)(m_buffer);
 
     //check crc
-	uint16_t crc = update_crc16(m_buffer + 4, header->size, 0);
-
+	//uint16_t crc = update_crc16(m_buffer + 4, header->size, 0);
+	uint16_t crc = 0;
 	if(crc == header->crc16)
 	{
 		unsigned char buff[1];

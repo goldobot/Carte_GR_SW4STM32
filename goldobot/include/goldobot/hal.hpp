@@ -29,6 +29,10 @@ namespace goldobot
 		static
 		void set_motors_pwm(float left, float right);
 
+#if 1 /* FIXME : DEBUG */
+		static
+		void disable_motors_pwm();
+#endif
 		static
 		bool uart_read_char(int uart_index, char* c, bool blocking);
 
@@ -46,6 +50,9 @@ namespace goldobot
 
 		static
 		bool uart_receive(int uart_index, const char* buffer, uint16_t size, bool blocking = true);
+
+		static
+		bool uart_receive_dma(int uart_index, const char* buffer, uint16_t size);
 
 		static
 		bool uart_receive_finished(int uart_index);

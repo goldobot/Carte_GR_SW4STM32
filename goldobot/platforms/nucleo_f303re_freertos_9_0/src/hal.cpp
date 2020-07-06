@@ -44,6 +44,10 @@ static GPIODescriptor s_gpio_descriptors[] ={
 
 static SemaphoreHandle_t s_uart_semaphore;
 
+#if 1 /* FIXME : DEBUG : TEST */
+	extern void rt_telemetry_cb(void);
+#endif
+
 extern "C"
 {
 	extern UART_HandleTypeDef huart1;
@@ -58,16 +62,25 @@ extern "C"
 
 	void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart)
 	{
-		BaseType_t xHigherPriorityTaskWoken;
-		xSemaphoreGiveFromISR(s_uart_semaphore, &xHigherPriorityTaskWoken);
-		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+		if (huart!=&huart3) {
+			BaseType_t xHigherPriorityTaskWoken;
+			xSemaphoreGiveFromISR(s_uart_semaphore, &xHigherPriorityTaskWoken);
+			portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+		}
 	}
 
 	void HAL_UART_RxCpltCallback(UART_HandleTypeDef* huart)
 	{
-		BaseType_t xHigherPriorityTaskWoken;
-		xSemaphoreGiveFromISR(s_uart_semaphore, &xHigherPriorityTaskWoken);
-		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+		if (huart!=&huart3) {
+			BaseType_t xHigherPriorityTaskWoken;
+			xSemaphoreGiveFromISR(s_uart_semaphore, &xHigherPriorityTaskWoken);
+			portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+		}
+#if 1 /* FIXME : DEBUG : TEST */
+		if (huart==&huart3) {
+			rt_telemetry_cb();
+		}
+#endif
 	}
 }
 
@@ -134,8 +147,27 @@ void Hal::set_servo_pwm(uint16_t pwm)
 {
 	__HAL_TIM_SET_COMPARE(&htim16, TIM_CHANNEL_1, pwm);
 }
+
+#if 0 /* FIXME : DEBUG */
+extern bool g_goldo_megakill_switch;
+void Hal::disable_motors_pwm()
+{
+	HAL_GPIO_WritePin(MAXON1_DIR_GPIO_Port, MAXON1_DIR_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(MAXON2_DIR_GPIO_Port, MAXON2_DIR_Pin, GPIO_PIN_RESET);
+	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 0);
+	__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);
+}
+#endif
+
 void Hal::set_motors_pwm(float left, float right)
 {
+#if 0 /* FIXME : DEBUG */
+    if (g_goldo_megakill_switch) {
+        disable_motors_pwm();
+        return;
+    }
+#endif
+
 #ifdef SIMULATE_ROBOT
 	s_robot_simulator.m_left_pwm = left;
 	s_robot_simulator.m_right_pwm = right;
@@ -228,6 +260,19 @@ bool Hal::uart_receive(int uart_index, const char* buffer, uint16_t size, bool b
 	}
 	return true;
 }
+
+bool Hal::uart_receive_dma(int uart_index, const char* buffer, uint16_t size)
+{
+	auto huart_ptr = g_uart_handles[uart_index];
+
+	if(HAL_UART_Receive_DMA(huart_ptr, (uint8_t*)buffer, size)!= HAL_OK)
+	{
+		return false;
+	}
+
+	return true;
+}
+
 
 bool Hal::uart_receive_finished(int uart_index)
 {

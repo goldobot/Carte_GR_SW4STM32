@@ -50,10 +50,18 @@ endif
 
 -include ../makefile.defs
 
+TOPDIR ?= ${shell pwd}/..
+GIT_REF := $(shell git describe --abbrev=8 --dirty --always)
+GIT_BRANCH := $(shell git describe --all)
+GOLDOFLAGS = -DGOLDO_GIT_VERSION="$(GIT_BRANCH) $(GIT_REF)"
+
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # All Target
 all: Carte_GR_SW4STM32.elf
+
+test-Goldo:
+	-@echo 'GOLDOFLAGS = ${GOLDOFLAGS}'
 
 # Tool invocations
 Carte_GR_SW4STM32.elf: $(OBJS) $(USER_OBJS)

@@ -54,6 +54,7 @@ void PropulsionController::clearError()
 	m_state = State::Stopped;
 	m_error = Error::None;
 	m_target_pose = m_current_pose;
+	m_low_level_controller.reset();
 	on_stopped_enter();
 }
 
@@ -117,11 +118,13 @@ void PropulsionController::update()
 		{
 			m_left_motor_pwm = 0;
 			m_right_motor_pwm = 0;
+#if 1 /* FIXME : DEBUG : GOLDO (why this?!..) */
 			if (fabsf(m_current_pose.speed) < 0.01 && fabsf(m_current_pose.yaw_rate) < 0.1)
 			{
 				m_state = State::Error;
 				m_error = Error::EmergencyStop;
 			}
+#endif
 		}
 		break;
 	case State::Error:

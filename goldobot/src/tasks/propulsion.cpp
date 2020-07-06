@@ -36,15 +36,17 @@ void PropulsionTask::doStep()
 	}
 
 	while(m_message_queue.message_ready() && m_controller.state() == PropulsionController::State::ManualControl)
-		{
-			processMessage();
-		}
+	{
+		processMessage();
+	}
 
+#if 0 /* FIXME : DEBUG : GOLDO */
 	// adversary detection
 	if(Hal::get_gpio(2) && m_controller.state() == PropulsionController::State::FollowTrajectory&& m_adversary_detection_enabled)
 	{
 		m_controller.emergencyStop();
 	}
+#endif
 	// Goldenium hack
 	if(m_recalage_goldenium_armed)
 	{
@@ -151,11 +153,7 @@ void PropulsionTask::processMessage()
 			}
 			break;
 	case CommMessageType::DbgPropulsionExecutePointTo:
-		{
-			float params[5];
-			m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
-			m_controller.executePointTo(*(Vector2D*)(params), params[2], params[3], params[4]);
-		}
+		onMsgExecutePointTo();
 		break;
 	case CommMessageType::PropulsionExecuteFaceDirection:
 		{
@@ -324,17 +322,94 @@ void PropulsionTask::processUrgentMessage()
 	}
 }
 
+#if 1 /* FIXME : DEBUG : GOLDO */
+extern bool debug_traj_flag;
+extern int debug_num_points;
+extern short debug_traj_x_mm[];
+extern short debug_traj_y_mm[];
+#endif
+
+
+unsigned char exec_traj_buff[256];// > 12 for traj params + 16*8 for points = 140
+
 void PropulsionTask::onMsgExecuteTrajectory()
 {
-	unsigned char buff[76];//12 for traj params and 8*8 for points
+  int num_points = 0;
+  float speed = 0.0;
+  float accel = 0.0;
+  float deccel = 0.0;
+  Vector2D* points = (Vector2D*)(exec_traj_buff+12);
 	auto msg_size = m_message_queue.message_size();
-	m_message_queue.pop_message(buff,76);
-	float speed = *(float*)(buff);
-	float accel = *(float*)(buff+4);
-	float deccel = *(float*)(buff+8);
-	Vector2D* points = (Vector2D*)(buff+12);
-	int num_points = (msg_size-12)/sizeof(Vector2D);
-	m_controller.executeTrajectory(points,num_points,speed, accel, deccel);
+
+  if (msg_size<140)
+  {
+    m_message_queue.pop_message(exec_traj_buff,140);
+    speed = *(float*)(exec_traj_buff);
+    accel = *(float*)(exec_traj_buff+4);
+    deccel = *(float*)(exec_traj_buff+8);
+    points = (Vector2D*)(exec_traj_buff+12);
+    num_points = (msg_size-12)/sizeof(Vector2D);
+  }
+  else 
+  {
+    m_message_queue.pop_message(NULL,140);
+  }
+
+#if 1 /* FIXME : DEBUG : GOLDO */
+  /*if (!debug_traj_flag)*/
+  {
+    debug_traj_flag = false;
+    if (num_points>0)
+    {
+      int i;
+      double tmp_f;
+      debug_num_points = num_points;
+      for (i=0; i<num_points; i++) {
+        tmp_f = 1000.0*points[i].x;
+        debug_traj_x_mm[i] = tmp_f;
+        tmp_f = 1000.0*points[i].y;
+        debug_traj_y_mm[i] = tmp_f;
+      }
+    }
+    else
+    {
+      debug_num_points = 1;
+      debug_traj_x_mm[0] = 0x7fff;
+      debug_traj_y_mm[0] = 0x7fff;
+    }
+    debug_traj_flag = true;
+  }
+#endif
+
+#if 1 /* FIXME : DEBUG : GOLDO */
+  if (num_points>0)
+    m_controller.executeTrajectory(points, num_points, speed, accel, deccel);
+#endif
+}
+
+void PropulsionTask::onMsgExecutePointTo()
+{
+  float params[5];
+  m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
+
+#if 1 /* FIXME : DEBUG : GOLDO */
+  /*if (!debug_traj_flag)*/
+  {
+    debug_traj_flag = false;
+    {
+      int i;
+      double tmp_f;
+      debug_num_points = 1;
+      tmp_f = 1000.0*params[0];
+      debug_traj_x_mm[0] = tmp_f;
+      tmp_f = 1000.0*params[1];
+      debug_traj_y_mm[0] = tmp_f;
+    }
+    debug_traj_flag = true;
+  }
+#endif
+
+  m_controller.executePointTo(*(Vector2D*)(params), params[2], params[3], params[4]);
 }
 
 

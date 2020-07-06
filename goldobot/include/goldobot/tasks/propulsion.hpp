@@ -42,6 +42,7 @@ namespace goldobot
 		void taskFunction() override;
 
 		void onMsgExecuteTrajectory();
+		void onMsgExecutePointTo();
 
 		void measureNormal(float angle, float distance);
 		void measurePointLongi(Vector2D point, float sensor_offset);

@@ -19,6 +19,18 @@ using namespace goldobot;
 
 unsigned char g_temp_buffer[32];
 
+#ifdef GOLDO_GIT_VERSION
+#define _STRINGIFY(A) #A
+#define STRINGIFY(A) _STRINGIFY(A)
+#define MY_GIT_VERSION STRINGIFY(GOLDO_GIT_VERSION)
+#else
+#define MY_GIT_VERSION "GOLDO HACK"
+#endif
+
+#define MY_FIRMWARE_VER_SZ 64
+const char my_firmware_ver[MY_FIRMWARE_VER_SZ] = MY_GIT_VERSION;
+
+
 MainTask::MainTask() :
 	m_message_queue(m_message_queue_buffer, sizeof(m_message_queue_buffer))
 {
@@ -38,6 +50,7 @@ int MainTask::remainingMatchTime()
 
 void MainTask::taskFunction()
 {
+	Robot::instance().mainExchangeIn().subscribe({5,5,&m_message_queue});
 	Robot::instance().mainExchangeIn().subscribe({40,50,&m_message_queue});
 	Robot::instance().mainExchangeIn().subscribe({90,90,&m_message_queue});
 	Robot::instance().mainExchangeIn().subscribe({166,166,&m_message_queue});
@@ -195,6 +208,15 @@ void MainTask::process_message()
 	int msg_size = m_message_queue.message_size();
 	switch(m_message_queue.message_type())
 	{
+	case CommMessageType::GetNucleoFirmwareVersion:
+	{
+    //std::memset(my_firmware_ver,0,MY_FIRMWARE_VER_SZ);
+    //std::strncpy(my_firmware_ver, GOLDO_GIT_VERSION, MY_FIRMWARE_VER_SZ);
+		m_message_queue.pop_message(nullptr, 0);
+		Robot::instance().mainExchangeOut().pushMessage(CommMessageType::GetNucleoFirmwareVersion, (unsigned char*)my_firmware_ver, MY_FIRMWARE_VER_SZ);
+	}
+	break;
+
 	case CommMessageType::SetMatchState:
 	{
 		MatchState state;
