@@ -120,6 +120,11 @@ void Hal::init()
 #endif
 }
 
+TickType_t Hal::get_tick_count()
+{
+	return xTaskGetTickCount();
+}
+
 
 void Hal::read_encoders(uint16_t& left, uint16_t& right)
 {

@@ -10,14 +10,10 @@
 
 #include <cstdint>
 
-#include "FreeRTOS.h"
-#include "semphr.h"
 
 
 namespace goldobot
 {
-
-
 	class MainTask : public Task
 	{
 	public:

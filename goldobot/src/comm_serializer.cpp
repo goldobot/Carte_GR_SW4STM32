@@ -41,12 +41,14 @@ CommSerializer::CommSerializer(unsigned char* buffer, size_t size):
 bool CommSerializer::push_message(uint16_t message_type, const unsigned char* buffer, size_t msg_size)
 {
 	// Reject message if buffer is full
-	if(size() + msg_size + 10 >= m_buffer_size)
+	if(size() + msg_size + 12 >= m_buffer_size)
 	{
 		return false;
 	}
-    unsigned char header[4];
-    unsigned char* ptr = header;
+    unsigned char header[6];
+    unsigned char* ptr = header + 2;
+    header[0] = 0x80 | (m_sequence_number & 0x7f);
+    header[1] = 0x80;
     ptr += write_varint(message_type, ptr);
     ptr += write_varint(msg_size, ptr);
 
@@ -59,6 +61,7 @@ bool CommSerializer::push_message(uint16_t message_type, const unsigned char* bu
     push_data(buffer, msg_size);
     push_data((unsigned char*)(&crc), sizeof(crc));
 
+    m_sequence_number = (m_sequence_number + 1) & 0x7f;
     return true;
 }
 
@@ -104,5 +107,5 @@ size_t CommSerializer::size() const
 
 size_t CommSerializer::availableSize() const
 {
-	return m_buffer_size - (size() + 10);
+	return m_buffer_size - (size() + 12);
 }

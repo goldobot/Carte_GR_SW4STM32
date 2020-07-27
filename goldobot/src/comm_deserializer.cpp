@@ -157,16 +157,17 @@ void CommDeserializer::do_parse()
 
 		case ReadHeader:
 		{
-			// Header is at most 4 bytes
-			if (size() < 4)
+			// Header is at most 6 bytes
+			if (size() < 6)
 			{
 				return;
 			}
-			unsigned char buff[4];
-			read_data(m_begin_index, buff, 4);
+			unsigned char buff[6];
+			read_data(m_begin_index, buff, 6);
 
 			// Decode header data
-			unsigned char* ptr = buff;
+			unsigned char* ptr = buff + 2;
+            m_sequence_number = buff[0] & 0x7f;
 			ptr += read_varint(&m_message_type, ptr);
 			ptr += read_varint(&m_message_size, ptr);
 

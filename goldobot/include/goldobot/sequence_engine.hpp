@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include "goldobot/enums.hpp"
+#include "goldobot/core/message_exchange.hpp"
 
 
 namespace goldobot
@@ -43,6 +44,8 @@ public:
 	void updateServoState(int id, bool moving);
 
 private:
+	MessageExchange* m_exchange_commands;
+
 	SequenceState m_state{SequenceState::WaitForInit};
 	Op* m_ops{nullptr};
 	uint16_t* m_sequence_offsets{nullptr};

@@ -2,8 +2,6 @@
 #include "goldobot/message_types.hpp"
 #include "goldobot/robot.hpp"
 
-#include "FreeRTOS.h"
-#include "task.h"
 
 #include <cstring>
 uint16_t update_crc16(const unsigned char* data_p, size_t length, uint16_t crc = 0xFFFF);
@@ -92,10 +90,10 @@ bool SequenceEngine::execOp(const Op& op)
 	case 32: // delay
 		if(m_end_delay == 0)
 		{
-			m_end_delay = xTaskGetTickCount() + *(int*)(m_vars + 4 * op.arg1);
+			m_end_delay = Hal::get_tick_count() + *(int*)(m_vars + 4 * op.arg1);
 			return false;
 		}
-		if(xTaskGetTickCount() >= m_end_delay)
+		if(Hal::get_tick_count() >= m_end_delay)
 		{
 			m_end_delay = 0;
 			m_pc++;
@@ -109,7 +107,7 @@ bool SequenceEngine::execOp(const Op& op)
 	case 65: // propulsion.enable
 	{
 		uint8_t b = true;
-		Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DbgSetPropulsionEnable, (unsigned char*)&b, 1);
+		m_exchange_commands->pushMessage(CommMessageType::DbgSetPropulsionEnable, (unsigned char*)&b, 1);
 		m_propulsion_state_dirty = true;
 		m_pc++;
 		return true;
@@ -150,7 +148,7 @@ bool SequenceEngine::execOp(const Op& op)
 		return false;
 	case 127: // propulsion.set_pose
 		{
-			Robot::instance().mainExchangeIn().pushMessage(
+		m_exchange_commands->pushMessage(
 					CommMessageType::DbgPropulsionSetPose,
 					m_vars + 4 * op.arg1, 12);
 		}
@@ -164,7 +162,7 @@ bool SequenceEngine::execOp(const Op& op)
 		params[2] = *(float*)(m_vars + 4 * (op.arg2));
 		params[3] = *(float*)(m_vars + 4 * (op.arg2+1));
 		params[4] = *(float*)(m_vars + 4 * (op.arg2+2));
-		Robot::instance().mainExchangeIn().pushMessage(
+		m_exchange_commands->pushMessage(
 				CommMessageType::DbgPropulsionExecutePointTo,
 				(unsigned char*) params, sizeof(params));
 	}
@@ -180,7 +178,7 @@ bool SequenceEngine::execOp(const Op& op)
 		params[3] = *(float*)(m_vars + 4 * (op.arg2+1));
 		params[4] = *(float*)(m_vars + 4 * (op.arg2+2));
 
-		Robot::instance().mainExchangeIn().pushMessage(
+		m_exchange_commands->pushMessage(
 				CommMessageType::DbgPropulsionExecuteMoveTo,
 				(unsigned char*) params, sizeof(params));
 		m_propulsion_state_dirty = true;
@@ -197,7 +195,7 @@ bool SequenceEngine::execOp(const Op& op)
 			memcpy(buff+12, m_vars + 4 * op.arg1, op.arg2 * 8);
 
 
-			Robot::instance().mainExchangeIn().pushMessage(
+			m_exchange_commands->pushMessage(
 					CommMessageType::DbgPropulsionExecuteTrajectory,
 					buff, 12 + op.arg2 * 8);
 
@@ -213,7 +211,7 @@ bool SequenceEngine::execOp(const Op& op)
 		params[2] = *(float*)(m_vars + 4 * (op.arg2+1));
 		params[3] = *(float*)(m_vars + 4 * (op.arg2+2));
 
-		Robot::instance().mainExchangeIn().pushMessage(
+		m_exchange_commands->pushMessage(
 				CommMessageType::DbgPropulsionExecuteRotation,
 				(unsigned char*) params, sizeof(params));
 		m_propulsion_state_dirty = true;
@@ -227,7 +225,7 @@ bool SequenceEngine::execOp(const Op& op)
 			params[1] = *(float*)(m_vars + 4 * (op.arg2));
 			params[2] = *(float*)(m_vars + 4 * (op.arg2+1));
 			params[3] = *(float*)(m_vars + 4 * (op.arg2+2));
-			Robot::instance().mainExchangeIn().pushMessage(
+			m_exchange_commands->pushMessage(
 					CommMessageType::PropulsionExecuteTranslation,
 					(unsigned char*) params, sizeof(params));
 			m_propulsion_state_dirty = true;
@@ -239,7 +237,7 @@ bool SequenceEngine::execOp(const Op& op)
 			float params[2];
 			params[0] = *(float*)(m_vars + 4 * op.arg1);
 			params[1] = *(float*)(m_vars + 4 * (op.arg2));
-			Robot::instance().mainExchangeIn().pushMessage(
+			m_exchange_commands->pushMessage(
 					CommMessageType::DbgPropulsionExecuteReposition,
 					(unsigned char*) params, sizeof(params));
 			m_propulsion_state_dirty = true;
@@ -248,7 +246,7 @@ bool SequenceEngine::execOp(const Op& op)
 		}
 	case 133: // propulsion.enter_manual
 			{
-				Robot::instance().mainExchangeIn().pushMessage(
+		m_exchange_commands->pushMessage(
 						CommMessageType::PropulsionEnterManualControl,nullptr, 0);
 				m_pc++;
 				m_propulsion_state_dirty = true;
@@ -256,7 +254,7 @@ bool SequenceEngine::execOp(const Op& op)
 			}
 	case 134: // propulsion.exit_manual
 			{
-				Robot::instance().mainExchangeIn().pushMessage(
+			m_exchange_commands->pushMessage(
 						CommMessageType::PropulsionExitManualControl,nullptr, 0);
 				m_pc++;
 				m_propulsion_state_dirty = true;
@@ -264,7 +262,7 @@ bool SequenceEngine::execOp(const Op& op)
 			}
 	case 135: // propulsion.set_control_levels
 			{
-				Robot::instance().mainExchangeIn().pushMessage(
+		m_exchange_commands->pushMessage(
 						CommMessageType::PropulsionSetControlLevels,&(op.arg1), 2);
 				m_pc++;
 				return false;
@@ -279,7 +277,7 @@ bool SequenceEngine::execOp(const Op& op)
 				pose.yaw_rate = *(float*)(m_vars + 4 * (op.arg2 + 1));
 				pose.acceleration = 0;
 				pose.angular_acceleration = 0;
-				Robot::instance().mainExchangeIn().pushMessage(
+				m_exchange_commands->pushMessage(
 						CommMessageType::PropulsionSetTargetPose,(unsigned char*)&pose, sizeof(pose));
 				m_pc++;
 				return false;
@@ -292,7 +290,7 @@ bool SequenceEngine::execOp(const Op& op)
 			params[2] = *(float*)(m_vars + 4 * (op.arg2+1));
 			params[3] = *(float*)(m_vars + 4 * (op.arg2+2));
 
-			Robot::instance().mainExchangeIn().pushMessage(
+			m_exchange_commands->pushMessage(
 					CommMessageType::PropulsionExecuteFaceDirection,
 					(unsigned char*) params, sizeof(params));
 			m_propulsion_state_dirty = true;
@@ -304,7 +302,7 @@ bool SequenceEngine::execOp(const Op& op)
 			unsigned char buff;
 			buff = op.arg1;
 
-			Robot::instance().mainExchangeIn().pushMessage(
+			m_exchange_commands->pushMessage(
 					CommMessageType::PropulsionSetAdversaryDetectionEnable,
 					&buff,
 					1);
@@ -315,7 +313,7 @@ bool SequenceEngine::execOp(const Op& op)
 		{
 			//arg: vector(border normal angle, projection of border point on normal
 			float buff[2] = {get_var_float(op.arg1), get_var_float(op.arg1+1)};
-			Robot::instance().mainExchangeIn().pushMessage(
+			m_exchange_commands->pushMessage(
 					CommMessageType::PropulsionMeasureNormal,(unsigned char*)&buff, sizeof(buff));
 			m_pc++;
 			return false;
@@ -328,7 +326,7 @@ bool SequenceEngine::execOp(const Op& op)
 							get_var_float(op.arg2),
 							get_var_float(op.arg2+1)
 			};
-			Robot::instance().mainExchangeIn().pushMessage(
+			m_exchange_commands->pushMessage(
 					CommMessageType::PropulsionMeasurePoint,(unsigned char*)&buff, sizeof(buff));
 			m_pc++;
 			return false;
@@ -372,7 +370,7 @@ bool SequenceEngine::execOp(const Op& op)
 			unsigned char buff[3];
 			buff[0] = 0;
 			*(int16_t*)(buff+1) = *(int*)(m_vars + 4 * op.arg1);
-			Robot::instance().mainExchangeIn().pushMessage(
+			m_exchange_commands->pushMessage(
 					CommMessageType::FpgaCmdDCMotor,
 					buff,
 					3);
@@ -384,7 +382,7 @@ bool SequenceEngine::execOp(const Op& op)
 			unsigned char buff[3];
 			buff[0] = op.arg1;
 			*(int16_t*)(buff+1) = *(int*)(m_vars + 4 * op.arg2);
-			Robot::instance().mainExchangeIn().pushMessage(
+			m_exchange_commands->pushMessage(
 					CommMessageType::FpgaCmdDCMotor,
 					buff,
 					3);
@@ -401,7 +399,7 @@ bool SequenceEngine::execOp(const Op& op)
 			buff[0] = op.arg1;
 			buff[1] = op.arg2;
 			*(uint16_t*)(buff+2) = op.arg3;// speed in % of max speed
-			Robot::instance().mainExchangeIn().pushMessage(
+			m_exchange_commands->pushMessage(
 					CommMessageType::DbgArmsGoToPosition,
 					buff,
 					4);
@@ -416,7 +414,7 @@ bool SequenceEngine::execOp(const Op& op)
 			buff[0] = op.arg1;
 			*(uint16_t*)(buff+1) = *(int*)(m_vars + 4 * op.arg2);
 			buff[3] = op.arg3;
-			Robot::instance().mainExchangeIn().pushMessage(
+			m_exchange_commands->pushMessage(
 					CommMessageType::FpgaCmdServo,
 					buff,
 					4);
@@ -425,7 +423,7 @@ bool SequenceEngine::execOp(const Op& op)
 		return true;
 	case 143: // arms.shutdown
 		{
-			Robot::instance().mainExchangeIn().pushMessage(
+		m_exchange_commands->pushMessage(
 					CommMessageType::ArmsShutdown,
 					nullptr,
 					0);

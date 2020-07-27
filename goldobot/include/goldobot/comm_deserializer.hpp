@@ -7,6 +7,12 @@ namespace goldobot
 	class CommDeserializer
 	{
 	public:
+		struct Statistics
+		{
+			uint32_t sequence_errors{0};
+		};
+
+	public:
 	    CommDeserializer(unsigned char* buffer, size_t buffer_size);
 
 	    size_t push_data(unsigned char* buffer, size_t size);
@@ -40,8 +46,10 @@ namespace goldobot
 	    uint16_t m_message_type;
 	    uint16_t m_state;
 		uint16_t m_crc;
-		uint8_t m_sequence_number;
+		uint8_t m_sequence_number{0};
+		uint8_t m_last_sequence_number{0};
 
+		Statistics m_statistics;
 		int m_corrupted_messages{0};
 		int m_lost_messages{0};
 	};

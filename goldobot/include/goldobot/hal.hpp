@@ -7,12 +7,17 @@ namespace goldobot
 	class SimpleOdometry;
 	struct OdometryConfig;
 
+	typedef uint32_t TickType_t;
+
+
 	class Hal
 	{
 	public:
 		//! \brief Setup peripherals.
 		static
 		void  init();
+
+		static TickType_t get_tick_count();
 
 		static
 		void set_servo_pwm(uint16_t pwm);

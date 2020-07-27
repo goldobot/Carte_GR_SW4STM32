@@ -5,8 +5,6 @@
 #include "goldobot/core/message_queue.hpp"
 #include <cstdint>
 
-#include "FreeRTOS.h"
-#include "semphr.h"
 
 namespace goldobot
 {

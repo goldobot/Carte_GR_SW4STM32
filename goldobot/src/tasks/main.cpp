@@ -5,10 +5,6 @@
 #include "goldobot/messages.hpp"
 
 #include <cstring>
-
-#include "FreeRTOS.h"
-#include "task.h"
-
 #include <cmath>
 
 using namespace goldobot;
@@ -43,7 +39,7 @@ const char* MainTask::name() const
 
 int MainTask::remainingMatchTime()
 {
-	int elapsed_time = (xTaskGetTickCount() - m_start_of_match_time)/1000;
+	int elapsed_time = (Hal::get_tick_count() - m_start_of_match_time)/1000;
 	int match_duration = 98;
 	return elapsed_time < match_duration ? match_duration - elapsed_time : 0;
 }
@@ -68,7 +64,7 @@ void MainTask::taskFunction()
 		{
 			process_message_config();
 		}
-		vTaskDelay(1);
+		delay(1);
 	}
 	{
 		messages::MsgMatchStateChange post_state{Robot::instance().matchState(), Robot::instance().side()};
@@ -121,8 +117,8 @@ void MainTask::taskFunction()
 		case MatchState::WaitForStartOfMatch:
 			if(!Hal::get_gpio(1))
 			{
-				Robot::instance().setStartMatchTime(xTaskGetTickCount());
-				m_start_of_match_time = xTaskGetTickCount();
+				Robot::instance().setStartMatchTime(Hal::get_tick_count());
+				m_start_of_match_time = Hal::get_tick_count();
 				Robot::instance().setRemainingMatchTime(remainingMatchTime());
 				Robot::instance().setMatchState(MatchState::Match);
 
@@ -166,7 +162,7 @@ void MainTask::taskFunction()
 			Robot::instance().mainExchangeOut().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&post_state, sizeof(post_state));
 		}
 
-		vTaskDelay(1);
+		delay(1);
 	}
 }
 
