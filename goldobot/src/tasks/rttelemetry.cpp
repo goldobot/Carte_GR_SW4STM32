@@ -5,9 +5,6 @@
 #include "goldobot/hal.hpp"
 #include "goldobot/robot.hpp"
 
-#include "FreeRTOS.h"
-#include "task.h"
-
 using namespace goldobot;
 
 RtTelemetryTask::RtTelemetryTask()
@@ -60,7 +57,7 @@ void RtTelemetryTask::taskFunction()
     int tmp_i;
     short tmp_s;
     char tmp_c;
-    uint32_t clock = xTaskGetTickCount();
+    uint32_t clock = Hal::get_tick_count();
     int i;
 
     n_char=0;

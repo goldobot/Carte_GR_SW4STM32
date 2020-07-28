@@ -3,9 +3,6 @@
 #include "goldobot/robot.hpp"
 #include "goldobot/messages.hpp"
 
-#include "FreeRTOS.h"
-#include "task.h"
-
 using namespace goldobot;
 
 HeartbeatTask::HeartbeatTask()
@@ -37,7 +34,7 @@ void HeartbeatTask::taskFunction()
 
 	while(1)
 	{
-		uint32_t clock = xTaskGetTickCount();
+		uint32_t clock = Hal::get_tick_count();
 		auto& exchange = Robot::instance().mainExchangeOut();
 		exchange.pushMessage(CommMessageType::Sync,(unsigned char*)"goldobot",8);
 		exchange.pushMessage(CommMessageType::Heartbeat,(unsigned char*)&clock,sizeof(clock));

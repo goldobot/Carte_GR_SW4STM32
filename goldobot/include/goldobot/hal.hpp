@@ -54,7 +54,7 @@ namespace goldobot
 		void uart_wait_for_transmit(int uart_index);
 
 		static
-		bool uart_receive(int uart_index, const char* buffer, uint16_t size, bool blocking = true);
+		bool uart_receive(int uart_index, char* buffer, uint16_t size, bool blocking = true);
 
 		static
 		bool uart_receive_dma(int uart_index, const char* buffer, uint16_t size);
@@ -76,6 +76,9 @@ namespace goldobot
 
 		static
 		bool get_gpio(int gpio_index);
+
+		static
+		void send_spi_frame(unsigned char* buff_out, unsigned char* buff_in);
 
 		static
 		bool user_flash_erase(int start_page, int num_pages);

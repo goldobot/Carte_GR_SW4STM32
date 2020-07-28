@@ -7,6 +7,7 @@ namespace goldobot
 	class CommSerializer
 	{
 	public:
+		bool t_debug{ false };
 		CommSerializer(unsigned char* buffer, size_t size);
 
 		size_t size() const;
@@ -23,5 +24,6 @@ namespace goldobot
 		size_t m_begin_index;
 		size_t m_end_index;
 		uint8_t m_sequence_number{0};
+		bool m_first_message{true};
 	};
 }

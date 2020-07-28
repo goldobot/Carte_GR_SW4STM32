@@ -52,7 +52,11 @@ void Task::set_priority(unsigned prio)
 
 void Task::delay(unsigned ticks)
 {
+	auto t1 = std::chrono::steady_clock::now();
 	std::this_thread::sleep_for(std::chrono::milliseconds(ticks));
+	auto t2 = std::chrono::steady_clock::now();
+	int foo = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+	int a;
 }
 
 void Task::delay_periodic(unsigned ticks)

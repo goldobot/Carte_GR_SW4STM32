@@ -9,20 +9,13 @@
 #include "goldobot/hal.hpp"
 #include "goldobot/robot.hpp"
 #include "goldobot/core/message_exchange.hpp"
-#include "FreeRTOS.h"
-#include "task.h"
-#include "stm32f3xx_hal.h"
+//#include "stm32f3xx_hal.h"
 #include <cstring>
 
 #define SPI_FRAME_SZ 6
 #define POOL_MAX_CNT 100000
 
 using namespace goldobot;
-
-extern "C"
-{
-  extern SPI_HandleTypeDef hspi1;
-}
 
 FpgaTask::FpgaTask():
   m_message_queue(m_message_queue_buffer, sizeof(m_message_queue_buffer)){
@@ -61,7 +54,7 @@ void FpgaTask::taskFunction()
     goldo_fpga_cmd_servo(i, 0);
   }
 
-  m_last_timestamp = xTaskGetTickCount();
+  m_last_timestamp = Hal::get_tick_count();
 
   while(1)
   {
@@ -96,7 +89,7 @@ void FpgaTask::taskFunction()
     }
 
     //Recompute servo targets
-    uint32_t ts = xTaskGetTickCount();
+    uint32_t ts = Hal::get_tick_count();
     float delta_t = (ts - m_last_timestamp)*1e-3;
     m_last_timestamp = ts;
     for(int i=0; i < m_servos_config->num_servos; i++)
@@ -135,11 +128,7 @@ void FpgaTask::taskFunction()
 }
 
 int FpgaTask::goldo_fpga_send_spi_frame(void) {
-  HAL_SPI_TransmitReceive_IT(&hspi1, spi_buf_out, spi_buf_in,SPI_FRAME_SZ);
-  while(HAL_SPI_GetState(&hspi1) != HAL_SPI_STATE_READY)
-  {
-
-  }
+    Hal::send_spi_frame(spi_buf_out, spi_buf_in);  
   m_total_spi_frame_cnt++;
   return 0;
 #if 0 /* FIXME : TODO : cleanup (old code) */
@@ -632,7 +621,8 @@ void FpgaTask::goldo_send_log_uint32(const char *msg, unsigned int val)
 {
   char dbg_log[64];
   std::memset(dbg_log, 0, 64);
-  sprintf(dbg_log, msg, val);
+  // \todo find a way to make this portable
+  //sprintf(dbg_log, msg, val);
   Robot::instance().mainExchangeOut().pushMessage(CommMessageType::NucleoLog, (unsigned char *)dbg_log, std::strlen(dbg_log));
 }
 

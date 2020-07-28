@@ -10,12 +10,7 @@
 #include <cstdlib>
 #include <cmath>
 
-#include "stm32f3xx.h"
-#include "FreeRTOS.h"
-#include "task.h"
-
 using namespace goldobot;
-
 
 UARTCommTask::UARTCommTask() :
     m_serializer(m_serialize_buffer, sizeof(m_serialize_buffer)),
@@ -39,7 +34,7 @@ void UARTCommTask::taskFunction()
 {
 	set_priority(5);
 
-	m_last_timestamp = xTaskGetTickCount();
+	m_last_timestamp = Hal::get_tick_count();
 	m_bytes_sent = 0;
 	m_serialize_buffer_high_watermark = 0;
 
@@ -89,7 +84,7 @@ void UARTCommTask::taskFunction()
 		}
 
 		// Process received message if needed
-		if(m_deserializer.message_ready())
+		while(m_deserializer.message_ready())
 		{
 			uint16_t message_type = m_deserializer.message_type();
 			if(message_type != 0)
@@ -101,13 +96,16 @@ void UARTCommTask::taskFunction()
 			}
 		}
 
-		uint32_t timestamp = xTaskGetTickCount();
+		uint32_t timestamp = Hal::get_tick_count();
 		if(timestamp - m_last_timestamp >= 1000)
 		{
-			uint16_t msg[2];
+			uint16_t msg[12];
 			msg[0] = (m_bytes_sent * 1000) / (timestamp - m_last_timestamp);
 			msg[1] =  m_serialize_buffer_high_watermark;
-			send_message(CommMessageType::CommStats, (char*)msg, 4);
+			*(CommDeserializer::Statistics*)(msg + 2) = m_deserializer.statistics();
+
+			sizeof(CommDeserializer::Statistics);
+			send_message(CommMessageType::CommStats, (char*)msg, 24);
 			m_last_timestamp = timestamp;
 			m_bytes_sent = 0;
 			m_serialize_buffer_high_watermark = 0;

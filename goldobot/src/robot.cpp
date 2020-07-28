@@ -1,4 +1,5 @@
 #include "goldobot/robot.hpp"
+#include "goldobot/utils/crc.hpp"
 
 #include <cstring>
 
@@ -69,12 +70,9 @@ void Robot::beginLoadConfig()
 	m_load_config_crc = 0;
 }
 
-// Todo proper utils library and declaration
-uint16_t update_crc16(const unsigned char* data_p, size_t length, uint16_t crc = 0xFFFF);
-
 void Robot::loadConfig(char* buffer, size_t size)
 {
-	if(m_load_config_ptr + size >= s_config_area + sizeof(s_config_area))
+	if(m_load_config_ptr == nullptr || m_load_config_ptr + size >= s_config_area + sizeof(s_config_area))
 	{
 		return;
 	}
@@ -92,6 +90,7 @@ bool Robot::endLoadConfig(uint16_t crc)
 	// ArmConfig
 	// Arm positions
 	// ServosConfig
+	size_t foo = m_load_config_ptr - s_config_area;
 	if(crc != m_load_config_crc)
 	{
 		return false;

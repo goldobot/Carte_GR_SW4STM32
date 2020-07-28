@@ -34,7 +34,7 @@ namespace goldobot
 
 		uint32_t m_start_of_match_time;
 		MessageQueue m_message_queue;
-		unsigned char m_message_queue_buffer[128];
+		unsigned char m_message_queue_buffer[1024];
 		unsigned char m_scratchpad[128];
 
 		SequenceEngine m_sequence_engine;

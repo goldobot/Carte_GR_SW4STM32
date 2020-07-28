@@ -1,4 +1,4 @@
-add_library(goldobot_platform_os OBJECT)
+add_library(goldobot_platform_os STATIC)
 
 target_include_directories(goldobot_platform_os PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

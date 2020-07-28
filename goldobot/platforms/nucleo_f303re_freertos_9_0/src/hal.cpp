@@ -12,6 +12,7 @@
 
 //#define SIMULATE_ROBOT
 
+#define SPI_FRAME_SZ 6
 
 #define MAXON_EN_Pin GPIO_PIN_15
 #define MAXON_EN_GPIO_Port GPIOC
@@ -47,6 +48,11 @@ static SemaphoreHandle_t s_uart_semaphore;
 #if 1 /* FIXME : DEBUG : TEST */
 	extern void rt_telemetry_cb(void);
 #endif
+
+extern "C"
+{
+  extern SPI_HandleTypeDef hspi1;
+}
 
 extern "C"
 {
@@ -252,7 +258,7 @@ void Hal::uart_wait_for_transmit(int uart_index)
 	}
 }
 
-bool Hal::uart_receive(int uart_index, const char* buffer, uint16_t size, bool blocking)
+bool Hal::uart_receive(int uart_index, char* buffer, uint16_t size, bool blocking)
 {
 	auto huart_ptr = g_uart_handles[uart_index];
 	if(HAL_UART_Receive_IT(huart_ptr, (uint8_t*)buffer, size)!= HAL_OK)
@@ -338,6 +344,14 @@ bool Hal::get_gpio(int gpio_index)
 bool Hal::user_flash_erase(int start_page, int num_pages)
 {
 	return true;
+}
+
+void Hal::send_spi_frame(unsigned char* buff_out, unsigned char* buff_in)
+{
+  HAL_SPI_TransmitReceive_IT(&hspi1, buff_out, buff_in,SPI_FRAME_SZ);
+  while(HAL_SPI_GetState(&hspi1) != HAL_SPI_STATE_READY)
+  {
+  }
 }
 
 

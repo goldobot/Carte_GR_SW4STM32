@@ -4,7 +4,7 @@
 
 
 #include <cstring>
-uint16_t update_crc16(const unsigned char* data_p, size_t length, uint16_t crc = 0xFFFF);
+
 
 #define FLAG_Z (1 << 0)
 #define FLAG_N (1 << 1)
@@ -21,7 +21,7 @@ enum Opcode
 
 SequenceEngine::SequenceEngine()
 {
-
+	m_exchange_commands = &Robot::instance().mainExchangeIn();
 }
 
 void SequenceEngine::doStep()

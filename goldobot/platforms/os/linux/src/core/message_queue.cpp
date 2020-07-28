@@ -23,7 +23,7 @@ bool MessageQueue::push_message(uint16_t message_type, const unsigned char* buff
 	std::lock_guard<std::mutex> lck(m_mutex);
 
 	// Set current message type if empty
-	if(m_begin_index == m_end_index)
+	if(m_begin_index == m_end_index &&! m_message_ready)
 	{
 		m_message_size = msg_size;
 		m_message_type = message_type;
