@@ -5,17 +5,23 @@ PREFIX_GOLDO = ${TOPDIR}
 
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \
-../goldobot/platforms/nucleo_f303re_freertos_9_0/src/hal.cpp 
+../goldobot/platforms/os/freertos/src/message_exchange.cpp \
+../goldobot/platforms/os/freertos/src/message_queue.cpp \
+../goldobot/platforms/os/freertos/src/task.cpp 
 
 OBJS += \
-./goldobot/platforms/nucleo_f303re_freertos_9_0/src/hal.o 
+./goldobot/platforms/os/freertos/src/message_exchange.o \
+./goldobot/platforms/os/freertos/src/message_queue.o \
+./goldobot/platforms/os/freertos/src/task.o 
 
 CPP_DEPS += \
-./goldobot/platforms/nucleo_f303re_freertos_9_0/src/hal.d 
+./goldobot/platforms/os/freertos/src/message_exchange.d \
+./goldobot/platforms/os/freertos/src/message_queue.d \
+./goldobot/platforms/os/freertos/src/task.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes
-goldobot/platforms/nucleo_f303re_freertos_9_0/src/%.o: ../goldobot/platforms/nucleo_f303re_freertos_9_0/src/%.cpp
+goldobot/platforms/os/freertos/src/%.o: ../goldobot/platforms/os/freertos/src/%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: MCU G++ Compiler'
 	@echo $(PWD)

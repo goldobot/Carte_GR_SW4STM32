@@ -32,6 +32,7 @@ Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F \
 Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang \
 Src \
 goldobot/platforms/nucleo_f303re_freertos_9_0/src \
+goldobot/platforms/os/freertos/src \
 goldobot/src \
 goldobot/src/core \
 goldobot/src/propulsion \

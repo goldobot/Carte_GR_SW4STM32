@@ -15,6 +15,7 @@ PATH := /opt/stm32/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.lin
 -include goldobot/src/core/subdir.mk
 -include goldobot/src/subdir.mk
 -include goldobot/platforms/nucleo_f303re_freertos_9_0/src/subdir.mk
+-include goldobot/platforms/os/freertos/src/subdir.mk
 -include Src/subdir.mk
 -include Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/subdir.mk
 -include Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/subdir.mk
