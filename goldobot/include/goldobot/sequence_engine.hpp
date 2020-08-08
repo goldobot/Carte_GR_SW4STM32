@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
 #include "goldobot/enums.hpp"
-#include "goldobot/core/message_exchange.hpp"
+#include "goldobot/platform/message_exchange.hpp"
 
 
 namespace goldobot

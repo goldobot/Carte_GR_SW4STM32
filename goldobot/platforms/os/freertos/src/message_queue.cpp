@@ -1,4 +1,4 @@
-#include "goldobot/core/message_queue.hpp"
+#include "goldobot/platform/message_queue.hpp"
 
 using namespace goldobot;
 

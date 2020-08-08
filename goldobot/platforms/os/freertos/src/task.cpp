@@ -1,4 +1,4 @@
-#include "goldobot/tasks/task.hpp"
+#include "goldobot/platform/task.hpp"
 
 #include "FreeRTOS.h"
 #include "task.h"

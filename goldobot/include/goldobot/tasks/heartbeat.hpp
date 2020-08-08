@@ -1,5 +1,5 @@
 #pragma once
-#include "goldobot/tasks/task.hpp"
+#include "goldobot/platform/task.hpp"
 
 #include <cstdint>
 

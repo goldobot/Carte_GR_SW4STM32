@@ -1,8 +1,8 @@
 #pragma once
-#include "goldobot/tasks/task.hpp"
+#include "goldobot/platform/task.hpp"
 #include "goldobot/comm_serializer.hpp"
 #include "goldobot/comm_deserializer.hpp"
-#include "goldobot/core/message_queue.hpp"
+#include "goldobot/platform/message_queue.hpp"
 #include <cstdint>
 
 

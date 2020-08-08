@@ -1,5 +1,5 @@
 #include "goldobot/tasks/uart_comm.hpp"
-#include "goldobot/core/message_queue.hpp"
+#include "goldobot/platform/message_queue.hpp"
 #include "goldobot/tasks/main.hpp"
 #include "goldobot/hal.hpp"
 #include "goldobot/propulsion/odometry_config.hpp"

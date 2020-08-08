@@ -29,3 +29,8 @@ target_include_directories(drivers_STM32F3xx_HAL_Driver PUBLIC
 target_link_libraries(drivers_STM32F3xx_HAL_Driver
   drivers_CMSIS
   )
+  
+target_compile_definitions(drivers_STM32F3xx_HAL_Driver PUBLIC
+  USE_HAL_DRIVER
+  STM32F303xE
+  )

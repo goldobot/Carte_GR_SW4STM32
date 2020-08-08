@@ -1,1 +1,5 @@
+if(GOLDOBOT_PLATFORM_OS EQUAL "FreeRTOS")
 add_subdirectory(linux)
+else()
+add_subdirectory(freertos)
+endif()

@@ -1,7 +1,7 @@
 #pragma once
-#include "goldobot/core/message_exchange.hpp"
+#include "goldobot/platform/message_exchange.hpp"
 #include "goldobot/enums.hpp"
-#include "goldobot/config.hpp"
+#include "goldobot/platform/config.hpp"
 #include "goldobot/tasks/propulsion.hpp"
 #include "goldobot/tasks/uart_comm.hpp"
 #include "goldobot/tasks/uart2_comm.hpp"
