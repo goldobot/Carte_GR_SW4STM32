@@ -1,0 +1,27 @@
+name: Compile Firmware
+on:
+  push:
+    branches: [ develop ]
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: install dependencies
+      run: sudo apt-get update && sudo apt-get install cmake gcc-arm-none-eabi
+    - name: create build directory
+      run: mkdir build
+    - name: run cmake
+      run: cmake -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchain/gcc-stm32f303xe.toolchain ..
+      working-directory: ./build
+    - name: run cmake build
+      run: cmake --build .
+      working-directory: ./build
+    - uses: actions/upload-artifact@v2
+      with:
+        name: firmware.elf
+        path: build/firmware.elf
+    - uses: actions/upload-artifact@v2
+      with:
+        name: firmware.hex
+        path: build/firmware.hex
