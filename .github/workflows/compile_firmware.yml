@@ -8,7 +8,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
-      run: sudo apt-get update && sudo apt-get install cmake arm-none-eabi-gcc
+      run: sudo apt-get update && sudo apt-get install cmake gcc-arm-none-eabi
     - name: create build directory
       run: mkdir build
     - name: run cmake
