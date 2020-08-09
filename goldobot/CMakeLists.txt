@@ -4,17 +4,11 @@ project(goldobot LANGUAGES CXX)
 
 add_subdirectory(platforms)
 
-add_library(goldobot STATIC)
-
-
-target_sources(goldobot PRIVATE
+add_library(goldobot STATIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include/goldobot/sequence_engine.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/goldobot/hal.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/goldobot/tasks/main.hpp
-  )
 
-
-target_sources(goldobot PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/src/core/low_pass_filter.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/core/pid_controller.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/core/trapezoidal_speed_profile.cpp

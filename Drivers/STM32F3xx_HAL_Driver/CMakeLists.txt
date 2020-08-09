@@ -1,6 +1,4 @@
-add_library(drivers_STM32F3xx_HAL_Driver STATIC)
-
-target_sources(drivers_STM32F3xx_HAL_Driver PUBLIC
+add_library(drivers_STM32F3xx_HAL_Driver STATIC
   ${CMAKE_CURRENT_SOURCE_DIR}/Src/stm32f3xx_hal.c
   ${CMAKE_CURRENT_SOURCE_DIR}/Src/stm32f3xx_hal_adc.c
   ${CMAKE_CURRENT_SOURCE_DIR}/Src/stm32f3xx_hal_adc_ex.c

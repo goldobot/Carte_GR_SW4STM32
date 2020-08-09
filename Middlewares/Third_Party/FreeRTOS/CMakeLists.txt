@@ -1,6 +1,4 @@
-add_library(middlewares_FreeRTOS STATIC)
-
-target_sources(middlewares_FreeRTOS PUBLIC
+add_library(middlewares_FreeRTOS STATIC
   ${CMAKE_CURRENT_SOURCE_DIR}/croutine.c
   ${CMAKE_CURRENT_SOURCE_DIR}/event_groups.c
   ${CMAKE_CURRENT_SOURCE_DIR}/list.c

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.10)
 
 project(Carte_GR VERSION 0.0 LANGUAGES C CXX ASM)
 
@@ -10,8 +10,7 @@ add_subdirectory(Middlewares)
 add_subdirectory(Drivers)
 add_subdirectory(goldobot)
 
-add_executable(firmware)
-target_sources(firmware PUBLIC
+add_executable(firmware
   ${CMAKE_CURRENT_SOURCE_DIR}/Src/main.c
   ${CMAKE_CURRENT_SOURCE_DIR}/Src/stm32f3xx_hal_msp.c
   ${CMAKE_CURRENT_SOURCE_DIR}/Src/stm32f3xx_hal_timebase_TIM.c
@@ -30,12 +29,16 @@ target_link_libraries(firmware
   goldobot
   )
   
-target_link_options(firmware PUBLIC
+target_compile_options(firmware PUBLIC
   -T ${CMAKE_CURRENT_SOURCE_DIR}/STM32F303RETx_FLASH.ld
+  )
+  
+set_target_properties(firmware PROPERTIES
+  SUFFIX ".elf"
   )
   
 add_custom_command(TARGET firmware
   POST_BUILD
-  COMMAND ${CMAKE_OBJCOPY} -O ihex "${CMAKE_CURRENT_BINARY_DIR}/firmware" "${CMAKE_CURRENT_BINARY_DIR}/firmware.hex"
+  COMMAND ${CMAKE_OBJCOPY} -O ihex "${CMAKE_CURRENT_BINARY_DIR}/firmware.elf" "${CMAKE_CURRENT_BINARY_DIR}/firmware.hex"
   )
   
