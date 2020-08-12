@@ -6,6 +6,23 @@ set(GOLDOBOT_PLATFORM_OS FreeRTOS)
 
 include_directories(Inc)
 
+execute_process(
+  COMMAND git describe --all
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  OUTPUT_VARIABLE GIT_BRANCH
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+execute_process(
+  COMMAND git describe --abbrev=8 --dirty --always
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  OUTPUT_VARIABLE GIT_REF
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+add_definitions("-DGOLDO_GIT_VERSION=\"${GIT_BRANCH} ${GIT_REF}\"")
+
+
 add_subdirectory(Middlewares)
 add_subdirectory(Drivers)
 add_subdirectory(goldobot)
@@ -40,5 +57,7 @@ set_target_properties(firmware PROPERTIES
 add_custom_command(TARGET firmware
   POST_BUILD
   COMMAND ${CMAKE_OBJCOPY} -O ihex "${CMAKE_CURRENT_BINARY_DIR}/firmware.elf" "${CMAKE_CURRENT_BINARY_DIR}/firmware.hex"
+  COMMAND ${CMAKE_OBJCOPY} -O binary "${CMAKE_CURRENT_BINARY_DIR}/firmware.elf" "${CMAKE_CURRENT_BINARY_DIR}/firmware.bin"
+  COMMAND ${CMAKE_SIZE_UTIL} "${CMAKE_CURRENT_BINARY_DIR}/firmware.elf"
   )
   
