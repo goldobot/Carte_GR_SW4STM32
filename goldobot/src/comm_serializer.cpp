@@ -1,5 +1,6 @@
 #include "goldobot/comm_serializer.hpp"
 #include "goldobot/utils/crc.hpp"
+#include <algorithm>
 
 using namespace goldobot;
 
@@ -61,6 +62,9 @@ bool CommSerializer::push_message(uint16_t message_type, const unsigned char* bu
     push_data((unsigned char*)(&crc), sizeof(crc));
 
     m_sequence_number = (m_sequence_number + 1) & 0x7f;
+    m_statistics.messages_sent++;
+    m_statistics.bytes_sent+= (ptr - header) + msg_size + sizeof(crc);
+    m_statistics.buffer_high_watermark = std::max<uint32_t>(m_statistics.buffer_high_watermark, size());
     return true;
 }
 
@@ -107,4 +111,11 @@ size_t CommSerializer::size() const
 size_t CommSerializer::availableSize() const
 {
 	return m_buffer_size - (size() + 12);
+}
+
+CommSerializer::Statistics CommSerializer::statistics()
+{
+	auto statistics = m_statistics;
+	m_statistics = Statistics();
+	return statistics;
 }

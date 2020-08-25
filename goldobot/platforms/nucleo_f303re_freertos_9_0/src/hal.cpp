@@ -1,14 +1,40 @@
-#include "goldobot/hal.hpp"
+#include "goldobot/platform/hal_private.hpp"
 #include "goldobot/robot_simulator.hpp"
+
 #include "stm32f3xx_hal.h"
+extern "C"
+{
+    #include "stm32f3xx_ll_usart.h"
+    #include "stm32f3xx_ll_gpio.h"
+    #include "stm32f3xx_ll_bus.h"
+}
 
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
 
+#include "core_cm4.h"
+
 #include <sys/unistd.h> // STDOUT_FILENO, STDERR_FILENO
 #include <errno.h>
 #include <math.h>
+#include <algorithm>
+#include <cstring>
+
+// Configuration structures
+
+
+
+extern "C"
+{
+void __assert_func(const char* filename, int line, const char*, const char*)
+{
+	while(1)
+	{
+
+	}
+};
+}
 
 //#define SIMULATE_ROBOT
 
@@ -31,6 +57,7 @@ struct GPIODescriptor
 	uint16_t pin;
 };
 
+
 static GPIODescriptor s_gpio_descriptors[] ={
 	{GPIOA, GPIO_PIN_5},//green led
 	{GPIOC, GPIO_PIN_9},//match start //tmp: blue button on nucleo. //C9 in robot
@@ -42,66 +69,95 @@ static GPIODescriptor s_gpio_descriptors[] ={
 	{GPIOB, GPIO_PIN_0} //ev 2
 };
 
-
-static SemaphoreHandle_t s_uart_semaphore;
-
-#if 1 /* FIXME : DEBUG : TEST */
-	extern void rt_telemetry_cb(void);
-#endif
-
 extern "C"
 {
   extern SPI_HandleTypeDef hspi1;
+  I2C_HandleTypeDef hi2c1;
 }
+
+static IODevice s_io_devices[16];
+
 
 extern "C"
 {
-	extern UART_HandleTypeDef huart1;
-	extern UART_HandleTypeDef huart2;
-	extern UART_HandleTypeDef huart3;
-
 	extern TIM_HandleTypeDef htim1;
 	extern TIM_HandleTypeDef htim2;
 	extern TIM_HandleTypeDef htim3;
 	extern TIM_HandleTypeDef htim4;
 	extern TIM_HandleTypeDef htim16;
 
+	extern void* goldobot_hal_s_usart_io_devices[5];
+
 	void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart)
 	{
-		if (huart!=&huart3) {
+	/*	if (huart!=&huart3) {
 			BaseType_t xHigherPriorityTaskWoken;
 			xSemaphoreGiveFromISR(s_uart_semaphore, &xHigherPriorityTaskWoken);
 			portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-		}
+		}*/
 	}
 
 	void HAL_UART_RxCpltCallback(UART_HandleTypeDef* huart)
 	{
-		if (huart!=&huart3) {
-			BaseType_t xHigherPriorityTaskWoken;
-			xSemaphoreGiveFromISR(s_uart_semaphore, &xHigherPriorityTaskWoken);
-			portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+		auto ptr = s_io_devices;
+		while(ptr->device_handle != nullptr)
+		{
+			if(ptr->device_handle == huart)
+			{
+				//ptr->rx_queue.size += huart->RxXferSize;
+				//HAL_UART_Receive_IT(huart, ptr->rx_queue.buffer, ptr->rx_queue.buffer_size/2);
+				int a =1;
+				return;
+			}
+
+			ptr++;
 		}
-#if 1 /* FIXME : DEBUG : TEST */
-		if (huart==&huart3) {
-			rt_telemetry_cb();
-		}
-#endif
 	}
 }
 
-UART_HandleTypeDef* g_uart_handles[] ={
-		&huart2,
-		&huart1,
-		&huart3
-};
+void goldobot_hal_usart_init(goldobot::IODevice* device, const goldobot::IODeviceConfigUART* config);
 
-#ifdef SIMULATE_ROBOT
-static RobotSimulator s_robot_simulator;
-#endif
+static void init_device(IODeviceConfig* config)
+{
+	IODevice* device = s_io_devices + config->fd;
+	device->type = config->device_type;
+
+	uint8_t* rx_buffer = static_cast<uint8_t*>(pvPortMalloc(config->rx_buffer_size));
+	uint8_t* tx_buffer = static_cast<uint8_t*>(pvPortMalloc(config->rx_buffer_size));
+
+	device->rx_queue.init(rx_buffer, config->rx_buffer_size);
+	device->tx_queue.init(tx_buffer, config->tx_buffer_size);
+
+	device->rx_semaphore = xSemaphoreCreateBinary();
+	device->tx_semaphore = xSemaphoreCreateBinary();
+
+	if(device->type == IODeviceType::Uart)
+	{
+		goldobot_hal_usart_init(device, static_cast<const goldobot::IODeviceConfigUART*>(config));
+	}
+}
+
+
 
 void Hal::init()
 {
+    // init uart
+	IODeviceConfigUART uart_config;
+	uart_config.device_type = IODeviceType::Uart;
+	uart_config.fd = 0;
+	uart_config.uart_index = 1; // USART2
+	uart_config.baudrate = 230400U;
+	uart_config.rx_port = 0;
+	uart_config.rx_pin = 3;
+	uart_config.tx_port = 0;
+	uart_config.tx_pin = 2;
+	uart_config.rx_buffer_size = 128;
+	uart_config.tx_buffer_size = 128;
+	uart_config.flags = 0;
+
+	init_device(&uart_config);
+
+    
 	// Start timers for encoders
 	HAL_TIM_Encoder_Start_IT(&htim1, TIM_CHANNEL_1);
 	HAL_TIM_Encoder_Start_IT(&htim4, TIM_CHANNEL_1);
@@ -112,18 +168,6 @@ void Hal::init()
 
 	HAL_TIM_Base_Start(&htim3);
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
-
-	s_uart_semaphore = xSemaphoreCreateBinary();
-
-#ifdef SIMULATE_ROBOT
-	// Init simulator
-	RobotSimulatorConfig simulator_config;
-	simulator_config.speed_coeff = 1.7f; // Measured on big robot
-	simulator_config.wheels_spacing = 0.2f;
-	simulator_config.encoders_spacing = 0.3f;
-	simulator_config.encoders_counts_per_m = 1 / 1.5e-05f;
-	s_robot_simulator.m_config = simulator_config;
-#endif
 }
 
 TickType_t Hal::get_tick_count()
@@ -134,11 +178,6 @@ TickType_t Hal::get_tick_count()
 
 void Hal::read_encoders(uint16_t& left, uint16_t& right)
 {
-#ifdef SIMULATE_ROBOT
-	left = s_robot_simulator.m_left_encoder;
-	right = s_robot_simulator.m_right_encoder;
-	return;
-#endif
 	left = 8192 - htim4.Instance->CNT;
 	right = 8192 - htim1.Instance->CNT;
 }
@@ -154,36 +193,8 @@ void Hal::set_motors_enable(bool enabled)
 	}
 }
 
-void Hal::set_servo_pwm(uint16_t pwm)
-{
-	__HAL_TIM_SET_COMPARE(&htim16, TIM_CHANNEL_1, pwm);
-}
-
-#if 0 /* FIXME : DEBUG */
-extern bool g_goldo_megakill_switch;
-void Hal::disable_motors_pwm()
-{
-	HAL_GPIO_WritePin(MAXON1_DIR_GPIO_Port, MAXON1_DIR_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(MAXON2_DIR_GPIO_Port, MAXON2_DIR_Pin, GPIO_PIN_RESET);
-	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 0);
-	__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);
-}
-#endif
-
 void Hal::set_motors_pwm(float left, float right)
 {
-#if 0 /* FIXME : DEBUG */
-    if (g_goldo_megakill_switch) {
-        disable_motors_pwm();
-        return;
-    }
-#endif
-
-#ifdef SIMULATE_ROBOT
-	s_robot_simulator.m_left_pwm = left;
-	s_robot_simulator.m_right_pwm = right;
-	s_robot_simulator.do_step();
-#endif
 	int left_pwm = 0;
 	int right_pwm = 0;
 	if(left > 0)
@@ -218,109 +229,26 @@ void Hal::set_motors_pwm(float left, float right)
 	__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, right_pwm);
 }
 
-bool Hal::uart_transmit(int uart_index, const char* buffer, uint16_t size, bool blocking)
+
+
+uint16_t Hal::uart_read(int fd, uint8_t* buffer, uint16_t buffer_size)
 {
-	auto huart_ptr = g_uart_handles[uart_index];
-	if(HAL_UART_Transmit_IT(huart_ptr, (uint8_t*)buffer, size)!= HAL_OK)
-	{
-		return false;
-	}
-	if(blocking)
-	{
-		Hal::uart_wait_for_transmit(uart_index);
-	}
-	return true;
+	auto& device = s_io_devices[fd];
+	auto usart = static_cast<USART_TypeDef*>(device.device_handle);
+	return device.rx_queue.pop(buffer, buffer_size);
 }
 
-bool Hal::uart_transmit_dma(int uart_index, const char* buffer, uint16_t size)
+uint16_t Hal::uart_write(int fd, const uint8_t* buffer, uint16_t buffer_size)
 {
-	auto huart_ptr = g_uart_handles[uart_index];
-	if(HAL_UART_Transmit_DMA(huart_ptr, (uint8_t*)buffer, size)!= HAL_OK)
-	{
-		return false;
-	}
-	return true;
+	auto& device = s_io_devices[fd];
+	uint16_t bytes_written = device.tx_queue.push(buffer, buffer_size);
+	//if()
 }
 
-bool Hal::uart_transmit_finished(int uart_index)
+uint16_t Hal::uart_write_space_available(int fd)
 {
-	auto huart_ptr = g_uart_handles[uart_index];
-	return huart_ptr->gState != HAL_UART_STATE_BUSY_TX;
-}
-
-void Hal::uart_wait_for_transmit(int uart_index)
-{
-	auto huart_ptr = g_uart_handles[uart_index];
-	while (huart_ptr->gState == HAL_UART_STATE_BUSY_TX)
-	{
-		// Semaphore is unblocked by UART interrupts.
-		xSemaphoreTake(s_uart_semaphore, portMAX_DELAY);
-	}
-}
-
-bool Hal::uart_receive(int uart_index, char* buffer, uint16_t size, bool blocking)
-{
-	auto huart_ptr = g_uart_handles[uart_index];
-	if(HAL_UART_Receive_IT(huart_ptr, (uint8_t*)buffer, size)!= HAL_OK)
-	{
-		return false;
-	}
-	if(blocking)
-	{
-		Hal::uart_wait_for_receive(uart_index);
-	}
-	return true;
-}
-
-bool Hal::uart_receive_dma(int uart_index, const char* buffer, uint16_t size)
-{
-	auto huart_ptr = g_uart_handles[uart_index];
-
-	if(HAL_UART_Receive_DMA(huart_ptr, (uint8_t*)buffer, size)!= HAL_OK)
-	{
-		return false;
-	}
-
-	return true;
-}
-
-
-bool Hal::uart_receive_finished(int uart_index)
-{
-	auto huart_ptr = g_uart_handles[uart_index];
-	return huart_ptr->RxState != HAL_UART_STATE_BUSY_RX;
-}
-
-void Hal::uart_wait_for_receive(int uart_index)
-{
-	auto huart_ptr = g_uart_handles[uart_index];
-	while (huart_ptr->RxState == HAL_UART_STATE_BUSY_RX)
-	{
-		// Semaphore is unblocked by UART interrupts.
-		xSemaphoreTake(s_uart_semaphore, portMAX_DELAY);
-	}
-}
-
-uint16_t Hal::uart_bytes_received(int uart_index)
-{
-	auto huart_ptr = g_uart_handles[uart_index];
-	portDISABLE_INTERRUPTS();
-	uint16_t bytes_received = huart_ptr->RxXferSize - huart_ptr->RxXferCount;
-	portENABLE_INTERRUPTS();
-	return bytes_received;
-}
-uint16_t Hal::uart_receive_abort(int uart_index)
-{
-	auto huart_ptr = g_uart_handles[uart_index];
-
-	portDISABLE_INTERRUPTS();
-	uint16_t bytes_received = huart_ptr->RxXferSize - huart_ptr->RxXferCount;
-	HAL_UART_AbortReceive_IT(huart_ptr);
-	portENABLE_INTERRUPTS();
-
-	// Unblock tasks potentially waiting for recevie to finish
-	xSemaphoreGive(s_uart_semaphore);
-	return bytes_received;
+	auto& device = s_io_devices[fd];
+	return device.tx_queue.space_available();
 }
 
 void Hal::set_gpio(int gpio_index, bool value)
@@ -334,6 +262,7 @@ void Hal::set_gpio(int gpio_index, bool value)
 		HAL_GPIO_WritePin(desc.port, desc.pin, GPIO_PIN_RESET);
 	}
 }
+
 
 bool Hal::get_gpio(int gpio_index)
 {

@@ -35,52 +35,32 @@ void UARTCommTask::taskFunction()
 	set_priority(5);
 
 	m_last_timestamp = Hal::get_tick_count();
-	m_bytes_sent = 0;
-	m_serialize_buffer_high_watermark = 0;
 
-	Hal::uart_receive(0, m_recv_buffer, sizeof(m_recv_buffer), false);
+
 	while(1)
 	{
-		// If current transmission is finished, send next chunk of data from ring buffer
-		if(Hal::uart_transmit_finished(0))
+
 		{
-			auto watermark =  m_serializer.size();
-			if(watermark > m_serialize_buffer_high_watermark)
-			{
-				m_serialize_buffer_high_watermark = watermark;
-			}
-			size_t dtlen = m_serializer.pop_data((unsigned char*)m_send_buffer, sizeof(m_send_buffer));
+			uint16_t space_available = Hal::uart_write_space_available(0);
+			size_t dtlen = m_serializer.pop_data((unsigned char*)m_scratch_buffer, space_available);
 			if(dtlen)
 			{
-				Hal::uart_transmit(0, m_send_buffer, dtlen, false);
+			Hal::uart_write(0, m_scratch_buffer, dtlen);
 			}
-			m_bytes_sent += dtlen;
 		}
 
 		// Parse received data
-		if(Hal::uart_receive_finished(0))
-		{
-			m_deserializer.push_data((unsigned char*)m_recv_buffer, sizeof(m_recv_buffer));
-		} else
-		{
-			// Abort reception if previous was not finished
-			uint16_t bytes_received = Hal::uart_receive_abort(0);
-			if(bytes_received)
-			{
-				m_deserializer.push_data((unsigned char*)m_recv_buffer, bytes_received);
-			}
-		}
+		size_t bytes_read = Hal::uart_read(0, (unsigned char*)m_scratch_buffer, sizeof(m_scratch_buffer));
+		m_deserializer.push_data((unsigned char*)m_scratch_buffer, bytes_read);
 
-		// Launch new receive command
-		Hal::uart_receive(0, m_recv_buffer, sizeof(m_recv_buffer), false);
 
 		// Copy waiting messages in serializer if needed
 		while(m_out_queue.message_ready() && m_out_queue.message_size() < m_serializer.availableSize())
 		{
 			auto msg_type = m_out_queue.message_type();
 			auto msg_size = m_out_queue.message_size();
-			m_out_queue.pop_message(m_tmp_buffer, msg_size);
-			m_serializer.push_message((uint16_t)msg_type, m_tmp_buffer, msg_size);
+			m_out_queue.pop_message(m_scratch_buffer, msg_size);
+			m_serializer.push_message((uint16_t)msg_type, m_scratch_buffer, msg_size);
 		}
 
 		// Process received message if needed
@@ -99,16 +79,13 @@ void UARTCommTask::taskFunction()
 		uint32_t timestamp = Hal::get_tick_count();
 		if(timestamp - m_last_timestamp >= 1000)
 		{
-			uint16_t msg[12];
-			msg[0] = (m_bytes_sent * 1000) / (timestamp - m_last_timestamp);
-			msg[1] =  m_serialize_buffer_high_watermark;
-			*(CommDeserializer::Statistics*)(msg + 2) = m_deserializer.statistics();
-
-			sizeof(CommDeserializer::Statistics);
-			send_message(CommMessageType::CommStats, (char*)msg, 24);
+			uint8_t msg[sizeof(CommDeserializer::Statistics) + sizeof(CommSerializer::Statistics)];
+			auto deserializer_statistics = m_deserializer.statistics();
+			auto serializer_statistics = m_serializer.statistics();
+			memcpy(msg, &deserializer_statistics, sizeof(CommDeserializer::Statistics));
+			memcpy(msg + sizeof(CommDeserializer::Statistics), &serializer_statistics, sizeof(CommSerializer::Statistics));
+			send_message(CommMessageType::CommStats, (char*)msg, sizeof(msg));
 			m_last_timestamp = timestamp;
-			m_bytes_sent = 0;
-			m_serialize_buffer_high_watermark = 0;
 		}
 		// Wait for next tick
 		delay(1);
@@ -125,6 +102,12 @@ void UARTCommTask::process_message(uint16_t message_type)
 {
 	uint16_t msg_type = m_deserializer.message_type();
 	size_t msg_size = m_deserializer.message_size();
-	m_deserializer.pop_message(m_tmp_buffer, msg_size);
-	Robot::instance().mainExchangeIn().pushMessage((CommMessageType)msg_type, m_tmp_buffer, msg_size);
+	m_deserializer.pop_message(m_scratch_buffer, msg_size);
+	if(msg_type == static_cast<uint16_t>(CommMessageType::Ping))
+	{
+		m_serializer.push_message(msg_type, (const unsigned char*)(m_scratch_buffer), msg_size);
+	} else
+	{
+		Robot::instance().mainExchangeIn().pushMessage((CommMessageType)msg_type, m_scratch_buffer, msg_size);
+	};
 }

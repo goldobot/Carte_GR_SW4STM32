@@ -45,8 +45,11 @@ void RtTelemetryTask::taskFunction()
   debug_traj_flag = false;
   rt_rcv_state = RT_RCV_IDLE;
 
+
   while(1)
   {
+	  delay_periodic(50);
+	continue;
     unsigned int *pw;
     unsigned short *psw;
     unsigned char *pc;
@@ -122,7 +125,7 @@ void RtTelemetryTask::taskFunction()
     odo_send_buf[n_char++] = *(pc++);
 
     //Hal::uart_transmit(2, (const char *) odo_send_buf, n_char, false);
-    Hal::uart_transmit_dma(2, (const char *) odo_send_buf, n_char);
+    //Hal::uart_transmit_dma(2, (const char *) odo_send_buf, n_char);
 
     delay_periodic(50);
 
@@ -150,7 +153,7 @@ void RtTelemetryTask::taskFunction()
         odo_send_buf[n_char++] = *(pc++);
       }
 
-      Hal::uart_transmit_dma(2, (const char *) odo_send_buf, n_char);
+      //Hal::uart_transmit_dma(2, (const char *) odo_send_buf, n_char);
 
       debug_traj_flag = false;
     }
@@ -159,7 +162,7 @@ void RtTelemetryTask::taskFunction()
     switch (rt_rcv_state) {
     case RT_RCV_IDLE:
       std::memset(rt_rcv_buff,0,RT_RCV_BUFF_SZ);
-      Hal::uart_receive_dma(2, (const char *)rt_rcv_buff, RT_RCV_BUFF_SZ);
+      //Hal::uart_receive_dma(2, (const char *)rt_rcv_buff, RT_RCV_BUFF_SZ);
       rt_rcv_state = RT_RCV_RECEIVING;
       break;
     case RT_RCV_RECEIVING:

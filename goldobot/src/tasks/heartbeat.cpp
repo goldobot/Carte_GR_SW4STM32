@@ -3,6 +3,8 @@
 #include "goldobot/robot.hpp"
 #include "goldobot/messages.hpp"
 
+#include "FreeRTOS.h"
+
 using namespace goldobot;
 
 HeartbeatTask::HeartbeatTask()
@@ -31,17 +33,25 @@ void HeartbeatTask::taskFunction()
     goldobot::g_goldo_debug7 = true;
     goldobot::g_dbg_goldo = 0;
 #endif
+    int i;
 
 	while(1)
 	{
 		uint32_t clock = Hal::get_tick_count();
 		auto& exchange = Robot::instance().mainExchangeOut();
-		exchange.pushMessage(CommMessageType::Sync,(unsigned char*)"goldobot",8);
 		exchange.pushMessage(CommMessageType::Heartbeat,(unsigned char*)&clock,sizeof(clock));
 
 		uint16_t remaining_time = Robot::instance().remainingMatchTime();
 		exchange.pushMessage(CommMessageType::MatchRemainingTime,(unsigned char*)&remaining_time, 2);
 
+		i++;
+		if(i == 10)
+		{
+			i = 0;
+			HeapStats_t heap_stats;
+			vPortGetHeapStats(&heap_stats);
+			exchange.pushMessage(CommMessageType::HeapStats,(unsigned char*)&heap_stats, sizeof(heap_stats));
+		}
 
 		//gpio debug
 		uint32_t gpio = 0;

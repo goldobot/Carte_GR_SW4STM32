@@ -13,6 +13,8 @@ namespace goldobot
 		CommStats=3,
 		DbgPrintf=4,
 		GetNucleoFirmwareVersion=5,
+		Ping=6,
+		HeapStats=7,
 		// Propulsion telemetry
 		PropulsionTelemetry=8, //
 		PropulsionTelemetryEx=9,

@@ -110,6 +110,7 @@
 #define configQUEUE_REGISTRY_SIZE                8
 #define configENABLE_BACKWARD_COMPATIBILITY      0
 #define configUSE_PORT_OPTIMISED_TASK_SELECTION  1
+#define configUSE_APPLICATION_TASK_TAG           1
 
 /* Co-routine definitions. */
 #define configUSE_CO_ROUTINES                    0
@@ -168,6 +169,12 @@ standard names. */
 
 /* USER CODE BEGIN Defines */   	      
 /* Section where parameter definitions can be added (for instance, to override default ones in FreeRTOS.h) */
+void goldo_trace_task_switched_in(void* task);
+void goldo_trace_task_switched_out(void* task);
+void goldo_trace_task_create(void* task);
+#define traceTASK_CREATE(xTask) goldo_trace_task_create(xTask)
+#define traceTASK_SWITCHED_OUT() goldo_trace_task_switched_out(pxCurrentTCB);
+#define traceTASK_SWITCHED_IN() goldo_trace_task_switched_in(pxCurrentTCB);
 /* USER CODE END Defines */ 
 
 #endif /* FREERTOS_CONFIG_H */

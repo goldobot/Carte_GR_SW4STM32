@@ -127,7 +127,7 @@ void UsageFault_Handler(void)
    while(1){};
 }
 
-
+void goldo_trace_init(void);
 
 /* USER CODE END 0 */
 
@@ -176,6 +176,7 @@ int main(void)
   MX_TIM16_Init();
   MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
+  goldo_trace_init();
 
   /* USER CODE END 2 */
 
@@ -880,6 +881,7 @@ static void MX_USART2_UART_Init(void)
   /* USER CODE BEGIN USART2_Init 1 */
 
   /* USER CODE END USART2_Init 1 */
+	return;
   huart2.Instance = USART2;
   huart2.Init.BaudRate = 230400;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
