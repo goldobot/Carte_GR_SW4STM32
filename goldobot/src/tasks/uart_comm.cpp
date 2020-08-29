@@ -36,16 +36,18 @@ void UARTCommTask::taskFunction()
 
 	m_last_timestamp = Hal::get_tick_count();
 
-
 	while(1)
 	{
 
 		{
 			uint16_t space_available = Hal::uart_write_space_available(0);
+			if(space_available > sizeof(m_scratch_buffer)){
+				space_available = sizeof(m_scratch_buffer);
+			}
 			size_t dtlen = m_serializer.pop_data((unsigned char*)m_scratch_buffer, space_available);
 			if(dtlen)
 			{
-			Hal::uart_write(0, m_scratch_buffer, dtlen);
+				Hal::uart_write(0, m_scratch_buffer, dtlen);
 			}
 		}
 

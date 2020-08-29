@@ -15,6 +15,8 @@ extern "C"
 
 #include "core_cm4.h"
 
+#include "goldobot/platform/hal_io_device.hpp"
+
 #include <sys/unistd.h> // STDOUT_FILENO, STDERR_FILENO
 #include <errno.h>
 #include <math.h>
@@ -23,6 +25,9 @@ extern "C"
 
 // Configuration structures
 
+namespace goldobot { namespace platform {
+void hal_usart_init(IODevice* device, const goldobot::IODeviceConfigUART* config);
+} };
 
 
 extern "C"
@@ -50,6 +55,7 @@ void __assert_func(const char* filename, int line, const char*, const char*)
 #define MAXON1_DIR_GPIO_Port GPIOB
 
 using namespace goldobot;
+using namespace goldobot::platform;
 
 struct GPIODescriptor
 {
@@ -75,8 +81,6 @@ extern "C"
   I2C_HandleTypeDef hi2c1;
 }
 
-static IODevice s_io_devices[16];
-
 
 extern "C"
 {
@@ -85,42 +89,13 @@ extern "C"
 	extern TIM_HandleTypeDef htim3;
 	extern TIM_HandleTypeDef htim4;
 	extern TIM_HandleTypeDef htim16;
-
-	extern void* goldobot_hal_s_usart_io_devices[5];
-
-	void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart)
-	{
-	/*	if (huart!=&huart3) {
-			BaseType_t xHigherPriorityTaskWoken;
-			xSemaphoreGiveFromISR(s_uart_semaphore, &xHigherPriorityTaskWoken);
-			portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-		}*/
-	}
-
-	void HAL_UART_RxCpltCallback(UART_HandleTypeDef* huart)
-	{
-		auto ptr = s_io_devices;
-		while(ptr->device_handle != nullptr)
-		{
-			if(ptr->device_handle == huart)
-			{
-				//ptr->rx_queue.size += huart->RxXferSize;
-				//HAL_UART_Receive_IT(huart, ptr->rx_queue.buffer, ptr->rx_queue.buffer_size/2);
-				int a =1;
-				return;
-			}
-
-			ptr++;
-		}
-	}
 }
 
-void goldobot_hal_usart_init(goldobot::IODevice* device, const goldobot::IODeviceConfigUART* config);
+
 
 static void init_device(IODeviceConfig* config)
 {
-	IODevice* device = s_io_devices + config->fd;
-	device->type = config->device_type;
+	IODevice* device = &g_io_devices[config->fd];
 
 	uint8_t* rx_buffer = static_cast<uint8_t*>(pvPortMalloc(config->rx_buffer_size));
 	uint8_t* tx_buffer = static_cast<uint8_t*>(pvPortMalloc(config->rx_buffer_size));
@@ -131,9 +106,15 @@ static void init_device(IODeviceConfig* config)
 	device->rx_semaphore = xSemaphoreCreateBinary();
 	device->tx_semaphore = xSemaphoreCreateBinary();
 
-	if(device->type == IODeviceType::Uart)
+	if(config->device_type == IODeviceType::Uart)
 	{
-		goldobot_hal_usart_init(device, static_cast<const goldobot::IODeviceConfigUART*>(config));
+		hal_usart_init(device, static_cast<const goldobot::IODeviceConfigUART*>(config));
+	}
+
+	// Non blocking io (fifo mode)
+	if(true)
+	{
+		device->start_rx_fifo();
 	}
 }
 
@@ -233,21 +214,19 @@ void Hal::set_motors_pwm(float left, float right)
 
 uint16_t Hal::uart_read(int fd, uint8_t* buffer, uint16_t buffer_size)
 {
-	auto& device = s_io_devices[fd];
-	auto usart = static_cast<USART_TypeDef*>(device.device_handle);
-	return device.rx_queue.pop(buffer, buffer_size);
+	assert(fd >= 0 && fd < sizeof(g_io_devices)/sizeof(IODevice));
+	return g_io_devices[fd].read(buffer, buffer_size);
 }
 
 uint16_t Hal::uart_write(int fd, const uint8_t* buffer, uint16_t buffer_size)
 {
-	auto& device = s_io_devices[fd];
-	uint16_t bytes_written = device.tx_queue.push(buffer, buffer_size);
-	//if()
+	assert(fd >= 0 && fd < sizeof(g_io_devices)/sizeof(IODevice));
+	return g_io_devices[fd].write(buffer, buffer_size);
 }
 
 uint16_t Hal::uart_write_space_available(int fd)
 {
-	auto& device = s_io_devices[fd];
+	auto& device = g_io_devices[fd];
 	return device.tx_queue.space_available();
 }
 
@@ -270,10 +249,6 @@ bool Hal::get_gpio(int gpio_index)
 	return HAL_GPIO_ReadPin(desc.port, desc.pin) == GPIO_PIN_SET;
 }
 
-bool Hal::user_flash_erase(int start_page, int num_pages)
-{
-	return true;
-}
 
 void Hal::send_spi_frame(unsigned char* buff_out, unsigned char* buff_in)
 {

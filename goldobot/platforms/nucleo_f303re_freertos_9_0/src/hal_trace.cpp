@@ -45,7 +45,7 @@ void goldo_trace_task_create(void* task)
 	g_trace_events[g_trace_event_head].reserved = 0;
 	g_trace_events[g_trace_event_head].cycle_counter = cycle_counter;
 	g_trace_event_head++;
-	if(g_trace_event_head == sizeof(g_trace_events)) g_trace_event_head = 0;
+	if(g_trace_event_head == sizeof(g_trace_events)/sizeof(TraceEvent)) g_trace_event_head = 0;
 
 }
 
@@ -59,7 +59,7 @@ void goldo_trace_task_switched_in(void* task)
 	g_trace_events[g_trace_event_head].reserved = 0;
 	g_trace_events[g_trace_event_head].cycle_counter = cycle_counter;
 	g_trace_event_head++;
-	if(g_trace_event_head == sizeof(g_trace_events)) g_trace_event_head = 0;
+	if(g_trace_event_head == sizeof(g_trace_events)/sizeof(TraceEvent)) g_trace_event_head = 0;
 }
 
 void goldo_trace_task_switched_out(void* task)
@@ -72,5 +72,5 @@ void goldo_trace_task_switched_out(void* task)
 	g_trace_events[g_trace_event_head].reserved = 0;
 	g_trace_events[g_trace_event_head].cycle_counter = cycle_counter;
 	g_trace_event_head++;
-	if(g_trace_event_head == sizeof(g_trace_events)) g_trace_event_head = 0;
+	if(g_trace_event_head == sizeof(g_trace_events)/sizeof(TraceEvent)) g_trace_event_head = 0;
 }

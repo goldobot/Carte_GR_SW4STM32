@@ -11,7 +11,9 @@ namespace goldobot
 		None=0,
 		Uart=1,
 		I2C=2,
-		Spi=3
+		Spi=3,
+		Encoder,
+		Pwm
 	};
 
 
@@ -40,13 +42,6 @@ namespace goldobot
 	class Hal
 	{
 	public:
-
-
-		struct IODeviceDescriptor
-		{
-			IODeviceType type;
-		};
-
 		enum class Status
 		{
 			Error = 0,
@@ -102,12 +97,5 @@ namespace goldobot
 
 		static Status i2c_memory_read(int fd, uint16_t dev_address, uint16_t mem_address, uint16_t mem_address_size, uint8_t* buffer, uint16_t size);
 		static Status i2c_memory_write(int fd, uint16_t dev_address, uint16_t mem_address, uint16_t mem_address_size, const uint8_t* buffer, uint16_t size);
-
-		static
-		bool user_flash_erase(int start_page, int num_pages);
-
-		static
-		bool user_flash_read(uint16_t start_offset, char* buffer, uint16_t size);
-
 	};
 }

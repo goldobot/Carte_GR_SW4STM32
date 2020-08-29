@@ -1,4 +1,4 @@
-#include "goldobot/platform/hal_private.hpp"
+#include "goldobot/platform/hal_io_device.hpp"
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -6,8 +6,8 @@
 #include <cstring>
 
 
-namespace goldobot
-{
+namespace goldobot { namespace platform {
+
 
 void IODeviceQueue::init(uint8_t* buffer, size_t buffer_size)
 {
@@ -18,10 +18,10 @@ void IODeviceQueue::init(uint8_t* buffer, size_t buffer_size)
 	m_full = 0;
 }
 
-uint16_t IODeviceQueue::size() const
+size_t IODeviceQueue::size() const
 {
 	taskDISABLE_INTERRUPTS();
-	uint16_t retval = 0;
+	size_t retval = 0;
 	if(m_full) {
 		retval = m_buffer_end - m_buffer;
 	}
@@ -36,17 +36,17 @@ uint16_t IODeviceQueue::size() const
 	return retval;
 }
 
-uint16_t IODeviceQueue::max_size() const
+size_t IODeviceQueue::max_size() const
 {
 	return m_buffer_end - m_buffer;
 }
 
-uint16_t IODeviceQueue::space_available() const
+size_t IODeviceQueue::space_available() const
 {
 	return max_size() - size();
 }
 
-uint16_t IODeviceQueue::pop(uint8_t* buffer, uint16_t buffer_size)
+size_t IODeviceQueue::pop(uint8_t* buffer, size_t buffer_size)
 {
 	if(buffer_size == 0 || buffer == nullptr)
 	{
@@ -88,7 +88,7 @@ uint16_t IODeviceQueue::pop(uint8_t* buffer, uint16_t buffer_size)
 	return bytes_to_read;
 }
 
-uint16_t IODeviceQueue::push(const uint8_t* buffer, uint16_t buffer_size)
+size_t IODeviceQueue::push(const uint8_t* buffer, size_t buffer_size)
 {
 	if(buffer_size == 0 || buffer == nullptr)
 	{
@@ -125,5 +125,100 @@ uint16_t IODeviceQueue::push(const uint8_t* buffer, uint16_t buffer_size)
 	return bytes_to_write;
 }
 
+bool IODeviceQueue::init_tx_request(IORequest* request)
+{
+	// Return false if empty
+	if(m_head == m_tail && !m_full)
+	{
+		return false;
+	}
 
-} // namespace goldobot
+	request->ptr = m_tail;
+	if(m_head > m_tail)
+	{
+		request->size = m_head - m_tail;
+	} else
+	{
+		request->size = m_buffer_end - m_tail;
+	}
+	return true;
+}
+
+void IODeviceQueue::update_tx_request(IORequest* req)
+{
+	size_t bytes_transmitted = (req->size - req->remaining);
+	if(bytes_transmitted == 0)
+	{
+		return;
+	}
+
+	uint8_t* tail = req->ptr + bytes_transmitted;
+	if(tail == m_buffer_end)
+	{
+		tail = m_buffer;
+	}
+
+	m_full = false;
+	m_tail = tail;
+}
+
+bool IODeviceQueue::init_rx_request(IORequest* request)
+{
+	if(request->state != IORequestState::Ready)
+	{
+		return false;
+	}
+
+	// No space to read data into
+	if(m_full)
+	{
+		request->ptr = 0;
+		request->size = 0;
+		return false;
+	}
+
+	request->ptr = m_head;
+
+	if(m_tail > m_head)
+	{
+		// Read data up to tail
+		request->size = m_tail - m_head;
+	}
+	else
+	{
+		// Read data up to end of the buffer
+		request->size = m_buffer_end - m_head;
+	}
+	return true;
+}
+
+void IODeviceQueue::update_rx_request(IORequest* req)
+{
+	if(req->state == IORequestState::Ready)
+	{
+		return;
+	}
+
+	size_t bytes_received = (req->size - req->remaining);
+	if(bytes_received == 0)
+	{
+		return;
+	}
+
+	uint8_t* head = req->ptr + bytes_received;
+	if(head == m_buffer_end)
+	{
+		head = m_buffer;
+	}
+
+	// If head after reading is equal to tail, the buffer has been filled
+	m_full = ((head == m_tail) && req->remaining == 0);
+	m_head = head;
+	if(m_full)
+	{
+		int a =1;
+	}
+}
+
+
+} }; // namespace goldobot

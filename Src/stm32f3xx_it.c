@@ -48,7 +48,7 @@ struct IODevice;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN PFP */
-void goldobot_hal_usart_irq_handler(struct IODevice* dev);
+void goldobot_hal_uart_irq_handler(int uart_index);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -60,9 +60,6 @@ void goldobot_hal_usart_irq_handler(struct IODevice* dev);
 extern SPI_HandleTypeDef hspi1;
 extern DMA_HandleTypeDef hdma_usart3_rx;
 extern DMA_HandleTypeDef hdma_usart3_tx;
-extern UART_HandleTypeDef huart1;
-extern UART_HandleTypeDef huart2;
-extern UART_HandleTypeDef huart3;
 extern TIM_HandleTypeDef htim6;
 
 /* USER CODE BEGIN EV */
@@ -128,13 +125,7 @@ void SPI1_IRQHandler(void)
   */
 void USART1_IRQHandler(void)
 {
-  /* USER CODE BEGIN USART1_IRQn 0 */
-
-  /* USER CODE END USART1_IRQn 0 */
-  HAL_UART_IRQHandler(&huart1);
-  /* USER CODE BEGIN USART1_IRQn 1 */
-
-  /* USER CODE END USART1_IRQn 1 */
+	goldobot_hal_uart_irq_handler(0);
 }
 
 /**
@@ -142,14 +133,7 @@ void USART1_IRQHandler(void)
   */
 void USART2_IRQHandler(void)
 {
-  /* USER CODE BEGIN USART2_IRQn 0 */
-
-  /* USER CODE END USART2_IRQn 0 */
-  //HAL_UART_IRQHandler(&huart2);
-  goldobot_hal_usart_irq_handler(goldobot_hal_s_usart_io_devices[1]);
-  /* USER CODE BEGIN USART2_IRQn 1 */
-
-  /* USER CODE END USART2_IRQn 1 */
+	goldobot_hal_uart_irq_handler(1);
 }
 
 /**
@@ -157,13 +141,23 @@ void USART2_IRQHandler(void)
   */
 void USART3_IRQHandler(void)
 {
-  /* USER CODE BEGIN USART3_IRQn 0 */
+	goldobot_hal_uart_irq_handler(2);
+}
 
-  /* USER CODE END USART3_IRQn 0 */
-  HAL_UART_IRQHandler(&huart3);
-  /* USER CODE BEGIN USART3_IRQn 1 */
+/**
+  * @brief This function handles UART4 global interrupt / USART3 wake-up interrupt through EXTI line 28.
+  */
+void UART4_IRQHandler(void)
+{
+	goldobot_hal_uart_irq_handler(3);
+}
 
-  /* USER CODE END USART3_IRQn 1 */
+/**
+  * @brief This function handles UART5 global interrupt / USART3 wake-up interrupt through EXTI line 28.
+  */
+void UART5_IRQHandler(void)
+{
+	goldobot_hal_uart_irq_handler(4);
 }
 
 /**

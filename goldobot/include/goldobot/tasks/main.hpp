@@ -4,9 +4,8 @@
 #include "goldobot/platform/task.hpp"
 #include "goldobot/propulsion/simple_odometry.hpp"
 #include "goldobot/propulsion/controller.hpp"
-#include "goldobot/trajectory_planner.hpp"
 #include "goldobot/sequence_engine.hpp"
-#include "goldobot/strategy_engine.hpp"
+
 
 #include <cstdint>
 

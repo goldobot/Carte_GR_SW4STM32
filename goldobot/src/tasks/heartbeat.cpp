@@ -27,12 +27,6 @@ namespace goldobot {
 
 void HeartbeatTask::taskFunction()
 {
-#if 1 /* FIXME : DEBUG */
-	g_goldo_megakill_switch = false;
-    goldobot::g_goldo_debug6 = true;
-    goldobot::g_goldo_debug7 = true;
-    goldobot::g_dbg_goldo = 0;
-#endif
     int i;
 
 	while(1)
@@ -41,48 +35,31 @@ void HeartbeatTask::taskFunction()
 		auto& exchange = Robot::instance().mainExchangeOut();
 		exchange.pushMessage(CommMessageType::Heartbeat,(unsigned char*)&clock,sizeof(clock));
 
-		uint16_t remaining_time = Robot::instance().remainingMatchTime();
-		exchange.pushMessage(CommMessageType::MatchRemainingTime,(unsigned char*)&remaining_time, 2);
+		//uint16_t remaining_time = Robot::instance().remainingMatchTime();
+		//exchange.pushMessage(CommMessageType::MatchRemainingTime,(unsigned char*)&remaining_time, 2);
 
 		i++;
 		if(i == 10)
 		{
 			i = 0;
-			HeapStats_t heap_stats;
-			vPortGetHeapStats(&heap_stats);
-			exchange.pushMessage(CommMessageType::HeapStats,(unsigned char*)&heap_stats, sizeof(heap_stats));
+			//HeapStats_t heap_stats;
+			//vPortGetHeapStats(&heap_stats);
+			//exchange.pushMessage(CommMessageType::HeapStats,(unsigned char*)&heap_stats, sizeof(heap_stats));
 		}
 
 		//gpio debug
 		uint32_t gpio = 0;
 		for(int i=0; i<6; i++)
 		{
-			if(Hal::get_gpio(i)) gpio |= (1 << i);
+			//if(Hal::get_gpio(i)) gpio |= (1 << i);
 		}
-		if(goldobot::g_goldo_debug6)
-		{
-			gpio |= (1 << 6);
-		}
-		if(goldobot::g_goldo_debug7)
-		{
-			gpio |= (1 << 7);
-		}
-		Robot::instance().mainExchangeOut().pushMessage(
-						CommMessageType::GPIODebug,
-						(unsigned char*)&gpio, sizeof(gpio));
 
-		messages::MsgMatchStateChange post_state{Robot::instance().matchState(), Robot::instance().side()};
-		Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&post_state, sizeof(post_state));
+		//Robot::instance().mainExchangeOut().pushMessage(
+		//				CommMessageType::GPIODebug,
+		//				(unsigned char*)&gpio, sizeof(gpio));
 
-
-		//	(unsigned char*)&g_dbg_goldo, sizeof(g_dbg_goldo));
-
-#if 0 /* FIXME : DEBUG */
-		g_goldo_megakill_switch = (Hal::get_gpio(2)!=0);
-		if (g_goldo_megakill_switch) {
-			Hal::disable_motors_pwm();
-		}
-#endif
+		//messages::MsgMatchStateChange post_state{Robot::instance().matchState(), Robot::instance().side()};
+		//Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&post_state, sizeof(post_state));
 
 		delay_periodic(100);
 	}
