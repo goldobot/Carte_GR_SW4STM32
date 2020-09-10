@@ -26,6 +26,7 @@ int g_trace_event_head=0;
 
 void goldo_trace_init()
 {
+	return;
 	CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
 	ITM->LAR = 0xC5ACCE55;
 	DWT->CYCCNT = 0;
@@ -35,6 +36,7 @@ void goldo_trace_init()
 
 void goldo_trace_task_create(void* task)
 {
+	return;
 	uint32_t cycle_counter = DWT->CYCCNT;
 	int task_tag = trace_task_tag;
 	trace_task_tag++;
@@ -51,6 +53,7 @@ void goldo_trace_task_create(void* task)
 
 void goldo_trace_task_switched_in(void* task)
 {
+	return;
 	uint32_t cycle_counter = DWT->CYCCNT;
 	int task_tag = (int)xTaskGetApplicationTaskTagFromISR((TaskHandle_t)task);
 
@@ -64,6 +67,7 @@ void goldo_trace_task_switched_in(void* task)
 
 void goldo_trace_task_switched_out(void* task)
 {
+	return;
 	uint32_t cycle_counter = DWT->CYCCNT;
 	int task_tag = (int)xTaskGetApplicationTaskTagFromISR((TaskHandle_t)task);
 

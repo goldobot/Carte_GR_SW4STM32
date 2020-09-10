@@ -26,7 +26,7 @@ extern "C"
 // Configuration structures
 
 namespace goldobot { namespace platform {
-void hal_usart_init(IODevice* device, const goldobot::IODeviceConfigUART* config);
+void hal_usart_init(IODevice* device, const IODeviceConfigUART* config);
 } };
 
 
@@ -36,12 +36,11 @@ void __assert_func(const char* filename, int line, const char*, const char*)
 {
 	while(1)
 	{
-
+		__asm__("BKPT");
 	}
 };
 }
 
-//#define SIMULATE_ROBOT
 
 #define SPI_FRAME_SZ 6
 
@@ -82,20 +81,10 @@ extern "C"
 }
 
 
-extern "C"
-{
-	extern TIM_HandleTypeDef htim1;
-	extern TIM_HandleTypeDef htim2;
-	extern TIM_HandleTypeDef htim3;
-	extern TIM_HandleTypeDef htim4;
-	extern TIM_HandleTypeDef htim16;
-}
-
-
 
 static void init_device(IODeviceConfig* config)
 {
-	IODevice* device = &g_io_devices[config->fd];
+	IODevice* device = &g_io_devices[config->device_id];
 
 	uint8_t* rx_buffer = static_cast<uint8_t*>(pvPortMalloc(config->rx_buffer_size));
 	uint8_t* tx_buffer = static_cast<uint8_t*>(pvPortMalloc(config->rx_buffer_size));
@@ -106,9 +95,9 @@ static void init_device(IODeviceConfig* config)
 	device->rx_semaphore = xSemaphoreCreateBinary();
 	device->tx_semaphore = xSemaphoreCreateBinary();
 
-	if(config->device_type == IODeviceType::Uart)
+	if(config->device_type == DeviceType::Uart)
 	{
-		hal_usart_init(device, static_cast<const goldobot::IODeviceConfigUART*>(config));
+		hal_usart_init(device, static_cast<const IODeviceConfigUART*>(config));
 	}
 
 	// Non blocking io (fifo mode)
@@ -119,36 +108,39 @@ static void init_device(IODeviceConfig* config)
 }
 
 
+void Hal::configure(void* config)
+{
 
+}
 void Hal::init()
 {
     // init uart
 	IODeviceConfigUART uart_config;
-	uart_config.device_type = IODeviceType::Uart;
-	uart_config.fd = 0;
+	uart_config.device_type = DeviceType::Uart;
+	uart_config.device_id = 0;
 	uart_config.uart_index = 1; // USART2
-	uart_config.baudrate = 230400U;
+	uart_config.baudrate = 500000U; //230400U;
 	uart_config.rx_port = 0;
 	uart_config.rx_pin = 3;
 	uart_config.tx_port = 0;
 	uart_config.tx_pin = 2;
-	uart_config.rx_buffer_size = 128;
-	uart_config.tx_buffer_size = 128;
-	uart_config.flags = 0;
+	uart_config.rx_buffer_size = 256;
+	uart_config.tx_buffer_size = 256;
+	uart_config.io_flags = 0;
 
 	init_device(&uart_config);
 
     
 	// Start timers for encoders
-	HAL_TIM_Encoder_Start_IT(&htim1, TIM_CHANNEL_1);
-	HAL_TIM_Encoder_Start_IT(&htim4, TIM_CHANNEL_1);
+	//HAL_TIM_Encoder_Start_IT(&htim1, TIM_CHANNEL_1);
+	//HAL_TIM_Encoder_Start_IT(&htim4, TIM_CHANNEL_1);
 
 	// start timers for motors
-	HAL_TIM_Base_Start(&htim2);
-	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
+	//HAL_TIM_Base_Start(&htim2);
+	//HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
 
-	HAL_TIM_Base_Start(&htim3);
-	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
+	//HAL_TIM_Base_Start(&htim3);
+	//HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
 }
 
 TickType_t Hal::get_tick_count()
@@ -157,13 +149,13 @@ TickType_t Hal::get_tick_count()
 }
 
 
-void Hal::read_encoders(uint16_t& left, uint16_t& right)
+void Hal::encoders_get(uint16_t& left, uint16_t& right)
 {
-	left = 8192 - htim4.Instance->CNT;
-	right = 8192 - htim1.Instance->CNT;
+	//left = 8192 - htim4.Instance->CNT;
+	//right = 8192 - htim1.Instance->CNT;
 }
 
-void Hal::set_motors_enable(bool enabled)
+void Hal::motors_set_enable(bool enabled)
 {
 	if(enabled)
 	{
@@ -174,7 +166,7 @@ void Hal::set_motors_enable(bool enabled)
 	}
 }
 
-void Hal::set_motors_pwm(float left, float right)
+void Hal::motors_set_pwm(float left, float right)
 {
 	int left_pwm = 0;
 	int right_pwm = 0;
@@ -206,8 +198,8 @@ void Hal::set_motors_pwm(float left, float right)
 		right_pwm = 10000;
 	}
 
-	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, left_pwm);
-	__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, right_pwm);
+	//__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, left_pwm);
+	//__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, right_pwm);
 }
 
 
@@ -230,7 +222,7 @@ uint16_t Hal::uart_write_space_available(int fd)
 	return device.tx_queue.space_available();
 }
 
-void Hal::set_gpio(int gpio_index, bool value)
+void Hal::gpio_set(int gpio_index, bool value)
 {
 	auto& desc = s_gpio_descriptors[gpio_index];
 	if(value)
@@ -243,7 +235,7 @@ void Hal::set_gpio(int gpio_index, bool value)
 }
 
 
-bool Hal::get_gpio(int gpio_index)
+bool Hal::gpio_get(int gpio_index)
 {
 	auto& desc = s_gpio_descriptors[gpio_index];
 	return HAL_GPIO_ReadPin(desc.port, desc.pin) == GPIO_PIN_SET;

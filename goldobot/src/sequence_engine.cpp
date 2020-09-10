@@ -101,7 +101,7 @@ bool SequenceEngine::execOp(const Op& op)
 		}
 		return false;
 	case 64: // propulsion.motors_enable
-		Hal::set_motors_enable(true);
+		Hal::motors_set_enable(true);
 		m_pc++;
 		return true;
 	case 65: // propulsion.enable
@@ -113,7 +113,7 @@ bool SequenceEngine::execOp(const Op& op)
 		return true;
 	}
 	case 66: // propulsion.motors_disable
-		Hal::set_motors_enable(false);
+		Hal::motors_set_enable(false);
 		m_pc++;
 		return true;
 	case 67: // propulsion.disable
@@ -390,7 +390,7 @@ bool SequenceEngine::execOp(const Op& op)
 		m_pc++;
 		return true;
 	case 145: // gpio.set
-		Hal::set_gpio(op.arg1,op.arg2);
+		Hal::gpio_set(op.arg1,op.arg2);
 		m_pc++;
 		return true;
 	case 141: // arm.go_to_position

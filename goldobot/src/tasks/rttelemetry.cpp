@@ -106,7 +106,7 @@ void RtTelemetryTask::taskFunction()
     uint32_t gpio = 0;
     for(int i=0; i<6; i++)
     {
-      if(Hal::get_gpio(i)) gpio |= (1 << i);
+      if(Hal::gpio_get(i)) gpio |= (1 << i);
     }
     PropulsionController::State prop_state= Robot::instance().propulsionState();
     if(prop_state!=PropulsionController::State::Stopped)

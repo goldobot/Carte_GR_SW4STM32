@@ -71,7 +71,7 @@ void PropulsionTask::doStep()
 	// Update odometry
 	uint16_t left;
 	uint16_t right;
-	Hal::read_encoders(left, right);
+	Hal::encoders_get(left, right);
 	m_odometry.update(left, right);
 	m_controller.update();
 
@@ -92,7 +92,7 @@ void PropulsionTask::doStep()
 	}
 	if(m_controller.state() != PropulsionController::State::Inactive)
 	{
-		Hal::set_motors_pwm(m_controller.leftMotorPwm(), m_controller.rightMotorPwm());
+		Hal::motors_set_pwm(m_controller.leftMotorPwm(), m_controller.rightMotorPwm());
 	}
 
 	// Send periodic telemetry messages
@@ -296,14 +296,14 @@ void PropulsionTask::processUrgentMessage()
 		{
 			uint8_t enabled;
 			m_urgent_message_queue.pop_message((unsigned char*)&enabled, 1);
-			Hal::set_motors_enable(enabled);
+			Hal::motors_set_enable(enabled);
 		}
 		break;
 	case CommMessageType::DbgSetMotorsPwm:
 		{
 			float pwm[2];
 			m_urgent_message_queue.pop_message((unsigned char*)&pwm, 8);
-			Hal::set_motors_pwm(pwm[0], pwm[1]);
+			Hal::motors_set_pwm(pwm[0], pwm[1]);
 		}
 		break;
 	case CommMessageType::PropulsionMeasurePoint:
@@ -461,7 +461,7 @@ void PropulsionTask::taskFunction()
 	// Setup odometry
 	uint16_t left;
 	uint16_t right;
-	Hal::read_encoders(left, right);
+	Hal::encoders_get(left, right);
 	m_odometry.reset(left, right);
 	m_telemetry_counter = 0;
 

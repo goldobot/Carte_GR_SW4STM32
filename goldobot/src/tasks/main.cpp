@@ -85,14 +85,14 @@ void MainTask::taskFunction()
 		switch(match_state)
 		{
 		case MatchState::Idle:
-			if( Hal::get_gpio(4))
+			if( Hal::gpio_get(4))
 			{
 				Robot::instance().setSide(Side::Purple);
 			} else
 			{
 				Robot::instance().setSide(Side::Yellow);
 			}
-			if(Hal::get_gpio(1))
+			if(Hal::gpio_get(1))
 			{
 				Robot::instance().setMatchState(MatchState::PreMatch);
 
@@ -115,7 +115,7 @@ void MainTask::taskFunction()
 			}
 			break;
 		case MatchState::WaitForStartOfMatch:
-			if(!Hal::get_gpio(1))
+			if(!Hal::gpio_get(1))
 			{
 				Robot::instance().setStartMatchTime(Hal::get_tick_count());
 				m_start_of_match_time = Hal::get_tick_count();

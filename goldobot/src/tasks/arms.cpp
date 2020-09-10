@@ -359,9 +359,9 @@ void ArmsTask::dynamixels_transmit_packet(uint8_t id, uint8_t command, unsigned 
 	}
 	checksum = ~checksum;
 	m_dynamixels_buffer[5 + num_parameters] = checksum;
-	Hal::set_gpio(3, 1);
+	Hal::gpio_set(3, 1);
 	//Hal::uart_transmit(1, (char*)m_dynamixels_buffer, 6 + num_parameters, true);
-	Hal::set_gpio(3, 0);
+	Hal::gpio_set(3, 0);
 }
 
 DynamixelStatusError ArmsTask::dynamixels_receive_packet()

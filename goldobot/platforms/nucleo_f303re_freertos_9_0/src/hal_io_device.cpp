@@ -9,7 +9,12 @@ void io_device_tx_complete_callback_fifo(IORequest* req, void* user_ptr)
 	assert(req->state == IORequestState::TxComplete);
 	auto device = static_cast<IODevice*>(user_ptr);
 	device->tx_queue.update_tx_request(req);
+
 	req->state = goldobot::platform::IORequestState::Ready;
+	req->ptr = 0;
+	req->size = 0;
+	req->remaining = 0;
+
 	if(device->tx_queue.init_tx_request(req))
 	{
 		device->functions->start_tx_request(req, device->device_handle);
@@ -21,7 +26,12 @@ void io_device_rx_complete_callback_fifo(IORequest* req, void* user_ptr)
 	assert(req->state == IORequestState::RxComplete);
 	auto device = static_cast<IODevice*>(user_ptr);
 	device->rx_queue.update_rx_request(req);
+
 	req->state = goldobot::platform::IORequestState::Ready;
+	req->ptr = 0;
+	req->size = 0;
+	req->remaining = 0;
+
 	if(device->rx_queue.init_rx_request(req))
 	{
 		device->functions->start_rx_request(req, device->device_handle);
@@ -45,13 +55,14 @@ size_t IODevice::read(uint8_t* buffer, size_t buffer_size)
 	if(true) // non blocking io
 	{
 		// Update state of rx request to read received data without waiting for end of current transfer.
-		taskDISABLE_INTERRUPTS();
+		taskENTER_CRITICAL();
 		functions->update_rx_request(&rx_request, device_handle);
 		rx_queue.update_rx_request(&rx_request);
-		taskENABLE_INTERRUPTS();
+		taskEXIT_CRITICAL();
 
 		auto bytes_read = rx_queue.pop(buffer, buffer_size);
 
+		taskENTER_CRITICAL();
 		if(rx_request.state == IORequestState::Ready)
 		{
 			if(rx_queue.init_rx_request(&rx_request))
@@ -60,6 +71,7 @@ size_t IODevice::read(uint8_t* buffer, size_t buffer_size)
 				functions->start_rx_request(&rx_request, device_handle);
 			}
 		}
+		taskEXIT_CRITICAL();
 		return bytes_read;
 	}
 	return 0;

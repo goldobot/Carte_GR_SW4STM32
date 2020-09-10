@@ -20,7 +20,7 @@ void IODeviceQueue::init(uint8_t* buffer, size_t buffer_size)
 
 size_t IODeviceQueue::size() const
 {
-	taskDISABLE_INTERRUPTS();
+	taskENTER_CRITICAL();
 	size_t retval = 0;
 	if(m_full) {
 		retval = m_buffer_end - m_buffer;
@@ -31,8 +31,10 @@ size_t IODeviceQueue::size() const
 	else {
 		retval = (m_buffer_end - m_tail) + (m_head - m_buffer);
 	}
-	taskENABLE_INTERRUPTS();
+	taskEXIT_CRITICAL();
+
 	assert(retval <= max_size());
+
 	return retval;
 }
 
@@ -81,10 +83,11 @@ size_t IODeviceQueue::pop(uint8_t* buffer, size_t buffer_size)
 		tail = m_buffer + size_2;
 	}
 
-	taskDISABLE_INTERRUPTS();
+	taskENTER_CRITICAL();
 	m_tail = tail;
 	m_full = false;
-	taskENABLE_INTERRUPTS();
+	taskEXIT_CRITICAL();
+
 	return bytes_to_read;
 }
 
@@ -115,13 +118,15 @@ size_t IODeviceQueue::push(const uint8_t* buffer, size_t buffer_size)
 		std::memcpy(m_buffer, buffer + size_1, size_2);
 		head = m_buffer + size_2;
 	}
-	taskDISABLE_INTERRUPTS();
+
+	taskENTER_CRITICAL();
 	m_head = head;
 	if(head == m_tail)
 	{
 		m_full = true;
 	}
-	taskENABLE_INTERRUPTS();
+	taskEXIT_CRITICAL();
+
 	return bytes_to_write;
 }
 
@@ -147,12 +152,14 @@ bool IODeviceQueue::init_tx_request(IORequest* request)
 void IODeviceQueue::update_tx_request(IORequest* req)
 {
 	size_t bytes_transmitted = (req->size - req->remaining);
+
 	if(bytes_transmitted == 0)
 	{
 		return;
 	}
 
 	uint8_t* tail = req->ptr + bytes_transmitted;
+
 	if(tail == m_buffer_end)
 	{
 		tail = m_buffer;
@@ -214,10 +221,6 @@ void IODeviceQueue::update_rx_request(IORequest* req)
 	// If head after reading is equal to tail, the buffer has been filled
 	m_full = ((head == m_tail) && req->remaining == 0);
 	m_head = head;
-	if(m_full)
-	{
-		int a =1;
-	}
 }
 
 

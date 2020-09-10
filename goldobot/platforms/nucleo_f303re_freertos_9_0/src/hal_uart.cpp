@@ -1,3 +1,4 @@
+#include "goldobot/platform/hal_private.hpp"
 #include "goldobot/platform/hal_io_device.hpp"
 #include "goldobot/platform/hal_gpio.hpp"
 
@@ -58,12 +59,35 @@ extern "C"
 				auto device = static_cast<goldobot::platform::IODevice*>(goldobot_hal_s_usart_io_devices[i]);
 				auto req = &device->rx_request;
 				req->remaining = huart->RxXferCount;
+				assert(req->remaining == 0);
 				req->state = goldobot::platform::IORequestState::RxComplete;
 				if(req->callback)
 				{
 					req->callback(req, device);
 				}
 				return;
+			}
+		}
+	}
+
+	void HAL_UART_ErrorCallback(UART_HandleTypeDef* huart)
+	{
+		for(unsigned i = 0; i < 5; i++)
+		{
+			if(huart == &goldobot::platform::g_uart_handles[i])
+			{
+				auto device = static_cast<goldobot::platform::IODevice*>(goldobot_hal_s_usart_io_devices[i]);
+				auto req = &device->rx_request;
+				if(req->state == goldobot::platform::IORequestState::RxBusy)
+				{
+					req->remaining = huart->RxXferCount;
+					req->state = goldobot::platform::IORequestState::RxComplete;
+					if(req->callback)
+					{
+						req->callback(req, device);
+					}
+					return;
+				}
 			}
 		}
 	}
@@ -79,6 +103,7 @@ namespace goldobot { namespace platform {
 
 void uart_start_rx_request(IORequest* req, void* device_handle)
 {
+	assert(req->state == IORequestState::Ready);
 	auto uart_handle = static_cast<UART_HandleTypeDef*>(device_handle);
 	req->remaining = req->size;
 	req->state = IORequestState::RxBusy;
@@ -97,6 +122,7 @@ void uart_update_rx_request(IORequest* req, void* device_handle)
 
 void uart_start_tx_request(IORequest* req, void* device_handle)
 {
+	assert(req->state == IORequestState::Ready);
 	auto uart_handle = static_cast<UART_HandleTypeDef*>(device_handle);
 	req->remaining = req->size;
 	req->state = IORequestState::TxBusy;
@@ -104,6 +130,44 @@ void uart_start_tx_request(IORequest* req, void* device_handle)
 }
 
 void uart_update_tx_request(IORequest* req, void* device_handle)
+{
+	if(req->state != IORequestState::TxBusy)
+	{
+		return;
+	}
+	auto uart_handle = static_cast<UART_HandleTypeDef*>(device_handle);
+	req->remaining = uart_handle->TxXferCount;
+}
+
+void uart_start_rx_request_dma(IORequest* req, void* device_handle)
+{
+	assert(req->state == IORequestState::Ready);
+	auto uart_handle = static_cast<UART_HandleTypeDef*>(device_handle);
+	req->remaining = req->size;
+	req->state = IORequestState::RxBusy;
+	HAL_UART_Receive_DMA(uart_handle, req->ptr, req->size);
+}
+
+void uart_update_rx_request_dma(IORequest* req, void* device_handle)
+{
+	if(req->state != IORequestState::RxBusy)
+	{
+		return;
+	}
+	auto uart_handle = static_cast<UART_HandleTypeDef*>(device_handle);
+	req->remaining = uart_handle->RxXferCount;
+}
+
+void uart_start_tx_request_dma(IORequest* req, void* device_handle)
+{
+	assert(req->state == IORequestState::Ready);
+	auto uart_handle = static_cast<UART_HandleTypeDef*>(device_handle);
+	req->remaining = req->size;
+	req->state = IORequestState::TxBusy;
+	HAL_UART_Transmit_DMA(uart_handle, req->ptr, req->size);
+}
+
+void uart_update_tx_request_dma(IORequest* req, void* device_handle)
 {
 	if(req->state != IORequestState::TxBusy)
 	{
@@ -122,8 +186,17 @@ IODeviceFunctions g_uart_device_functions = {
 		0
 };
 
+IODeviceFunctions g_uart_device_functions_dma = {
+		&uart_start_rx_request_dma,
+		&uart_update_rx_request_dma,
+		0,
+		&uart_start_tx_request_dma,
+		&uart_update_tx_request_dma,
+		0
+};
 
-void hal_usart_init(IODevice* device, const goldobot::IODeviceConfigUART* config)
+
+void hal_usart_init(IODevice* device, const IODeviceConfigUART* config)
 {
 	IRQn_Type irq_n;
 	uint32_t gpio_alternate;
@@ -187,7 +260,7 @@ void hal_usart_init(IODevice* device, const goldobot::IODeviceConfigUART* config
 
 
 	/* USART2 interrupt Init */
-	HAL_NVIC_SetPriority(irq_n, 5, 0);
+	HAL_NVIC_SetPriority(irq_n, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY, 0);
 	HAL_NVIC_EnableIRQ(irq_n);
 
 	uart_handle->Instance = uart_instance;
