@@ -126,6 +126,14 @@ namespace goldobot
 		RobotEndLoadConfig=402,
 		RobotEndLoadConfigStatus=403,
 
+		// ODrive
+		ODrivePacket=410,
+
+		// HAL
+		HalGpioGet=500,
+		HalGpioSet,
+		HalPwmSet,
+
 		RplidarStart=1024,
 		RplidarStop=1025,
 

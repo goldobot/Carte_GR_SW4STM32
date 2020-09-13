@@ -4,7 +4,7 @@
 #include "goldobot/platform/config.hpp"
 #include "goldobot/tasks/propulsion.hpp"
 #include "goldobot/tasks/uart_comm.hpp"
-#include "goldobot/tasks/uart2_comm.hpp"
+#include "goldobot/tasks/debug.hpp"
 #include "goldobot/tasks/heartbeat.hpp"
 #include "goldobot/tasks/rttelemetry.hpp"
 #include "goldobot/tasks/arms.hpp"
@@ -74,6 +74,7 @@ namespace goldobot
 		std::atomic<int> m_remaining_match_time{0};
 		uint32_t m_sensors_state{0};
 
+		DebugTask m_debug_task;
 		PropulsionTask m_propulsion_task;
 		UARTCommTask m_comm_task;
 		//UART2CommTask m_comm2_task;

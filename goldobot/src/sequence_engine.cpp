@@ -101,7 +101,7 @@ bool SequenceEngine::execOp(const Op& op)
 		}
 		return false;
 	case 64: // propulsion.motors_enable
-		Hal::motors_set_enable(true);
+		//Hal::motors_set_enable(true);
 		m_pc++;
 		return true;
 	case 65: // propulsion.enable
@@ -113,7 +113,7 @@ bool SequenceEngine::execOp(const Op& op)
 		return true;
 	}
 	case 66: // propulsion.motors_disable
-		Hal::motors_set_enable(false);
+		//Hal::motors_set_enable(false);
 		m_pc++;
 		return true;
 	case 67: // propulsion.disable

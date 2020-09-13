@@ -198,42 +198,38 @@ IODeviceFunctions g_uart_device_functions_dma = {
 
 void hal_usart_init(IODevice* device, const IODeviceConfigUART* config)
 {
+	int uart_index = (int)config->device_id - (int)DeviceId::Usart1;
+
 	IRQn_Type irq_n;
-	uint32_t gpio_alternate;
-	UART_HandleTypeDef* uart_handle = &g_uart_handles[config->uart_index];
+	UART_HandleTypeDef* uart_handle = &g_uart_handles[uart_index];
 	USART_TypeDef* uart_instance;
 
-	switch(config->uart_index)
+	switch(config->device_id)
 	{
-	case 0:
+	case DeviceId::Usart1:
 		uart_instance = USART1;
 		irq_n = USART1_IRQn;
-		gpio_alternate = GPIO_AF7_USART1;
 		LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_USART1);
 		break;
 
-	case 1:
+	case DeviceId::Usart2:
 		uart_instance = USART2;
 		irq_n = USART2_IRQn;
-		gpio_alternate = GPIO_AF7_USART2;
 		LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_USART2);
 		break;
-	case 2:
+	case DeviceId::Usart3:
 		uart_instance = USART3;
 		irq_n = USART3_IRQn;
-		gpio_alternate = GPIO_AF7_USART3;
 		LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_USART3);
 		break;
-	case 3:
+	case DeviceId::Uart4:
 		uart_instance = UART4;
 		irq_n = UART4_IRQn;
-		gpio_alternate = GPIO_AF5_UART4;
 		LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_UART4);
 		break;
-	case 4:
+	case DeviceId::Uart5:
 		uart_instance = UART5;
 		irq_n = UART5_IRQn;
-		gpio_alternate = GPIO_AF5_UART5;
 		LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_UART5);
 		break;
 	default:
@@ -241,22 +237,23 @@ void hal_usart_init(IODevice* device, const IODeviceConfigUART* config)
 	}
 
 
-	goldobot_hal_s_usart_io_devices[config->uart_index] = device;
+	goldobot_hal_s_usart_io_devices[uart_index] = device;
 	device->device_handle = uart_handle;
 	device->functions = &g_uart_device_functions;
 
 
 	LL_GPIO_InitTypeDef GPIO_InitStruct;
-	GPIO_InitStruct.Pin = (uint16_t)( 1U << config->rx_pin);
+	GPIO_InitStruct.Pin = (uint16_t)( 1U << config->rx_pin.pin);
 	GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
 	GPIO_InitStruct.Pull = GPIO_NOPULL;
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	GPIO_InitStruct.Alternate = gpio_alternate;
+	GPIO_InitStruct.Alternate = hal_gpio_get_pin_af(config->device_id, 0, config->rx_pin);
 
-	hal_gpio_init_pin(config->rx_port, &GPIO_InitStruct);
+	hal_gpio_init_pin(config->rx_pin.port, &GPIO_InitStruct);
 
-	GPIO_InitStruct.Pin = (uint16_t)( 1U << config->tx_pin);
-	hal_gpio_init_pin(config->tx_port, &GPIO_InitStruct);
+	GPIO_InitStruct.Pin = (uint16_t)( 1U << config->tx_pin.pin);
+	GPIO_InitStruct.Alternate = hal_gpio_get_pin_af(config->device_id, 1, config->tx_pin);
+	hal_gpio_init_pin(config->tx_pin.port, &GPIO_InitStruct);
 
 
 	/* USART2 interrupt Init */

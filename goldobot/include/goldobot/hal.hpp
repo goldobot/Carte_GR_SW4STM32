@@ -27,9 +27,21 @@ namespace goldobot
 
 		static TickType_t get_tick_count();
 
-		//! \brief read wheel encoders value
 		static
-		void encoders_get(uint16_t& left, uint16_t& right);
+		bool gpio_get(int gpio_id);
+
+		static
+		void gpio_set(int gpio_id, bool value);
+
+		static
+		void pwm_set(int pwm_id, float value);
+
+		static
+		uint16_t encoder_get(int encoder_id);
+
+		static
+		uint16_t encoder_set(int encoder_id, uint16_t value);
+
 
 		//! \brief set motors enable
 		static
@@ -48,11 +60,7 @@ namespace goldobot
 		static
 		uint16_t uart_write_space_available(int fd);
 
-		static
-		void gpio_set(int gpio_index, bool value);
 
-		static
-		bool gpio_get(int gpio_index);
 
 		static
 		void send_spi_frame(unsigned char* buff_out, unsigned char* buff_in);

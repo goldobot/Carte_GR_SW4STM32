@@ -18,6 +18,7 @@ void Robot::init()
 	m_comm_task.init();
 	m_main_exchange_out.pushMessage(CommMessageType::Reset,nullptr, 0);
 	m_main_task.init();
+	m_debug_task.init();
 	m_heartbeat_task.init();
 	//m_rt_telemetry_task.init();
 }
@@ -114,8 +115,8 @@ bool Robot::endLoadConfig(uint16_t crc)
 	odometry().setConfig(*m_odometry_config);
 	m_propulsion_task.controller().setConfig(defaultPropulsionControllerConfig());
 	m_propulsion_task.init();
-	m_arms_task.init();
-	m_fpga_task.init();
+	//m_arms_task.init();
+	//m_fpga_task.init();
 
 	start();
 	m_match_state = MatchState::Idle;

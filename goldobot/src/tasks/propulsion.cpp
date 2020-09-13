@@ -40,38 +40,11 @@ void PropulsionTask::doStep()
 		processMessage();
 	}
 
-#if 0 /* FIXME : DEBUG : GOLDO */
-	// adversary detection
-	if(Hal::get_gpio(2) && m_controller.state() == PropulsionController::State::FollowTrajectory&& m_adversary_detection_enabled)
-	{
-		m_controller.emergencyStop();
-	}
-#endif
-	// Goldenium hack
-	if(m_recalage_goldenium_armed)
-	{
-		if(Robot::instance().side() == Side::Yellow && Robot::instance().sensorsState() & (1 << 42))
-		{
-			auto pose = m_odometry.pose();
-			pose.position.y = 1;
-			m_odometry.setPose(pose);
-			m_recalage_goldenium_armed = false;
 
-		}
-
-		if(Robot::instance().side() == Side::Purple && Robot::instance().sensorsState() & (1 << 42))
-		{
-			auto pose = m_odometry.pose();
-			//pose.position.y = ;
-			m_odometry.setPose(pose);
-			m_recalage_goldenium_armed = false;
-		}
-
-	}
 	// Update odometry
 	uint16_t left;
 	uint16_t right;
-	Hal::encoders_get(left, right);
+	//Hal::encoders_get(left, right);
 	m_odometry.update(left, right);
 	m_controller.update();
 
@@ -92,7 +65,7 @@ void PropulsionTask::doStep()
 	}
 	if(m_controller.state() != PropulsionController::State::Inactive)
 	{
-		Hal::motors_set_pwm(m_controller.leftMotorPwm(), m_controller.rightMotorPwm());
+		//Hal::motors_set_pwm(m_controller.leftMotorPwm(), m_controller.rightMotorPwm());
 	}
 
 	// Send periodic telemetry messages
@@ -296,14 +269,14 @@ void PropulsionTask::processUrgentMessage()
 		{
 			uint8_t enabled;
 			m_urgent_message_queue.pop_message((unsigned char*)&enabled, 1);
-			Hal::motors_set_enable(enabled);
+			//Hal::motors_set_enable(enabled);
 		}
 		break;
 	case CommMessageType::DbgSetMotorsPwm:
 		{
 			float pwm[2];
 			m_urgent_message_queue.pop_message((unsigned char*)&pwm, 8);
-			Hal::motors_set_pwm(pwm[0], pwm[1]);
+			//Hal::motors_set_pwm(pwm[0], pwm[1]);
 		}
 		break;
 	case CommMessageType::PropulsionMeasurePoint:
@@ -316,18 +289,18 @@ void PropulsionTask::processUrgentMessage()
 			m_controller.resetPose(pose.position.x, pose.position.y, pose.yaw);
 		}
 		break;
+	case CommMessageType::ODrivePacket:
+		m_urgent_message_queue.pop_message(nullptr, 0);
+		while(m_message_queue.message_ready())
+		{
+			m_message_queue.pop_message(nullptr, 0);
+		}
+				break;
 	default:
 		m_urgent_message_queue.pop_message(nullptr, 0);
 		break;
 	}
 }
-
-#if 1 /* FIXME : DEBUG : GOLDO */
-extern bool debug_traj_flag;
-extern int debug_num_points;
-extern short debug_traj_x_mm[];
-extern short debug_traj_y_mm[];
-#endif
 
 
 unsigned char exec_traj_buff[256];// > 12 for traj params + 16*8 for points = 140
@@ -354,60 +327,12 @@ void PropulsionTask::onMsgExecuteTrajectory()
   {
     m_message_queue.pop_message(NULL,140);
   }
-
-#if 1 /* FIXME : DEBUG : GOLDO */
-  /*if (!debug_traj_flag)*/
-  {
-    debug_traj_flag = false;
-    if (num_points>0)
-    {
-      int i;
-      double tmp_f;
-      debug_num_points = num_points;
-      for (i=0; i<num_points; i++) {
-        tmp_f = 1000.0*points[i].x;
-        debug_traj_x_mm[i] = tmp_f;
-        tmp_f = 1000.0*points[i].y;
-        debug_traj_y_mm[i] = tmp_f;
-      }
-    }
-    else
-    {
-      debug_num_points = 1;
-      debug_traj_x_mm[0] = 0x7fff;
-      debug_traj_y_mm[0] = 0x7fff;
-    }
-    debug_traj_flag = true;
-  }
-#endif
-
-#if 1 /* FIXME : DEBUG : GOLDO */
-  if (num_points>0)
-    m_controller.executeTrajectory(points, num_points, speed, accel, deccel);
-#endif
 }
 
 void PropulsionTask::onMsgExecutePointTo()
 {
   float params[5];
   m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
-
-#if 1 /* FIXME : DEBUG : GOLDO */
-  /*if (!debug_traj_flag)*/
-  {
-    debug_traj_flag = false;
-    {
-      int i;
-      double tmp_f;
-      debug_num_points = 1;
-      tmp_f = 1000.0*params[0];
-      debug_traj_x_mm[0] = tmp_f;
-      tmp_f = 1000.0*params[1];
-      debug_traj_y_mm[0] = tmp_f;
-    }
-    debug_traj_flag = true;
-  }
-#endif
 
   m_controller.executePointTo(*(Vector2D*)(params), params[2], params[3], params[4]);
 }
@@ -454,14 +379,46 @@ void PropulsionTask::taskFunction()
 	Robot::instance().mainExchangeIn().subscribe({80,83, &m_urgent_message_queue});
 	Robot::instance().mainExchangeIn().subscribe({32,32, &m_urgent_message_queue});
 	Robot::instance().mainExchangeIn().subscribe({98,102, &m_urgent_message_queue});
+	Robot::instance().mainExchangeIn().subscribe({400,410, &m_urgent_message_queue}); //odrive messages
 
 	// Set task to high
 	set_priority(6);
 
+	// test debug odrive
+	uint16_t endpoint_id = 0;
+	endpoint_id |= 0x8000;
+
+	/*
+	unsigned char buffer[128];
+	buffer[0] = CANONICAL_PREFIX;
+	buffer[1] = 12;
+	buffer[2] = calc_crc8<CANONICAL_CRC8_POLYNOMIAL>(CANONICAL_CRC8_INIT, buffer, 2);
+	buffer[3] = 129;
+	buffer[4] = 0; // sequence number
+	*reinterpret_cast<uint16_t*>(buffer +5) = endpoint_id;
+	buffer[7] = 0;
+	buffer[8] = 2; //expected response size
+	buffer[9] = 0;
+	buffer[10] = 0;
+	buffer[11] = 0;
+	buffer[12] = 0; //payload: read offset
+	buffer[13] = 1;
+	buffer[14] = 0; //protocol version
+	uint16_t crc16 = calc_crc16<CANONICAL_CRC16_POLYNOMIAL>(CANONICAL_CRC16_INIT, buffer+3, 12);
+
+	buffer[15] = (uint8_t)((crc16 >> 8) & 0xff); //crc16 in big endian
+	buffer[16] = (uint8_t)((crc16 >> 0) & 0xff);*/
+
+	//Hal::uart_write(1, buffer, 17);
+	//delay(100);
+
+	//Hal::uart_read(1, buffer, 128);
+
+
 	// Setup odometry
 	uint16_t left;
 	uint16_t right;
-	Hal::encoders_get(left, right);
+	//Hal::encoders_get(left, right);
 	m_odometry.reset(left, right);
 	m_telemetry_counter = 0;
 
