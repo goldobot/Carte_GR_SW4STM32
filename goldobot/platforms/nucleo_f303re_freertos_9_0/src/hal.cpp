@@ -17,6 +17,7 @@ extern "C"
 
 #include "goldobot/platform/hal_io_device.hpp"
 #include "goldobot/platform/hal_timer.hpp"
+#include "goldobot/platform/hal_uart.hpp"
 
 #include <sys/unistd.h> // STDOUT_FILENO, STDERR_FILENO
 #include <errno.h>
@@ -26,9 +27,7 @@ extern "C"
 
 // Configuration structures
 
-namespace goldobot { namespace platform {
-void hal_usart_init(IODevice* device, const IODeviceConfigUART* config);
-} };
+
 
 
 extern "C"
@@ -41,9 +40,6 @@ void __assert_func(const char* filename, int line, const char*, const char*)
 	}
 };
 }
-
-
-#define SPI_FRAME_SZ 6
 
 
 using namespace goldobot;
@@ -96,7 +92,16 @@ void Hal::configure(void* config)
 		case DeviceType::Pwm:
 			hal_pwm_init(static_cast<DeviceConfigPwm*>(device_config));
 			break;
+		case DeviceType::Encoder:
+			hal_encoder_init(static_cast<DeviceConfigEncoder*>(device_config));
+			break;
 		case DeviceType::Uart:
+			init_io_device(static_cast<IODeviceConfig*>(device_config));
+			break;
+		case DeviceType::I2c:
+			init_io_device(static_cast<IODeviceConfig*>(device_config));
+			break;
+		case DeviceType::Spi:
 			init_io_device(static_cast<IODeviceConfig*>(device_config));
 			break;
 		}

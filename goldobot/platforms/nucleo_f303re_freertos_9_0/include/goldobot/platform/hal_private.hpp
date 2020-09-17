@@ -58,9 +58,23 @@ enum class DeviceType : uint8_t
 
 struct IODeviceFlag
 {
-	static constexpr uint16_t RxBlocking = 1;
-	static constexpr uint16_t TxBlocking = 2;
-	static constexpr uint16_t UseDMA = 4;
+	static constexpr uint16_t RxBlocking = 0x01;
+	static constexpr uint16_t TxBlocking = 0x02;
+	static constexpr uint16_t RxDma = 0x04;
+	static constexpr uint16_t TxDma = 0x08;
+};
+
+struct EncoderFlags
+{
+	static constexpr uint8_t ReverseDirection = 0x01;
+};
+
+struct GpioFlags
+{
+	static constexpr uint8_t ModeInput = 0x00;
+	static constexpr uint8_t ModetPushPull = 0x01;
+	static constexpr uint8_t ModeOutputOpenDrain = 0x02;
+
 };
 
 struct PinID
@@ -79,7 +93,7 @@ struct DeviceConfig
 struct DeviceConfigGpio : DeviceConfig
 {
 	uint8_t id;
-	uint8_t dir;
+	uint8_t dir;//mode
 	PinID pin;
 };
 
@@ -138,9 +152,10 @@ extern GpioDevice g_gpio_devices[32];
 uint32_t hal_gpio_get_pin_af(DeviceId device, int signal, PinID pin);
 
 // put it here for now
-void hal_timer_init(DeviceConfigTimer* config);
 void hal_gpio_init(const DeviceConfigGpio* config);
-void hal_pwm_init(DeviceConfigPwm* config);
+
+
+
 
 
 } }// namespace goldobot::platform

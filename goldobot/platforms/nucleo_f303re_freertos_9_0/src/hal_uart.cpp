@@ -1,6 +1,7 @@
 #include "goldobot/platform/hal_private.hpp"
 #include "goldobot/platform/hal_io_device.hpp"
 #include "goldobot/platform/hal_gpio.hpp"
+#include "goldobot/platform/hal_uart.hpp"
 
 extern "C"
 {
