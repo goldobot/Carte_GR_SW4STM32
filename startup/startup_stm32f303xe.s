@@ -61,6 +61,10 @@ defined in linker script */
 .word	_sbss
 /* end address for the .bss section. defined in linker script */
 .word	_ebss
+/* start address for the .ccm section. defined in linker script */
+.word	_sccmram
+/* end address for the .ccm section. defined in linker script */
+.word	_eccmram
 
 .equ  BootRAM,        0xF1E0F85F
 /**
@@ -105,6 +109,17 @@ LoopFillZerobss:
 	ldr	r3, = _ebss
 	cmp	r2, r3
 	bcc	FillZerobss
+	ldr	r2, =_sccmram
+	b	LoopFillZeroccmram
+/* Zero fill the ccmram segment. */
+FillZeroccmram:
+	movs	r3, #0
+	str	r3, [r2], #4
+
+LoopFillZeroccmram:
+	ldr	r3, = _eccmram
+	cmp	r2, r3
+	bcc	FillZeroccmram
 
 /* Call the clock system intitialization function.*/
     bl  SystemInit
