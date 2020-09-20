@@ -6,6 +6,6 @@
 
 namespace goldobot { namespace platform {
 
-void hal_usart_init(IODevice* device, const IODeviceConfigUART* config);
+void hal_usart_init(IODevice* device, const IODeviceConfigUart* config);
 
 } };

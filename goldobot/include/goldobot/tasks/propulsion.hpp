@@ -19,12 +19,7 @@ namespace goldobot
 
 	private:
 		MessageQueue m_message_queue;
-		unsigned char m_message_queue_buffer[512];
-
 		MessageQueue m_urgent_message_queue;
-		unsigned char m_urgent_message_queue_buffer[768];
-
-
 
 		SimpleOdometry m_odometry;
 		PropulsionController m_controller;
@@ -46,5 +41,8 @@ namespace goldobot
 
 		void measureNormal(float angle, float distance);
 		void measurePointLongi(Vector2D point, float sensor_offset);
+
+		static unsigned char s_message_queue_buffer[1024];
+		static unsigned char s_urgent_message_queue_buffer[1024];
 	};
 }

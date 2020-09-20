@@ -143,30 +143,17 @@ void hal_pwm_init(const DeviceConfigPwm* config)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 
-  if(config->pin.port != 0xff)
-  {
-	  GPIO_InitStruct.Pin = (uint16_t)( 1U << config->pin.pin);
-	  GPIO_InitStruct.Alternate = hal_gpio_get_pin_af(config->device_id, channel_index * 2, config->pin);
-	  hal_gpio_init_pin(config->pin.port, &GPIO_InitStruct);
-  }
-
-  if(config->n_pin.port != 0xff)
-  {
-	  GPIO_InitStruct.Pin = (uint16_t)( 1U << config->n_pin.pin);
-	  GPIO_InitStruct.Alternate = hal_gpio_get_pin_af(config->device_id, channel_index * 2 + 1, config->n_pin);
-	  hal_gpio_init_pin(config->n_pin.port, &GPIO_InitStruct);
-  }
+  hal_gpio_init_pin_af(config->device_id, channel_index * 2, config->pin, GPIO_InitStruct);
+  hal_gpio_init_pin_af(config->device_id, channel_index * 2 + 1, config->n_pin, GPIO_InitStruct);
 
   if(config->dir_pin.port != 0xff)
   {
 	GPIO_InitStruct = {0};
-	GPIO_InitStruct.Pin = (uint32_t)( 1U << config->dir_pin.pin);
 	GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
 	GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
 	GPIO_InitStruct.Pull = GPIO_NOPULL;
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-
-	hal_gpio_init_pin(config->dir_pin.port, &GPIO_InitStruct);
+	hal_gpio_init_pin(config->dir_pin, GPIO_InitStruct);
   }
 
   HAL_TIM_PWM_Start(tim_handle, channel);
@@ -218,19 +205,8 @@ void hal_encoder_init(const DeviceConfigEncoder* config)
 	GPIO_InitStruct.Pull = GPIO_NOPULL;
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 
-  if(config->ch1_pin.port != 0xff)
-  {
-	  GPIO_InitStruct.Pin = (uint16_t)( 1U << config->ch1_pin.pin);
-	  GPIO_InitStruct.Alternate = hal_gpio_get_pin_af(config->device_id,0, config->ch1_pin);
-	  hal_gpio_init_pin(config->ch1_pin.port, &GPIO_InitStruct);
-  }
-
-  if(config->ch2_pin.port != 0xff)
-  {
-	  GPIO_InitStruct.Pin = (uint16_t)( 1U << config->ch2_pin.pin);
-	  GPIO_InitStruct.Alternate = hal_gpio_get_pin_af(config->device_id,2 , config->ch2_pin);
-	  hal_gpio_init_pin(config->ch2_pin.port, &GPIO_InitStruct);
-  }
+	hal_gpio_init_pin_af(config->device_id, 0, config->ch1_pin, GPIO_InitStruct);
+	hal_gpio_init_pin_af(config->device_id, 2, config->ch2_pin, GPIO_InitStruct);
 
 	HAL_TIM_Encoder_Start(tim, TIM_CHANNEL_1);
 }

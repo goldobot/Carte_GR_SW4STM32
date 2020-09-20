@@ -8,10 +8,13 @@
 
 using namespace goldobot;
 
+unsigned char __attribute__((section (".ccmram"))) PropulsionTask::s_message_queue_buffer[1024];
+unsigned char __attribute__((section (".ccmram"))) PropulsionTask::s_urgent_message_queue_buffer[1024];
+
 PropulsionTask::PropulsionTask():
 		m_controller(&m_odometry),
-		m_message_queue(m_message_queue_buffer, sizeof(m_message_queue_buffer)),
-		m_urgent_message_queue(m_urgent_message_queue_buffer, sizeof(m_urgent_message_queue_buffer))
+		m_message_queue(s_message_queue_buffer, sizeof(s_message_queue_buffer)),
+		m_urgent_message_queue(s_urgent_message_queue_buffer, sizeof(s_urgent_message_queue_buffer))
 
 {
 }

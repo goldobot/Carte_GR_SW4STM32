@@ -1,6 +1,11 @@
 #include "goldobot/platform/hal_gpio.hpp"
 #include "goldobot/platform/hal_private.hpp"
 
+extern "C"
+{
+	#include "stm32f3xx_ll_bus.h"
+}
+
 namespace goldobot { namespace platform {
 
 struct AFDef
@@ -289,6 +294,8 @@ GPIO_TypeDef* g_gpio_ports[] = {
 
 GpioDevice g_gpio_devices[32];
 
+uint32_t hal_gpio_get_pin_af(DeviceId device, int signal, PinID pin);
+
 void hal_gpio_init(const DeviceConfigGpio* config)
 {
 	GpioDevice* gpio_ptr = &g_gpio_devices[config->id];
@@ -316,44 +323,71 @@ void hal_gpio_init(const DeviceConfigGpio* config)
 	GPIO_InitStruct.Pull = GPIO_NOPULL;
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 
-	hal_gpio_init_pin(config->pin.port, &GPIO_InitStruct);
+	hal_gpio_init_pin(config->pin, GPIO_InitStruct);
 	gpio_ptr->port = config->pin.port;
 	gpio_ptr->pin = config->pin.pin;
 }
 
-void hal_gpio_init_pin(int port_index, LL_GPIO_InitTypeDef* init)
+bool hal_gpio_init_pin(PinID pin, const LL_GPIO_InitTypeDef& init)
 {
+	int port_index = pin.port;
+
+	if(port_index == 0xff)
+	{
+		return false;
+	}
+
+	LL_GPIO_InitTypeDef init2 = init;
+
 	switch(port_index)
 	{
 	case 0:
 		LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
-		LL_GPIO_Init(GPIOA, init);
+		LL_GPIO_Init(GPIOA, &init2);
 		break;
 	case 1:
 		LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOB);
-		LL_GPIO_Init(GPIOB, init);
+		LL_GPIO_Init(GPIOB, &init2);
 		break;
 	case 2:
 		LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOC);
-		LL_GPIO_Init(GPIOC, init);
+		LL_GPIO_Init(GPIOC, &init2);
 		break;
 	case 3:
 		LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOD);
-		LL_GPIO_Init(GPIOD, init);
+		LL_GPIO_Init(GPIOD, &init2);
 		break;
 	case 4:
 		LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOE);
-		LL_GPIO_Init(GPIOE, init);
+		LL_GPIO_Init(GPIOE, &init2);
 		break;
 	case 5:
 		LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOF);
-		LL_GPIO_Init(GPIOF, init);
+		LL_GPIO_Init(GPIOF, &init2);
 		break;
 	case 6:
 		LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOG);
-		LL_GPIO_Init(GPIOG, init);
+		LL_GPIO_Init(GPIOG, &init2);
+		break;
+	default:
 		break;
 	}
+	return true;
+}
+
+bool hal_gpio_init_pin_af(DeviceId device, int signal, PinID pin, const LL_GPIO_InitTypeDef& init)
+{
+	int port_index = pin.port;
+
+	if(port_index == 0xff)
+	{
+		return false;
+	}
+
+	LL_GPIO_InitTypeDef init2 = init;
+	init2.Pin = (uint32_t)( 1U << pin.pin);
+	init2.Alternate = hal_gpio_get_pin_af(device, signal, pin);
+	return hal_gpio_init_pin(pin, init2);
 }
 
 uint32_t hal_gpio_get_pin_af(DeviceId device, int signal, PinID pin)
@@ -371,4 +405,23 @@ uint32_t hal_gpio_get_pin_af(DeviceId device, int signal, PinID pin)
 	return 0;
 }
 
-} }; //namespace goldobot::platform
+void hal_gpio_pin_set(PinID pin, bool value)
+{
+	if(pin.port == 0xff)
+	{
+		return;
+	}
+
+	auto gpio_port = g_gpio_ports[pin.port];
+	uint32_t pin_ = (uint32_t)( 1U << pin.pin);
+
+	if(value)
+	{
+		HAL_GPIO_WritePin(gpio_port, pin_, GPIO_PIN_SET);
+	} else
+	{
+		HAL_GPIO_WritePin(gpio_port, pin_, GPIO_PIN_RESET);
+	}
+}
+
+}}; //namespace goldobot::platform

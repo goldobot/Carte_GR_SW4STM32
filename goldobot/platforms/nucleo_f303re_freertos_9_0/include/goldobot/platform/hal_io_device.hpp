@@ -1,5 +1,7 @@
 #pragma once
 #include "goldobot/hal.hpp"
+#include "goldobot/platform/hal_private.hpp"
+#include "goldobot/platform/hal_io_device_queue.hpp"
 
 #include "FreeRTOS.h"
 #include "semphr.h"
@@ -9,9 +11,10 @@
 namespace goldobot { namespace platform {
 
 struct IORequest;
+struct IODevice;
 
-typedef void (*IORequestCallback)(IORequest*, void*);
-typedef void (*IORequestFunction)(IORequest*, void*);
+typedef void (*IORequestCallback)(IORequest*, IODevice* device);
+typedef void (*IORequestFunction)(IORequest*, uint32_t device_index);
 
 enum class IORequestState : uint32_t
 {
@@ -19,12 +22,16 @@ enum class IORequestState : uint32_t
 	TxBusy,
 	TxComplete,
 	RxBusy,
-	RxComplete
+	RxComplete,
+	RxTxBusy,
+	RxTxComplete,
+	Error
 };
 
 struct IORequest
 {
-	uint8_t* ptr;
+	uint8_t* rx_ptr;
+	uint8_t* tx_ptr;
 	uint32_t size;
 	volatile uint32_t remaining;
 	volatile IORequestState state{IORequestState::Ready};
@@ -33,59 +40,39 @@ struct IORequest
 
 struct IODeviceFunctions
 {
-	IORequestFunction start_rx_request;
-	IORequestFunction update_rx_request;
-	IORequestFunction abort_rx_request;
-	IORequestFunction start_tx_request;
-	IORequestFunction update_tx_request;
-	IORequestFunction abort_tx_request;
-};
-
-struct IODeviceQueue
-{
-	void init(uint8_t* buffer, size_t buffer_size);
-
-	size_t size() const;
-	size_t max_size() const;
-	size_t space_available() const;
-
-	size_t push(const uint8_t* buffer, size_t buffer_size);
-	size_t pop(uint8_t* buffer, size_t buffer_size);
-
-	// Initialize io request to read data up to the tail or the end of the buffer
-	bool init_rx_request(IORequest* request);
-	// Update the head according to the count of bytes read by the current request
-	void update_rx_request(IORequest* request);
-
-	bool init_tx_request(IORequest* request);
-	void update_tx_request(IORequest* request);
-
-	uint8_t* m_buffer;
-	uint8_t* m_buffer_end;
-	uint8_t* m_head;
-	uint8_t* m_tail;
-	uint32_t m_full;
+	IORequestFunction start_request;
+	IORequestFunction update_request;
+	IORequestFunction abort_request;
 };
 
 class IODevice{
 public:
 	size_t read(uint8_t* buffer, size_t buffer_size);
 	size_t write(const uint8_t* buffer, size_t buffer_size);
+
+	size_t map_read(uint8_t const ** buffer);
+	void unmap_read(const uint8_t* buffer, size_t size);
+
+	size_t map_write(uint8_t** buffer);
+	void unmap_write(uint8_t* buffer, size_t size);
+
 	void start_rx_fifo();
 
-    void* device_handle;
-	IODeviceFunctions* functions;
+    uint32_t device_index; // index of raw device (0 for UART1 for example)
+    uint16_t io_flags;
+    PinID txen_pin; //gpio pin that is set to 1 when transmitting
 
+	IODeviceFunctions* rx_functions;
     IODeviceQueue rx_queue;
     IORequest rx_request;
     SemaphoreHandle_t rx_semaphore;
 
+    IODeviceFunctions* tx_functions;
     IODeviceQueue tx_queue;
     IORequest tx_request;
     SemaphoreHandle_t tx_semaphore;
-
 };
 
 extern IODevice g_io_devices[8];
 
-}}// namespace goldobot::platform
+}} // namespace goldobot::platform

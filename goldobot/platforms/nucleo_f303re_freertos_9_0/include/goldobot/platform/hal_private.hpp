@@ -56,7 +56,7 @@ enum class DeviceType : uint8_t
 	Can
 };
 
-struct IODeviceFlag
+struct IODeviceFlags
 {
 	static constexpr uint16_t RxBlocking = 0x01;
 	static constexpr uint16_t TxBlocking = 0x02;
@@ -79,8 +79,8 @@ struct GpioFlags
 
 struct PinID
 {
-	uint8_t port;
-	uint8_t pin;
+	uint8_t port{0xff};
+	uint8_t pin{0xff};
 };
 
 struct DeviceConfig
@@ -132,24 +132,53 @@ struct IODeviceConfig : DeviceConfig
 	uint16_t io_flags;
 };
 
-struct IODeviceConfigUART : IODeviceConfig
+struct IODeviceConfigUart : IODeviceConfig
+{
+	PinID rx_pin;
+	PinID tx_pin;
+	PinID txen_pin; //gpio pin that is set to 1 when transmitting
+	uint32_t baudrate;
+};
+
+struct IODeviceConfigI2c : IODeviceConfig
 {
 	PinID rx_pin;
 	PinID tx_pin;
 	uint32_t baudrate;
 };
 
+struct IODeviceConfigSpi : IODeviceConfig
+{
+	PinID sck_pin;
+	PinID mosi_pin;
+	PinID miso_pin;
+	PinID nss_pin;
+	uint32_t baudrate_prescaler;
+};
 struct GpioDevice
 {
 	uint8_t port;
 	uint8_t pin;
 };
 
+struct HalCallback
+{
+	DeviceType device_type;
+	uint8_t device_index;
+	uint8_t callback_index;
+	uint8_t reserved;
+};
+
+void hal_callback_send_from_isr(const HalCallback& callback);
+void hal_callback_handler_task_start();
+
+void hal_uart_callback(int uart_index, int callback_id);
+
 extern GPIO_TypeDef* g_gpio_ports[];
 extern GpioDevice g_gpio_devices[32];
 
 //GPIO helpers
-uint32_t hal_gpio_get_pin_af(DeviceId device, int signal, PinID pin);
+
 
 // put it here for now
 void hal_gpio_init(const DeviceConfigGpio* config);

@@ -18,6 +18,8 @@ extern "C"
 #include "goldobot/platform/hal_io_device.hpp"
 #include "goldobot/platform/hal_timer.hpp"
 #include "goldobot/platform/hal_uart.hpp"
+#include "goldobot/platform/hal_i2c.hpp"
+#include "goldobot/platform/hal_spi.hpp"
 
 #include <sys/unistd.h> // STDOUT_FILENO, STDERR_FILENO
 #include <errno.h>
@@ -26,9 +28,6 @@ extern "C"
 #include <cstring>
 
 // Configuration structures
-
-
-
 
 extern "C"
 {
@@ -51,23 +50,40 @@ using namespace goldobot::platform;
 static void init_io_device(IODeviceConfig* config)
 {
 	IODevice* device = &g_io_devices[config->io_device_id];
+	device->io_flags = config->io_flags;
 
-	uint8_t* rx_buffer = static_cast<uint8_t*>(pvPortMalloc(config->rx_buffer_size));
-	uint8_t* tx_buffer = static_cast<uint8_t*>(pvPortMalloc(config->rx_buffer_size));
+	if(config->rx_buffer_size > 0)
+	{
+		uint8_t* rx_buffer = static_cast<uint8_t*>(pvPortMalloc(config->rx_buffer_size));
+		device->rx_queue.init(rx_buffer, config->rx_buffer_size);
+	}
 
-	device->rx_queue.init(rx_buffer, config->rx_buffer_size);
-	device->tx_queue.init(tx_buffer, config->tx_buffer_size);
+	if(config->rx_buffer_size > 0)
+	{
+		uint8_t* tx_buffer = static_cast<uint8_t*>(pvPortMalloc(config->rx_buffer_size));
+		device->tx_queue.init(tx_buffer, config->tx_buffer_size);
+	}
 
 	device->rx_semaphore = xSemaphoreCreateBinary();
 	device->tx_semaphore = xSemaphoreCreateBinary();
 
-	if(config->device_type == DeviceType::Uart)
+	switch(config->device_type )
 	{
-		hal_usart_init(device, static_cast<const IODeviceConfigUART*>(config));
+	case DeviceType::Uart:
+		hal_usart_init(device, static_cast<const IODeviceConfigUart*>(config));
+		break;
+	case DeviceType::I2c:
+		hal_i2c_init(device, static_cast<const IODeviceConfigI2c*>(config));
+		break;
+	case DeviceType::Spi:
+		hal_spi_init(device, static_cast<const IODeviceConfigSpi*>(config));
+		break;
+	default:
+		break;
 	}
 
 	// Non blocking io (fifo mode)
-	if(true)
+	if(!(device->io_flags & IODeviceFlags::RxBlocking))
 	{
 		device->start_rx_fifo();
 	}
@@ -104,6 +120,8 @@ void Hal::configure(void* config)
 		case DeviceType::Spi:
 			init_io_device(static_cast<IODeviceConfig*>(device_config));
 			break;
+		default:
+			break;
 		}
 
 
@@ -111,8 +129,10 @@ void Hal::configure(void* config)
 }
 void Hal::init()
 {
+	hal_callback_handler_task_start();
+
     // init uart
-	IODeviceConfigUART uart_config;
+	IODeviceConfigUart uart_config;
 	uart_config.device_type = DeviceType::Uart;
 	uart_config.io_device_id = 0;
 	uart_config.device_id = DeviceId::Usart2;
@@ -214,11 +234,11 @@ void Hal::pwm_set(int pwm_id, float value)
 
 	if(value >= 0)
 	{
-		static_cast<uint32_t>(value * htim->Init.Period);
+		pwm_raw = static_cast<uint32_t>(value * htim->Init.Period);
 		dir_pin_state = descr.sign_pin & 0x80 ? GPIO_PIN_RESET : GPIO_PIN_SET; // if bit set, gpio = 1 for negative
 	} else
 	{
-		static_cast<uint32_t>(-value * htim->Init.Period);
+		pwm_raw = static_cast<uint32_t>(-value * htim->Init.Period);
 		dir_pin_state = descr.sign_pin & 0x80 ? GPIO_PIN_SET : GPIO_PIN_RESET;
 	}
 

@@ -26,9 +26,10 @@ unsigned char g_temp_buffer[32];
 #define MY_FIRMWARE_VER_SZ 64
 const char my_firmware_ver[MY_FIRMWARE_VER_SZ] = MY_GIT_VERSION;
 
+unsigned char __attribute__((section (".ccmram"))) MainTask::s_message_queue_buffer[2048];
 
 MainTask::MainTask() :
-	m_message_queue(m_message_queue_buffer, sizeof(m_message_queue_buffer))
+	m_message_queue(s_message_queue_buffer, sizeof(s_message_queue_buffer))
 {
 }
 
