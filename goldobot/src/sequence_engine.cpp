@@ -90,10 +90,10 @@ bool SequenceEngine::execOp(const Op& op)
 	case 32: // delay
 		if(m_end_delay == 0)
 		{
-			m_end_delay = Hal::get_tick_count() + *(int*)(m_vars + 4 * op.arg1);
+			m_end_delay = hal::get_tick_count() + *(int*)(m_vars + 4 * op.arg1);
 			return false;
 		}
-		if(Hal::get_tick_count() >= m_end_delay)
+		if(hal::get_tick_count() >= m_end_delay)
 		{
 			m_end_delay = 0;
 			m_pc++;
@@ -390,7 +390,7 @@ bool SequenceEngine::execOp(const Op& op)
 		m_pc++;
 		return true;
 	case 145: // gpio.set
-		Hal::gpio_set(op.arg1,op.arg2);
+		hal::gpio_set(op.arg1,op.arg2);
 		m_pc++;
 		return true;
 	case 141: // arm.go_to_position

@@ -54,7 +54,7 @@ void FpgaTask::taskFunction()
     goldo_fpga_cmd_servo(i, 0);
   }
 
-  m_last_timestamp = Hal::get_tick_count();
+  m_last_timestamp = hal::get_tick_count();
 
   while(1)
   {
@@ -89,7 +89,7 @@ void FpgaTask::taskFunction()
     }
 
     //Recompute servo targets
-    uint32_t ts = Hal::get_tick_count();
+    uint32_t ts = hal::get_tick_count();
     float delta_t = (ts - m_last_timestamp)*1e-3;
     m_last_timestamp = ts;
     for(int i=0; i < m_servos_config->num_servos; i++)
@@ -128,7 +128,7 @@ void FpgaTask::taskFunction()
 }
 
 int FpgaTask::goldo_fpga_send_spi_frame(void) {
-    Hal::send_spi_frame(spi_buf_out, spi_buf_in);  
+    //hal::send_spi_frame(spi_buf_out, spi_buf_in);
   m_total_spi_frame_cnt++;
   return 0;
 #if 0 /* FIXME : TODO : cleanup (old code) */

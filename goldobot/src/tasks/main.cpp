@@ -40,7 +40,7 @@ const char* MainTask::name() const
 
 int MainTask::remainingMatchTime()
 {
-	int elapsed_time = (Hal::get_tick_count() - m_start_of_match_time)/1000;
+	int elapsed_time = (hal::get_tick_count() - m_start_of_match_time)/1000;
 	int match_duration = 98;
 	return elapsed_time < match_duration ? match_duration - elapsed_time : 0;
 }
@@ -86,14 +86,14 @@ void MainTask::taskFunction()
 		switch(match_state)
 		{
 		case MatchState::Idle:
-			if( Hal::gpio_get(4))
+			if( hal::gpio_get(4))
 			{
 				Robot::instance().setSide(Side::Purple);
 			} else
 			{
 				Robot::instance().setSide(Side::Yellow);
 			}
-			if(Hal::gpio_get(1))
+			if(hal::gpio_get(1))
 			{
 				Robot::instance().setMatchState(MatchState::PreMatch);
 
@@ -116,10 +116,10 @@ void MainTask::taskFunction()
 			}
 			break;
 		case MatchState::WaitForStartOfMatch:
-			if(!Hal::gpio_get(1))
+			if(!hal::gpio_get(1))
 			{
-				Robot::instance().setStartMatchTime(Hal::get_tick_count());
-				m_start_of_match_time = Hal::get_tick_count();
+				Robot::instance().setStartMatchTime(hal::get_tick_count());
+				m_start_of_match_time = hal::get_tick_count();
 				Robot::instance().setRemainingMatchTime(remainingMatchTime());
 				Robot::instance().setMatchState(MatchState::Match);
 

@@ -20,7 +20,6 @@ void Robot::init()
 	m_main_task.init();
 	m_debug_task.init();
 	m_heartbeat_task.init();
-	//m_rt_telemetry_task.init();
 }
 
 void Robot::start()
@@ -104,7 +103,7 @@ bool Robot::endLoadConfig(uint16_t crc)
 	m_arms_task.m_config.torques_ptr = (uint16_t*)(s_config_area + offsets[8]);
 	m_servos_config = (ServosConfig*)(s_config_area + offsets[6]);
 
-	Hal::configure(s_config_area + offsets[0]);
+	hal::configure(s_config_area + offsets[0]);
 
 
 

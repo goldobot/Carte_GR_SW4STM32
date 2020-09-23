@@ -8,6 +8,6 @@ goldobot::UARTCommTask s_uart_comm_task;
 
 void goldobot_main()
 {
-	goldobot::Hal::init();
+	goldobot::hal::init();
 	goldobot::Robot::instance().init();
 }

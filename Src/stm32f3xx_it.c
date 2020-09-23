@@ -4,7 +4,7 @@
 #include "cmsis_os.h"
 
 void goldobot_hal_uart_irq_handler(int uart_index);
-
+void goldobot_hal_dma_irq_handler(int dma_index);
 void goldobot_hal_i2c_ev_irq_handler(int ioc_index);
 void goldobot_hal_i2c_er_irq_handler(int ioc_index);
 
@@ -23,18 +23,43 @@ extern TIM_HandleTypeDef htim6;
 /* please refer to the startup file (startup_stm32f3xx.s).                    */
 /******************************************************************************/
 
+void DMA1_Channel1_IRQHandler(void)
+{
+	goldobot_hal_dma_irq_handler(0);
+}
+
 void DMA1_Channel2_IRQHandler(void)
 {
-
+	goldobot_hal_dma_irq_handler(1);
 }
 
 
 void DMA1_Channel3_IRQHandler(void)
 {
-
+	goldobot_hal_dma_irq_handler(2);
 }
 
-ART1_IRQHandler(void)
+void DMA1_Channel4_IRQHandler(void)
+{
+	goldobot_hal_dma_irq_handler(3);
+}
+
+void DMA1_Channel5_IRQHandler(void)
+{
+	goldobot_hal_dma_irq_handler(4);
+}
+
+void DMA1_Channel6_IRQHandler(void)
+{
+	goldobot_hal_dma_irq_handler(5);
+}
+
+void DMA1_Channel7_IRQHandler(void)
+{
+	goldobot_hal_dma_irq_handler(6);
+}
+
+void USART1_IRQHandler(void)
 {
 	goldobot_hal_uart_irq_handler(0);
 }

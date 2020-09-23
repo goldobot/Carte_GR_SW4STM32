@@ -34,25 +34,25 @@ void UARTCommTask::taskFunction()
 {
 	set_priority(5);
 
-	m_last_timestamp = Hal::get_tick_count();
+	m_last_timestamp = hal::get_tick_count();
 
 	while(1)
 	{
 
 		{
-			uint16_t space_available = Hal::uart_write_space_available(0);
+			uint16_t space_available = hal::io_write_space_available(0);
 			if(space_available > sizeof(m_scratch_buffer)){
 				space_available = sizeof(m_scratch_buffer);
 			}
 			size_t dtlen = m_serializer.pop_data((unsigned char*)m_scratch_buffer, space_available);
 			if(dtlen)
 			{
-				Hal::uart_write(0, m_scratch_buffer, dtlen);
+				hal::io_write(0, m_scratch_buffer, dtlen);
 			}
 		}
 
 		// Parse received data
-		size_t bytes_read = Hal::uart_read(0, (unsigned char*)m_scratch_buffer, sizeof(m_scratch_buffer));
+		size_t bytes_read = hal::io_read(0, (unsigned char*)m_scratch_buffer, sizeof(m_scratch_buffer));
 		m_deserializer.push_data((unsigned char*)m_scratch_buffer, bytes_read);
 
 
@@ -78,7 +78,7 @@ void UARTCommTask::taskFunction()
 			}
 		}
 
-		uint32_t timestamp = Hal::get_tick_count();
+		uint32_t timestamp = hal::get_tick_count();
 		if(timestamp - m_last_timestamp >= 1000)
 		{
 			uint8_t msg[sizeof(CommDeserializer::Statistics) + sizeof(CommSerializer::Statistics)];

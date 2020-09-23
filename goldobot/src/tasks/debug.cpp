@@ -46,7 +46,7 @@ void DebugTask::processMessage()
 	case CommMessageType::HalGpioGet:
 		{
 		m_message_queue.pop_message(buff, 1);
-		bool val = Hal::gpio_get(buff[0]);
+		bool val = hal::gpio_get(buff[0]);
 		buff[1] = val ? 1 : 0;
 		exchange_out.pushMessage(CommMessageType::HalGpioGet, buff, 2);
 		}
@@ -54,14 +54,14 @@ void DebugTask::processMessage()
 	case CommMessageType::HalGpioSet:
 		{
 		m_message_queue.pop_message(buff, 2);
-		Hal::gpio_set(buff[0], buff[1]);
+		hal::gpio_set(buff[0], buff[1]);
 		}
 		break;
 	case CommMessageType::HalPwmSet:
 		{
 		m_message_queue.pop_message(buff, 5);
 		float pwm = *reinterpret_cast<float*>(&buff[1]);
-		Hal::pwm_set(buff[0], pwm);
+		hal::pwm_set(buff[0], pwm);
 		}
 		break;
 	default:

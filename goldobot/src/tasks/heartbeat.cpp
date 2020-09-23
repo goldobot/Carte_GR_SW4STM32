@@ -31,7 +31,7 @@ void HeartbeatTask::taskFunction()
 
 	while(1)
 	{
-		uint32_t clock = Hal::get_tick_count();
+		uint32_t clock = hal::get_tick_count();
 		auto& exchange = Robot::instance().mainExchangeOut();
 		exchange.pushMessage(CommMessageType::Heartbeat,(unsigned char*)&clock,sizeof(clock));
 
@@ -51,7 +51,7 @@ void HeartbeatTask::taskFunction()
 		uint32_t gpio = 0;
 		for(int i=0; i<6; i++)
 		{
-			if(Hal::gpio_get(i)) gpio |= (1 << i);
+			if(hal::gpio_get(i)) gpio |= (1 << i);
 		}
 
 		Robot::instance().mainExchangeOut().pushMessage(

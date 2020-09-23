@@ -53,7 +53,7 @@ void ArmsTask::taskFunction()
 	int servo_idx = 0;
 	while(1)
 	{
-		uint32_t clock = Hal::get_tick_count();
+		uint32_t clock = hal::get_tick_count();
 		auto prev_state = m_arm_state;
 		if(m_arm_state == ArmState::Moving && clock >= m_end_move_timestamp )
 		{
@@ -223,7 +223,7 @@ void ArmsTask::go_to_position(uint8_t pos_id, uint16_t speed_percent, int torque
 
 	// Set time of end
 	m_arm_state = ArmState::Moving;
-	m_end_move_timestamp = Hal::get_tick_count() + (uint32_t)time_ms;
+	m_end_move_timestamp = hal::get_tick_count() + (uint32_t)time_ms;
 }
 
 void ArmsTask::process_message()
@@ -359,9 +359,9 @@ void ArmsTask::dynamixels_transmit_packet(uint8_t id, uint8_t command, unsigned 
 	}
 	checksum = ~checksum;
 	m_dynamixels_buffer[5 + num_parameters] = checksum;
-	Hal::gpio_set(3, 1);
+	hal::gpio_set(3, 1);
 	//Hal::uart_transmit(1, (char*)m_dynamixels_buffer, 6 + num_parameters, true);
-	Hal::gpio_set(3, 0);
+	hal::gpio_set(3, 0);
 }
 
 DynamixelStatusError ArmsTask::dynamixels_receive_packet()

@@ -71,6 +71,14 @@ void initialise_monitor_handles()
 {
 }
 
+void __assert_func(const char* filename, int line, const char* a, const char* b)
+{
+	while(1)
+	{
+		__asm__("BKPT");
+	}
+};
+
 int _getpid(void)
 {
 	return 1;

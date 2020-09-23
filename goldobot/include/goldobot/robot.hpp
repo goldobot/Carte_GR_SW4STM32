@@ -79,8 +79,6 @@ namespace goldobot
 		UARTCommTask m_comm_task;
 		//UART2CommTask m_comm2_task;
 		HeartbeatTask m_heartbeat_task;
-		RtTelemetryTask m_rt_telemetry_task;
-
 
 		OdometryConfig* m_odometry_config;
 		RobotConfig* m_robot_config;
