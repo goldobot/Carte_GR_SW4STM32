@@ -1,48 +1,46 @@
 #pragma once
-#include "goldobot/platform/task.hpp"
-#include "goldobot/propulsion/simple_odometry.hpp"
-#include "goldobot/propulsion/controller.hpp"
-#include "goldobot/platform/message_queue.hpp"
-
 #include <cstdint>
 
-namespace goldobot
-{
-	class PropulsionTask : public Task
-	{
-	public:
-		PropulsionTask();
-		const char* name() const override;
+#include "goldobot/platform/message_queue.hpp"
+#include "goldobot/platform/task.hpp"
+#include "goldobot/propulsion/controller.hpp"
+#include "goldobot/propulsion/simple_odometry.hpp"
 
-		SimpleOdometry& odometry();
-		PropulsionController& controller();
+namespace goldobot {
+class PropulsionTask : public Task {
+ public:
+  PropulsionTask();
+  const char* name() const override;
 
-	private:
-		MessageQueue m_message_queue;
-		MessageQueue m_urgent_message_queue;
+  SimpleOdometry& odometry();
+  PropulsionController& controller();
 
-		SimpleOdometry m_odometry;
-		PropulsionController m_controller;
-		uint16_t m_encoder_left{0};
-		uint16_t m_encoders_right{0};
-		uint16_t m_telemetry_counter{0};
-		PropulsionController::State m_previous_state{PropulsionController::State::Inactive};
+ private:
+  MessageQueue m_message_queue;
+  MessageQueue m_urgent_message_queue;
 
-		bool m_adversary_detection_enabled{true};
-		bool m_recalage_goldenium_armed{false};
+  SimpleOdometry m_odometry;
+  PropulsionController m_controller;
+  uint16_t m_encoder_left{0};
+  uint16_t m_encoders_right{0};
+  uint16_t m_telemetry_counter{0};
+  PropulsionController::State m_previous_state{PropulsionController::State::Inactive};
 
-		void doStep();
-		void processMessage();
-		void processUrgentMessage();
-		void taskFunction() override;
+  bool m_adversary_detection_enabled{true};
+  bool m_recalage_goldenium_armed{false};
 
-		void onMsgExecuteTrajectory();
-		void onMsgExecutePointTo();
+  void doStep();
+  void processMessage();
+  void processUrgentMessage();
+  void taskFunction() override;
 
-		void measureNormal(float angle, float distance);
-		void measurePointLongi(Vector2D point, float sensor_offset);
+  void onMsgExecuteTrajectory();
+  void onMsgExecutePointTo();
 
-		static unsigned char s_message_queue_buffer[1024];
-		static unsigned char s_urgent_message_queue_buffer[1024];
-	};
-}
+  void measureNormal(float angle, float distance);
+  void measurePointLongi(Vector2D point, float sensor_offset);
+
+  static unsigned char s_message_queue_buffer[1024];
+  static unsigned char s_urgent_message_queue_buffer[1024];
+};
+}  // namespace goldobot

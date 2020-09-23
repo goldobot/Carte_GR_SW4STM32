@@ -1,102 +1,94 @@
 #pragma once
-#include "goldobot/platform/message_exchange.hpp"
-#include "goldobot/enums.hpp"
-#include "goldobot/platform/config.hpp"
-#include "goldobot/tasks/propulsion.hpp"
-#include "goldobot/tasks/uart_comm.hpp"
-#include "goldobot/tasks/debug.hpp"
-#include "goldobot/tasks/heartbeat.hpp"
-#include "goldobot/tasks/rttelemetry.hpp"
-#include "goldobot/tasks/arms.hpp"
-#include "goldobot/tasks/main.hpp"
-#include "goldobot/tasks/fpga.hpp"
-#include "goldobot/hal.hpp"
-
 #include <cstdint>
 
-namespace goldobot
-{
+#include "goldobot/enums.hpp"
+#include "goldobot/hal.hpp"
+#include "goldobot/platform/config.hpp"
+#include "goldobot/platform/message_exchange.hpp"
+#include "goldobot/tasks/arms.hpp"
+#include "goldobot/tasks/debug.hpp"
+#include "goldobot/tasks/fpga.hpp"
+#include "goldobot/tasks/heartbeat.hpp"
+#include "goldobot/tasks/main.hpp"
+#include "goldobot/tasks/propulsion.hpp"
+#include "goldobot/tasks/rttelemetry.hpp"
+#include "goldobot/tasks/uart_comm.hpp"
 
+namespace goldobot {
 
+class Robot {
+ public:
+  static Robot& instance();
+  void init();
+  void start();
 
+  Side side() const noexcept { return m_side; };
+  void setSide(Side side) noexcept { m_side = side; };
 
-	class Robot
-	{
-	public:
-		static Robot& instance();
-		void init();
-		void start();
+  MatchState matchState() const noexcept { return m_match_state; };
+  void setMatchState(MatchState state) noexcept { m_match_state = state; };
 
-		Side side() const noexcept { return m_side;};
-		void setSide(Side side) noexcept {m_side = side;};
+  uint32_t sensorsState() const { return m_sensors_state; };
+  void setSensorsState(uint32_t state) { m_sensors_state = state; };
 
-		MatchState matchState() const noexcept { return m_match_state;};
-		void setMatchState(MatchState state) noexcept {m_match_state = state;};
+  void setStartMatchTime(uint32_t time) { m_start_match_time = time; };
 
-		uint32_t sensorsState() const { return m_sensors_state;};
-		void setSensorsState(uint32_t state) { m_sensors_state = state;};
+  int remainingMatchTime() const { return m_remaining_match_time; };
+  void setRemainingMatchTime(int t) { m_remaining_match_time = t; };
 
-		void setStartMatchTime(uint32_t time) {m_start_match_time = time;};
+  SimpleOdometry& odometry();
 
-		int remainingMatchTime() const { return m_remaining_match_time;};
-		void setRemainingMatchTime(int t) { m_remaining_match_time = t;};
+  MessageExchange& mainExchangeIn() { return m_main_exchange_in; };
+  MessageExchange& mainExchangeOut() { return m_main_exchange_out; };
 
-		SimpleOdometry& odometry();
+  const RobotConfig& robotConfig() const;
 
-		MessageExchange& mainExchangeIn() { return m_main_exchange_in; };
-		MessageExchange& mainExchangeOut() { return m_main_exchange_out; };
+  ArmConfig* armConfig(int arm_id);
+  ServosConfig* servosConfig();
 
+  OdometryConfig odometryConfig();
 
-		const RobotConfig& robotConfig() const;
+  PropulsionControllerConfig defaultPropulsionControllerConfig();
+  void setOdometryConfig(const OdometryConfig& config);
 
-		ArmConfig* armConfig(int arm_id);
-		ServosConfig* servosConfig();
+  PropulsionController::State propulsionState();
 
-		OdometryConfig odometryConfig();
+  // Synopsis: beginLoad, multiple calls to loadConfig to write config buffer, endLoadConfig to
+  // check
+  void beginLoadConfig();
+  void loadConfig(char* buffer, size_t size);
+  bool endLoadConfig(uint16_t crc);
 
-		PropulsionControllerConfig defaultPropulsionControllerConfig();
-		void setOdometryConfig(const OdometryConfig& config);
+ private:
+  Side m_side{Side::Unknown};
+  MatchState m_match_state{MatchState::Unconfigured};
 
-		PropulsionController::State propulsionState();
+  std::atomic<int> m_start_match_time{0};
+  std::atomic<int> m_remaining_match_time{0};
+  uint32_t m_sensors_state{0};
 
-		// Synopsis: beginLoad, multiple calls to loadConfig to write config buffer, endLoadConfig to check
-		void beginLoadConfig();
-		void loadConfig(char* buffer, size_t size);
-		bool endLoadConfig(uint16_t crc);
+  DebugTask m_debug_task;
+  PropulsionTask m_propulsion_task;
+  UARTCommTask m_comm_task;
+  // UART2CommTask m_comm2_task;
+  HeartbeatTask m_heartbeat_task;
 
+  OdometryConfig* m_odometry_config;
+  RobotConfig* m_robot_config;
+  PropulsionControllerConfig* m_propulsion_controller_config;
+  ServosConfig* m_servos_config;
 
+  unsigned char* m_load_config_ptr{0};
+  uint16_t m_load_config_crc;
 
-	private:
-		Side m_side{Side::Unknown};
-		MatchState m_match_state{MatchState::Unconfigured};
+  MainTask m_main_task;
+  ArmsTask m_arms_task;
+  FpgaTask m_fpga_task;
 
-		std::atomic<int> m_start_match_time{0};
-		std::atomic<int> m_remaining_match_time{0};
-		uint32_t m_sensors_state{0};
+  MessageExchange m_main_exchange_in;
+  MessageExchange m_main_exchange_out;
 
-		DebugTask m_debug_task;
-		PropulsionTask m_propulsion_task;
-		UARTCommTask m_comm_task;
-		//UART2CommTask m_comm2_task;
-		HeartbeatTask m_heartbeat_task;
-
-		OdometryConfig* m_odometry_config;
-		RobotConfig* m_robot_config;
-		PropulsionControllerConfig* m_propulsion_controller_config;
-		ServosConfig* m_servos_config;
-
-		unsigned char* m_load_config_ptr{0};
-		uint16_t m_load_config_crc;
-
-
-		MainTask m_main_task;
-		ArmsTask m_arms_task;
-		FpgaTask m_fpga_task;
-
-		MessageExchange m_main_exchange_in;
-		MessageExchange m_main_exchange_out;
-
-		static unsigned char s_config_area[16384];
-		static Robot s_instance;
-	};
-}
+  static unsigned char s_config_area[16384];
+  static Robot s_instance;
+};
+}  // namespace goldobot

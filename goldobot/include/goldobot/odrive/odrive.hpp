@@ -1,18 +1,9 @@
 
 namespace goldobot {
 
-class ODriveSerial
-{
-public:
-
-
-
-
-private:
-
-
+class ODriveSerial {
+ public:
+ private:
 };
 
-
-
-} // namespace goldobot
+}  // namespace goldobot
