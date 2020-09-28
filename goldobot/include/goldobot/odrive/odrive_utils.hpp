@@ -1,3 +1,4 @@
+#pragma once
 #include <limits.h>
 #include <stdint.h>
 
@@ -56,7 +57,3 @@ constexpr uint16_t CANONICAL_CRC16_POLYNOMIAL = 0x3d65;
 constexpr uint16_t CANONICAL_CRC16_INIT = 0x1337;
 
 constexpr uint8_t CANONICAL_PREFIX = 0xAA;
-
-#include "goldobot/odrive/odrive.hpp"
-
-namespace goldobot {};  // namespace goldobot
