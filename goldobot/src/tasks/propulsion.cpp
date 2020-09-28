@@ -307,41 +307,10 @@ void PropulsionTask::taskFunction() {
   Robot::instance().mainExchangeIn().subscribe({80, 83, &m_urgent_message_queue});
   Robot::instance().mainExchangeIn().subscribe({32, 32, &m_urgent_message_queue});
   Robot::instance().mainExchangeIn().subscribe({98, 102, &m_urgent_message_queue});
-  Robot::instance().mainExchangeIn().subscribe(
-      {400, 410, &m_urgent_message_queue});  // odrive messages
+
 
   // Set task to high
   set_priority(6);
-
-  // test debug odrive
-  uint16_t endpoint_id = 0;
-  endpoint_id |= 0x8000;
-
-  /*
-  unsigned char buffer[128];
-  buffer[0] = CANONICAL_PREFIX;
-  buffer[1] = 12;
-  buffer[2] = calc_crc8<CANONICAL_CRC8_POLYNOMIAL>(CANONICAL_CRC8_INIT, buffer, 2);
-  buffer[3] = 129;
-  buffer[4] = 0; // sequence number
-  *reinterpret_cast<uint16_t*>(buffer +5) = endpoint_id;
-  buffer[7] = 0;
-  buffer[8] = 2; //expected response size
-  buffer[9] = 0;
-  buffer[10] = 0;
-  buffer[11] = 0;
-  buffer[12] = 0; //payload: read offset
-  buffer[13] = 1;
-  buffer[14] = 0; //protocol version
-  uint16_t crc16 = calc_crc16<CANONICAL_CRC16_POLYNOMIAL>(CANONICAL_CRC16_INIT, buffer+3, 12);
-
-  buffer[15] = (uint8_t)((crc16 >> 8) & 0xff); //crc16 in big endian
-  buffer[16] = (uint8_t)((crc16 >> 0) & 0xff);*/
-
-  // Hal::uart_write(1, buffer, 17);
-  // delay(100);
-
-  // Hal::uart_read(1, buffer, 128);
 
   // Setup odometry
   uint16_t left;

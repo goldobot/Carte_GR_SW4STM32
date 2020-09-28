@@ -86,6 +86,10 @@ bool Robot::endLoadConfig(uint16_t crc) {
   odometry().setConfig(*m_odometry_config);
   m_propulsion_task.controller().setConfig(defaultPropulsionControllerConfig());
   m_propulsion_task.init();
+  if(m_robot_config->use_odrive_uart)
+  {
+	m_odrive_comm_task.init();
+  }
   // m_arms_task.init();
   // m_fpga_task.init();
 

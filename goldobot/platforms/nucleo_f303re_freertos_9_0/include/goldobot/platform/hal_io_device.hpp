@@ -48,8 +48,8 @@ class IODevice {
   size_t read(uint8_t* buffer, size_t buffer_size);
   size_t write(const uint8_t* buffer, size_t buffer_size);
 
-  size_t map_read(uint8_t const** buffer);
-  void unmap_read(const uint8_t* buffer, size_t size);
+  size_t map_read(uint8_t ** buffer);
+  void unmap_read(uint8_t* buffer, size_t size);
 
   size_t map_write(uint8_t** buffer);
   void unmap_write(uint8_t* buffer, size_t size);

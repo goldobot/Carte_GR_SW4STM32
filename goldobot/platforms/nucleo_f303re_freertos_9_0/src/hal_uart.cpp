@@ -160,7 +160,7 @@ void uart_update_tx_request_dma(IORequest* req, uint32_t device_index) {
     return;
   }
   auto uart_handle = &g_hal_uart_handles[device_index];
-  req->remaining = uart_handle->hdmarx->Instance->CNDTR;
+  req->remaining = uart_handle->hdmatx->Instance->CNDTR;
 }
 
 IODeviceFunctions g_uart_device_rx_functions = {&uart_start_rx_request, &uart_update_rx_request, 0};

@@ -15,10 +15,15 @@
 
 using namespace goldobot;
 
+unsigned char __attribute__((section(".ccmram"))) UARTCommTask::s_serialize_buffer[1024];
+unsigned char __attribute__((section(".ccmram"))) UARTCommTask::s_deserialize_buffer[1024];
+unsigned char __attribute__((section(".ccmram"))) UARTCommTask::s_out_buffer[1024];
+unsigned char __attribute__((section(".ccmram"))) UARTCommTask::s_scratch_buffer[1024];
+
 UARTCommTask::UARTCommTask()
-    : m_serializer(m_serialize_buffer, sizeof(m_serialize_buffer)),
-      m_deserializer(m_deserialize_buffer, sizeof(m_deserialize_buffer)),
-      m_out_queue(m_out_buffer, sizeof(m_out_buffer)) {}
+    : m_serializer(s_serialize_buffer, sizeof(s_serialize_buffer)),
+      m_deserializer(s_deserialize_buffer, sizeof(s_deserialize_buffer)),
+      m_out_queue(s_out_buffer, sizeof(s_out_buffer)) {}
 
 const char* UARTCommTask::name() const { return "uart_comm"; }
 
@@ -35,26 +40,26 @@ void UARTCommTask::taskFunction() {
   while (1) {
     {
       uint16_t space_available = hal::io_write_space_available(0);
-      if (space_available > sizeof(m_scratch_buffer)) {
-        space_available = sizeof(m_scratch_buffer);
+      if (space_available > sizeof(s_scratch_buffer)) {
+        space_available = sizeof(s_scratch_buffer);
       }
-      size_t dtlen = m_serializer.pop_data((unsigned char*)m_scratch_buffer, space_available);
+      size_t dtlen = m_serializer.pop_data((unsigned char*)s_scratch_buffer, space_available);
       if (dtlen) {
-        hal::io_write(0, m_scratch_buffer, dtlen);
+        hal::io_write(0, s_scratch_buffer, dtlen);
       }
     }
 
     // Parse received data
-    size_t bytes_read = hal::io_read(0, (unsigned char*)m_scratch_buffer, sizeof(m_scratch_buffer));
-    m_deserializer.push_data((unsigned char*)m_scratch_buffer, bytes_read);
+    size_t bytes_read = hal::io_read(0, (unsigned char*)s_scratch_buffer, sizeof(s_scratch_buffer));
+    m_deserializer.push_data((unsigned char*)s_scratch_buffer, bytes_read);
 
     // Copy waiting messages in serializer if needed
     while (m_out_queue.message_ready() &&
            m_out_queue.message_size() < m_serializer.availableSize()) {
       auto msg_type = m_out_queue.message_type();
       auto msg_size = m_out_queue.message_size();
-      m_out_queue.pop_message(m_scratch_buffer, msg_size);
-      m_serializer.push_message((uint16_t)msg_type, m_scratch_buffer, msg_size);
+      m_out_queue.pop_message(s_scratch_buffer, msg_size);
+      m_serializer.push_message((uint16_t)msg_type, s_scratch_buffer, msg_size);
     }
 
     // Process received message if needed
@@ -91,11 +96,11 @@ bool UARTCommTask::send_message(CommMessageType type, const char* buffer, uint16
 void UARTCommTask::process_message(uint16_t message_type) {
   uint16_t msg_type = m_deserializer.message_type();
   size_t msg_size = m_deserializer.message_size();
-  m_deserializer.pop_message(m_scratch_buffer, msg_size);
+  m_deserializer.pop_message(s_scratch_buffer, msg_size);
   if (msg_type == static_cast<uint16_t>(CommMessageType::Ping)) {
-    m_serializer.push_message(msg_type, (const unsigned char*)(m_scratch_buffer), msg_size);
+    m_serializer.push_message(msg_type, (const unsigned char*)(s_scratch_buffer), msg_size);
   } else {
-    Robot::instance().mainExchangeIn().pushMessage((CommMessageType)msg_type, m_scratch_buffer,
+    Robot::instance().mainExchangeIn().pushMessage((CommMessageType)msg_type, s_scratch_buffer,
                                                    msg_size);
   };
 }

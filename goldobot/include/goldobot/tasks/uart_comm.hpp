@@ -21,10 +21,10 @@ class UARTCommTask : public Task {
 
   uint32_t m_last_timestamp;
 
-  unsigned char m_scratch_buffer[1024];
-  unsigned char m_serialize_buffer[1024];
-  unsigned char m_deserialize_buffer[1024];
-  unsigned char m_out_buffer[1024];
+  static unsigned char s_scratch_buffer[1024];
+  static unsigned char s_serialize_buffer[1024];
+  static unsigned char s_deserialize_buffer[1024];
+  static unsigned char s_out_buffer[1024];
   CommSerializer m_serializer;
   CommDeserializer m_deserializer;
   MessageQueue m_out_queue;

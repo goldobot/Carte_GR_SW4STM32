@@ -31,6 +31,9 @@ struct RobotConfig {
 
   //! \brief distance from wheels axis to back of the robot
   float back_length;
+
+  //! \brief use odrive uart interface for propulsion instead of pwm
+  bool use_odrive_uart;
 };
 
 }  // namespace goldobot

@@ -13,6 +13,7 @@
 #include "goldobot/tasks/propulsion.hpp"
 #include "goldobot/tasks/rttelemetry.hpp"
 #include "goldobot/tasks/uart_comm.hpp"
+#include "goldobot/tasks/odrive_comm.hpp"
 
 namespace goldobot {
 
@@ -70,7 +71,7 @@ class Robot {
   DebugTask m_debug_task;
   PropulsionTask m_propulsion_task;
   UARTCommTask m_comm_task;
-  // UART2CommTask m_comm2_task;
+  ODriveCommTask m_odrive_comm_task;
   HeartbeatTask m_heartbeat_task;
 
   OdometryConfig* m_odometry_config;

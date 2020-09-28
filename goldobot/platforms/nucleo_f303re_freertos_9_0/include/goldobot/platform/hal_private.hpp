@@ -97,10 +97,10 @@ struct IODeviceConfig : DeviceConfig {
 };
 
 struct IODeviceConfigUart : IODeviceConfig {
+  uint32_t baudrate;
   PinID rx_pin;
   PinID tx_pin;
   PinID txen_pin;  // gpio pin that is set to 1 when transmitting
-  uint32_t baudrate;
 };
 
 struct IODeviceConfigI2c : IODeviceConfig {

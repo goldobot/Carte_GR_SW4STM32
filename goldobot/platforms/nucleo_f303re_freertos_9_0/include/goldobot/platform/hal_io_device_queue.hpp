@@ -36,7 +36,6 @@ class IODeviceQueue {
   uint8_t* m_buffer_end;
   uint8_t* m_head;
   uint8_t* m_tail;
-  uint32_t m_full;
 };
 
 }  // namespace platform

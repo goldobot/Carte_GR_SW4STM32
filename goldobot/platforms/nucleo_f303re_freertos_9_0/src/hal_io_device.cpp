@@ -211,17 +211,114 @@ size_t IODevice::write(const uint8_t* buffer, size_t buffer_size) {
   return 0;
 }
 
+size_t IODevice::map_read(uint8_t** buffer) {
+  if (io_flags & IODeviceFlags::RxBlocking) {
+    // mmapped io only works in fifo mode
+    *buffer = nullptr;
+    return 0;
+
+  } else {
+    // Update state of rx request to read received data without waiting for end
+    // of current transfer.
+    taskENTER_CRITICAL();
+    if (rx_request.state == IORequestState::RxBusy) {
+      rx_functions->update_request(&rx_request, device_index);
+      rx_queue.unmap_push(rx_request.rx_ptr, rx_request.size - rx_request.remaining);
+    }
+    taskEXIT_CRITICAL();
+    auto retval = rx_queue.map_pop(buffer);
+    return retval;
+  }
+}
+
+void IODevice::unmap_read(uint8_t* buffer, size_t size) {
+  if (size != 0) {
+    rx_queue.unmap_pop(buffer, size);
+  }
+
+  taskENTER_CRITICAL();
+  if (rx_request.state == IORequestState::Ready) {
+    start_rx_fifo();
+  }
+  taskEXIT_CRITICAL();
+}
+
+size_t IODevice::map_write(uint8_t** buffer) {
+  if (io_flags & IODeviceFlags::RxBlocking) {
+    // mmapped io only works in fifo mode
+    *buffer = nullptr;
+    return 0;
+
+  } else {
+    // Update state of tx request to get an accurate measure of space remaining
+    // in the tx queue.
+    taskENTER_CRITICAL();
+    if (tx_request.state == IORequestState::TxBusy) {
+      tx_functions->update_request(&tx_request, device_index);
+      tx_queue.unmap_pop(tx_request.tx_ptr, tx_request.size - tx_request.remaining);
+    }
+    taskEXIT_CRITICAL();
+    return tx_queue.map_push(buffer);
+  }
+}
+
+void IODevice::unmap_write(uint8_t* buffer, size_t size) {
+  tx_queue.unmap_push(buffer, size);
+
+  // If not currently transmitting, start tx request
+  if (tx_request.state == IORequestState::Ready) {
+    uint8_t* ptr;
+    auto size = tx_queue.map_pop(&ptr);
+
+    if (size > 0) {
+      tx_request.tx_ptr = ptr;
+      tx_request.size = size;
+      tx_request.callback = &io_device_tx_complete_callback_fifo;
+      tx_functions->start_request(&tx_request, device_index);
+    }
+  }
+}
+
 }  // namespace platform
 using namespace platform;
 
+static void check_io_device_id(int id) {
+  assert(id >= 0 && (unsigned)id < sizeof(g_io_devices) / sizeof(IODevice));
+}
+
 size_t io_read(int id, uint8_t* buffer, size_t buffer_size) {
-  assert(id >= 0 && id < sizeof(g_io_devices) / sizeof(IODevice));
+  check_io_device_id(id);
   return g_io_devices[id].read(buffer, buffer_size);
 }
 
 size_t io_write(int id, const uint8_t* buffer, size_t buffer_size) {
-  assert(id >= 0 && id < sizeof(g_io_devices) / sizeof(IODevice));
+  check_io_device_id(id);
   return g_io_devices[id].write(buffer, buffer_size);
+}
+
+size_t io_map_read(int id, uint8_t** buffer) {
+  check_io_device_id(id);
+  return g_io_devices[id].map_read(buffer);
+}
+
+void io_unmap_read(int id, uint8_t* buffer, size_t size) {
+  check_io_device_id(id);
+  g_io_devices[id].unmap_read(buffer, size);
+}
+
+size_t io_map_write(int id, uint8_t** buffer) {
+  check_io_device_id(id);
+  return g_io_devices[id].map_write(buffer);
+}
+
+void io_unmap_write(int id, uint8_t* buffer, size_t size) {
+  check_io_device_id(id);
+  g_io_devices[id].unmap_write(buffer, size);
+}
+
+size_t io_read_bytes_available(int id) {
+  check_io_device_id(id);
+  return g_io_devices[id].rx_queue.size();
 }
 
 size_t io_write_space_available(int id) {
