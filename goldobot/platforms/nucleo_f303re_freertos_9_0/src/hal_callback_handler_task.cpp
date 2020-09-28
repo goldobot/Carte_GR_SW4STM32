@@ -18,6 +18,9 @@ void hal_callback_handler_task_function(void* thisptr) {
         case DeviceType::Uart:
           hal_uart_callback(callback.device_index, callback.callback_index);
           break;
+        case DeviceType::IODevice:
+          hal_iodevice_callback(callback.device_index, callback.callback_index);
+          break;
         default:
           break;
       }
@@ -31,6 +34,11 @@ void hal_callback_handler_task_start() {
   xTaskCreate(hal_callback_handler_task_function, "hal_callback_handler", 128, nullptr,
               (configMAX_PRIORITIES - 1), nullptr);
 };
+
+void hal_callback_send(const HalCallback& callback) {
+  BaseType_t xHigherPriorityTaskWoken;
+  xQueueSend(g_hal_callback_queue, &callback, portMAX_DELAY);
+}
 
 void hal_callback_send_from_isr(const HalCallback& callback) {
   BaseType_t xHigherPriorityTaskWoken;

@@ -78,13 +78,11 @@ void hal_uart_callback(int uart_index, int callback_id) {
         req->callback(req, io_device);
       }
       return;
-    }
-
-    break;
+    } break;
     case 2:  // error
     {
       auto req = &io_device->rx_request;
-      if (req->state == IORequestState::RxBusy) {
+      if (huart->RxState == HAL_UART_STATE_READY) {
         req->remaining = huart->RxXferCount;
         req->state = IORequestState::RxComplete;
         if (req->callback) {
@@ -104,7 +102,8 @@ void uart_start_rx_request(IORequest* req, uint32_t device_index) {
   req->remaining = req->size;
   req->state = IORequestState::RxBusy;
   hal_gpio_pin_set(g_hal_uart_tx_pins[device_index], true);
-  HAL_UART_Receive_IT(uart_handle, req->rx_ptr, req->size);
+  auto status = HAL_UART_Receive_IT(uart_handle, req->rx_ptr, req->size);
+  assert(status == HAL_OK);
 }
 
 void uart_update_rx_request(IORequest* req, uint32_t device_index) {
@@ -120,7 +119,8 @@ void uart_start_tx_request(IORequest* req, uint32_t device_index) {
   auto uart_handle = &g_hal_uart_handles[device_index];
   req->remaining = req->size;
   req->state = IORequestState::TxBusy;
-  HAL_UART_Transmit_IT(uart_handle, req->tx_ptr, req->size);
+  auto status = HAL_UART_Transmit_IT(uart_handle, req->tx_ptr, req->size);
+  assert(status == HAL_OK);
 }
 
 void uart_update_tx_request(IORequest* req, uint32_t device_index) {
@@ -136,7 +136,8 @@ void uart_start_rx_request_dma(IORequest* req, uint32_t device_index) {
   auto uart_handle = &g_hal_uart_handles[device_index];
   req->remaining = req->size;
   req->state = IORequestState::RxBusy;
-  HAL_UART_Receive_DMA(uart_handle, req->rx_ptr, req->size);
+  auto status = HAL_UART_Receive_DMA(uart_handle, req->rx_ptr, req->size);
+  assert(status == HAL_OK);
 }
 
 void uart_update_rx_request_dma(IORequest* req, uint32_t device_index) {
@@ -152,7 +153,8 @@ void uart_start_tx_request_dma(IORequest* req, uint32_t device_index) {
   auto uart_handle = &g_hal_uart_handles[device_index];
   req->remaining = req->size;
   req->state = IORequestState::TxBusy;
-  HAL_UART_Transmit_DMA(uart_handle, req->tx_ptr, req->size);
+  auto status = HAL_UART_Transmit_DMA(uart_handle, req->tx_ptr, req->size);
+  assert(status == HAL_OK);
 }
 
 void uart_update_tx_request_dma(IORequest* req, uint32_t device_index) {

@@ -9,7 +9,18 @@ namespace goldobot {
 namespace hal {
 namespace platform {
 
-enum class DeviceType : uint8_t { None = 0, Gpio, Timer, Pwm, Encoder, Uart, I2c, Spi, Can };
+enum class DeviceType : uint8_t {
+  None = 0,
+  Gpio,
+  Timer,
+  Pwm,
+  Encoder,
+  Uart,
+  I2c,
+  Spi,
+  Can,
+  IODevice
+};
 
 enum class DeviceId : uint8_t {
   Gpio = 1,
@@ -128,9 +139,11 @@ struct HalCallback {
   uint8_t reserved;
 };
 
+void hal_callback_send(const HalCallback& callback);
 void hal_callback_send_from_isr(const HalCallback& callback);
 void hal_callback_handler_task_start();
 
+void hal_iodevice_callback(int id, int callback_id);
 void hal_uart_callback(int uart_index, int callback_id);
 
 // GPIO helpers

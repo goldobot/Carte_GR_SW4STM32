@@ -93,7 +93,19 @@ void IODevice::start_rx_fifo() {
     rx_request.rx_ptr = ptr;
     rx_request.size = size;
     rx_request.callback = &io_device_rx_complete_callback_fifo;
-    rx_functions->start_request(&rx_request, device_index);
+    hal_callback_send(HalCallback{DeviceType::IODevice, this - g_io_devices, 0});
+  }
+}
+
+void IODevice::start_tx_fifo() {
+  uint8_t* ptr;
+  auto size = tx_queue.map_pop(&ptr);
+
+  if (size > 0) {
+    tx_request.tx_ptr = ptr;
+    tx_request.size = size;
+    tx_request.callback = &io_device_tx_complete_callback_fifo;
+    hal_callback_send(HalCallback{DeviceType::IODevice, this - g_io_devices, 1});
   }
 }
 
@@ -196,15 +208,7 @@ size_t IODevice::write(const uint8_t* buffer, size_t buffer_size) {
 
     // If not currently transmitting, start tx request
     if (tx_request.state == IORequestState::Ready) {
-      uint8_t* ptr;
-      auto size = tx_queue.map_pop(&ptr);
-
-      if (size > 0) {
-        tx_request.tx_ptr = ptr;
-        tx_request.size = size;
-        tx_request.callback = &io_device_tx_complete_callback_fifo;
-        tx_functions->start_request(&tx_request, device_index);
-      }
+      start_tx_fifo();
     }
     return bytes_written;
   }
@@ -267,15 +271,19 @@ void IODevice::unmap_write(uint8_t* buffer, size_t size) {
 
   // If not currently transmitting, start tx request
   if (tx_request.state == IORequestState::Ready) {
-    uint8_t* ptr;
-    auto size = tx_queue.map_pop(&ptr);
+    start_tx_fifo();
+  }
+}
 
-    if (size > 0) {
-      tx_request.tx_ptr = ptr;
-      tx_request.size = size;
-      tx_request.callback = &io_device_tx_complete_callback_fifo;
-      tx_functions->start_request(&tx_request, device_index);
-    }
+void hal_iodevice_callback(int id, int callback_id) {
+  IODevice* device = &g_io_devices[id];
+  switch (callback_id) {
+    case 0:
+      device->rx_functions->start_request(&device->rx_request, device->device_index);
+      break;
+    case 1:
+      device->tx_functions->start_request(&device->tx_request, device->device_index);
+      break;
   }
 }
 

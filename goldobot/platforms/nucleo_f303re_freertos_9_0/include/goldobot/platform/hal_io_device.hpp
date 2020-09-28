@@ -48,13 +48,14 @@ class IODevice {
   size_t read(uint8_t* buffer, size_t buffer_size);
   size_t write(const uint8_t* buffer, size_t buffer_size);
 
-  size_t map_read(uint8_t ** buffer);
+  size_t map_read(uint8_t** buffer);
   void unmap_read(uint8_t* buffer, size_t size);
 
   size_t map_write(uint8_t** buffer);
   void unmap_write(uint8_t* buffer, size_t size);
 
   void start_rx_fifo();
+  void start_tx_fifo();
 
   uint32_t device_index;  // index of raw device (0 for UART1 for example)
   uint16_t io_flags;
