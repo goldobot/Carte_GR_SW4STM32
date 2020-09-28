@@ -9,19 +9,12 @@
 using namespace goldobot;
 
 RobotSimulator::RobotSimulator()
-    : m_x(0),
-      m_y(0),
-      m_yaw(0),
-      m_speed(0),
-      m_yaw_rate(0),
-      m_left_pwm(0),
-      m_right_pwm(0),
-      m_left_encoder(0),
-      m_right_encoder(0),
-      m_left_encoder_delta(0),
-      m_right_encoder_delta(0) {}
+    : m_x(0), m_y(0), m_yaw(0), m_speed(0), m_yaw_rate(0), m_left_pwm(0), m_right_pwm(0) {}
 
-void RobotSimulator::do_step() {
+uint16_t RobotSimulator::encoderLeft() { return m_left_encoder.m_counts; }
+uint16_t RobotSimulator::encoderRight() { return m_right_encoder.m_counts; }
+
+void RobotSimulator::doStep() {
   // Simple formula for speed and yaw, with perfect motor controllers.
   float target_speed = 0.5 * (m_left_pwm + m_right_pwm) * m_config.speed_coeff;
   float target_yaw_rate =
@@ -44,16 +37,8 @@ void RobotSimulator::do_step() {
   m_yaw_rate = target_yaw_rate;
 
   // Update robot pose and wheels distances
-  double d_yaw = 1e-3 * m_yaw_rate;
-  double d_trans = 1e-3 * m_speed;
-
-  m_left_dist += (d_trans - 0.5 * d_yaw * m_config.wheels_spacing);
-  m_right_dist += (d_trans + 0.5 * d_yaw * m_config.wheels_spacing);
-
-  m_left_encoder_delta +=
-      (d_trans - 0.5 * d_yaw * m_config.encoders_spacing) * m_config.encoders_counts_per_m;
-  m_right_encoder_delta +=
-      (d_trans + 0.5 * d_yaw * m_config.encoders_spacing) * m_config.encoders_counts_per_m;
+  float d_yaw = 1e-3 * m_yaw_rate;
+  float d_trans = 1e-3 * m_speed;
 
   double ux = cos(m_yaw + 0.5 * d_yaw);
   double uy = sin(m_yaw + 0.5 * d_yaw);
@@ -71,27 +56,25 @@ void RobotSimulator::do_step() {
   }
 
   // Update encoders
-  // Compute change in counts
-  int dcounts_left = static_cast<int>(std::trunc(m_left_encoder_delta));
-  m_left_encoder_delta -= dcounts_left;
+  float left_encoder_delta =
+      (d_trans - 0.5 * d_yaw * m_config.encoders_spacing) * m_config.encoders_counts_per_m;
+  float right_encoder_delta =
+      (d_trans + 0.5 * d_yaw * m_config.encoders_spacing) * m_config.encoders_counts_per_m;
 
-  int dcounts_right = static_cast<int>(std::trunc(m_right_encoder_delta));
-  m_right_encoder_delta -= dcounts_right;
+  m_left_encoder.update(left_encoder_delta, m_config.encoders_period);
+  m_right_encoder.update(right_encoder_delta, m_config.encoders_period);
+}
 
-  m_left_encoder += dcounts_left;
-  m_right_encoder += dcounts_right;
-
-  if (m_left_encoder >= 8192) {
-    m_left_encoder -= 8192;
+void RobotSimulator::Encoder::update(float delta, uint16_t period) {
+  m_delta += delta;
+  int d_counts = static_cast<int>(std::trunc(m_delta));
+  m_delta -= d_counts;
+  int new_counts = m_counts + d_counts;
+  while (new_counts >= period) {
+    new_counts -= period;
   }
-  if (m_left_encoder < 0) {
-    m_left_encoder += 8192;
+  while (new_counts < 0) {
+    new_counts += period;
   }
-
-  if (m_right_encoder >= 8192) {
-    m_right_encoder -= 8192;
-  }
-  if (m_right_encoder < 0) {
-    m_right_encoder += 8192;
-  }
+  m_counts = static_cast<uint16_t>(new_counts);
 }

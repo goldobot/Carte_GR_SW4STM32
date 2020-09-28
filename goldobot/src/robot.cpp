@@ -30,6 +30,10 @@ OdometryConfig Robot::odometryConfig() { return *m_odometry_config; }
 
 const RobotConfig& Robot::robotConfig() const { return *m_robot_config; }
 
+const RobotSimulatorConfig& Robot::robotSimulatorConfig() const {
+  return *m_robot_simulator_config;
+}
+
 void Robot::setOdometryConfig(const OdometryConfig& config) {
   *m_odometry_config = config;
   odometry().setConfig(config);
@@ -58,7 +62,9 @@ void Robot::loadConfig(char* buffer, size_t size) {
 
 bool Robot::endLoadConfig(uint16_t crc) {
   // Config binary starts with array of 16 bits offsets to:
+  // HalConfig
   // RobotConfig
+  // RobotSimulatorConfig
   // OdometryConfig
   // PropulsionControllerConfig
   // ArmConfig
@@ -69,26 +75,26 @@ bool Robot::endLoadConfig(uint16_t crc) {
     return false;
   }
   uint16_t* offsets = (uint16_t*)s_config_area;
+  int i = 0;
 
-  m_robot_config = (RobotConfig*)(s_config_area + offsets[1]);
-  m_odometry_config = (OdometryConfig*)(s_config_area + offsets[2]);
-  m_propulsion_controller_config = (PropulsionControllerConfig*)(s_config_area + offsets[3]);
-  m_arms_task.m_config = *(ArmConfig*)(s_config_area + offsets[4]);
-  m_arms_task.m_config.positions_ptr = (uint16_t*)(s_config_area + offsets[5]);
-  m_arms_task.m_config.torques_ptr = (uint16_t*)(s_config_area + offsets[8]);
-  m_servos_config = (ServosConfig*)(s_config_area + offsets[6]);
+  hal::configure(s_config_area + offsets[i++]);
+  m_robot_config = (RobotConfig*)(s_config_area + offsets[i++]);
+  m_robot_simulator_config = (RobotSimulatorConfig*)(s_config_area + offsets[i++]);
+  m_odometry_config = (OdometryConfig*)(s_config_area + offsets[i++]);
+  m_propulsion_controller_config = (PropulsionControllerConfig*)(s_config_area + offsets[i++]);
+  m_arms_task.m_config = *(ArmConfig*)(s_config_area + offsets[i++]);
+  m_servos_config = (ServosConfig*)(s_config_area + offsets[i++]);
+  m_arms_task.m_config.positions_ptr = (uint16_t*)(s_config_area + offsets[i++]);
+  m_arms_task.m_config.torques_ptr = (uint16_t*)(s_config_area + offsets[i++]);
+  m_main_task.sequenceEngine().setBuffer(s_config_area + offsets[i++]);
 
-  hal::configure(s_config_area + offsets[0]);
-
-  m_main_task.sequenceEngine().setBuffer(s_config_area + offsets[7]);
   m_main_task.sequenceEngine().endLoad();
 
   odometry().setConfig(*m_odometry_config);
   m_propulsion_task.controller().setConfig(defaultPropulsionControllerConfig());
   m_propulsion_task.init();
-  if(m_robot_config->use_odrive_uart)
-  {
-	m_odrive_comm_task.init();
+  if (m_robot_config->use_odrive_uart) {
+    m_odrive_comm_task.init();
   }
   // m_arms_task.init();
   // m_fpga_task.init();

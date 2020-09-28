@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 
 namespace goldobot {
 struct RobotSimulatorConfig {
@@ -6,14 +7,25 @@ struct RobotSimulatorConfig {
   float wheels_spacing;  // wheels spacing
   float encoders_spacing;
   float encoders_counts_per_m;
+  uint16_t encoders_period;
 };
 
 class RobotSimulator {
  public:
   RobotSimulator();
-  void do_step();
+  void doStep();
+
+  uint16_t encoderLeft();
+  uint16_t encoderRight();
 
   RobotSimulatorConfig m_config;
+
+  class Encoder {
+   public:
+    void update(float delta, uint16_t period);
+    float m_delta{0};
+    uint16_t m_counts{0};
+  };
 
   double m_x;
   double m_y;
@@ -24,13 +36,7 @@ class RobotSimulator {
   float m_left_pwm;
   float m_right_pwm;
 
-  double m_left_dist;
-  double m_right_dist;
-
-  double m_left_encoder_delta;
-  double m_right_encoder_delta;
-
-  int m_left_encoder;
-  int m_right_encoder;
+  Encoder m_left_encoder;
+  Encoder m_right_encoder;
 };
 }  // namespace goldobot

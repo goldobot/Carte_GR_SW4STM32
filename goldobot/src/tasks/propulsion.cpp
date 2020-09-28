@@ -40,10 +40,16 @@ void PropulsionTask::doStep() {
   }
 
   // Update odometry
-  uint16_t left;
-  uint16_t right;
-  // Hal::encoders_get(left, right);
-  m_odometry.update(left, right);
+  if (!m_use_simulator) {
+    uint16_t left = hal::encoder_get(0);
+    uint16_t right = hal::encoder_get(1);
+    m_odometry.update(left, right);
+  } else {
+    uint16_t left = m_robot_simulator.encoderLeft();
+    uint16_t right = m_robot_simulator.encoderRight();
+    m_odometry.update(left, right);
+  }
+
   m_controller.update();
 
   while (m_message_queue.message_ready() &&
@@ -62,11 +68,18 @@ void PropulsionTask::doStep() {
     Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionStateChanged,
                                                     (unsigned char*)buff, 2);
   }
+
   if (m_controller.state() != PropulsionController::State::Inactive) {
-    // Hal::motors_set_pwm(m_controller.leftMotorPwm(), m_controller.rightMotorPwm());
+    setMotorsPwm(m_controller.leftMotorPwm(), m_controller.rightMotorPwm());
+  }
+  if (m_use_simulator) {
+    m_robot_simulator.doStep();
   }
 
-  // Send periodic telemetry messages
+  sendTelemetryMessages();
+}
+
+void PropulsionTask::sendTelemetryMessages() {
   m_telemetry_counter++;
   if (m_telemetry_counter == 20) {
     auto msg = m_controller.getTelemetryEx();
@@ -225,7 +238,7 @@ void PropulsionTask::processUrgentMessage() {
     case CommMessageType::DbgSetMotorsPwm: {
       float pwm[2];
       m_urgent_message_queue.pop_message((unsigned char*)&pwm, 8);
-      // Hal::motors_set_pwm(pwm[0], pwm[1]);
+      setMotorsPwm(pwm[0], pwm[1]);
     } break;
     case CommMessageType::PropulsionMeasurePoint: {
       float buff[4];
@@ -235,12 +248,6 @@ void PropulsionTask::processUrgentMessage() {
       // Set controller to new pose
       m_controller.resetPose(pose.position.x, pose.position.y, pose.yaw);
     } break;
-    case CommMessageType::ODrivePacket:
-      m_urgent_message_queue.pop_message(nullptr, 0);
-      while (m_message_queue.message_ready()) {
-        m_message_queue.pop_message(nullptr, 0);
-      }
-      break;
     default:
       m_urgent_message_queue.pop_message(nullptr, 0);
       break;
@@ -300,6 +307,21 @@ void PropulsionTask::measureNormal(float angle, float distance) {
   m_controller.resetPose(pose.position.x, pose.position.y, pose.yaw);
 }
 
+void PropulsionTask::setMotorsPwm(float left_pwm, float right_pwm) {
+  if (m_use_simulator) {
+    m_robot_simulator.m_left_pwm = left_pwm;
+    m_robot_simulator.m_right_pwm = right_pwm;
+  } else if (Robot::instance().robotConfig().use_odrive_uart) {
+    // uint8_t buff[8];
+    // Robot::instance().mainExchangeIn().pushMessage(CommMessageType::ODrivePacket, buff,
+    // sizeof(buff));
+
+  } else {
+    hal::pwm_set(0, left_pwm);
+    hal::pwm_set(1, right_pwm);
+  }
+}
+
 void PropulsionTask::taskFunction() {
   // Register for messages
   Robot::instance().mainExchangeIn().subscribe({84, 97, &m_message_queue});
@@ -308,14 +330,15 @@ void PropulsionTask::taskFunction() {
   Robot::instance().mainExchangeIn().subscribe({32, 32, &m_urgent_message_queue});
   Robot::instance().mainExchangeIn().subscribe({98, 102, &m_urgent_message_queue});
 
-
+  m_use_simulator = Robot::instance().robotConfig().use_simulator;
+  m_robot_simulator.m_config = Robot::instance().robotSimulatorConfig();
   // Set task to high
   set_priority(6);
 
   // Setup odometry
-  uint16_t left;
-  uint16_t right;
-  // Hal::encoders_get(left, right);
+  uint16_t left = hal::encoder_get(0);
+  uint16_t right = hal::encoder_get(1);
+
   m_odometry.reset(left, right);
   m_telemetry_counter = 0;
 

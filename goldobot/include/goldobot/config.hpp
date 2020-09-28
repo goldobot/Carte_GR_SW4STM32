@@ -34,6 +34,7 @@ struct RobotConfig {
 
   //! \brief use odrive uart interface for propulsion instead of pwm
   bool use_odrive_uart;
+  bool use_simulator;
 };
 
 }  // namespace goldobot

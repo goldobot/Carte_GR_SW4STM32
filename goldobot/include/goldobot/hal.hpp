@@ -38,8 +38,8 @@ size_t io_write_space_available(int id);
 size_t io_read_bytes_available(int id);
 
 Status i2c_memory_read(int fd, uint16_t dev_address, uint16_t mem_address,
-                              uint16_t mem_address_size, uint8_t* buffer, uint16_t size);
+                       uint16_t mem_address_size, uint8_t* buffer, uint16_t size);
 Status i2c_memory_write(int fd, uint16_t dev_address, uint16_t mem_address,
-                               uint16_t mem_address_size, const uint8_t* buffer, uint16_t size);
+                        uint16_t mem_address_size, const uint8_t* buffer, uint16_t size);
 }  // namespace hal
 };  // namespace goldobot

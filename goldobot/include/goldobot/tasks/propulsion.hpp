@@ -5,6 +5,7 @@
 #include "goldobot/platform/task.hpp"
 #include "goldobot/propulsion/controller.hpp"
 #include "goldobot/propulsion/simple_odometry.hpp"
+#include "goldobot/robot_simulator.hpp"
 
 namespace goldobot {
 class PropulsionTask : public Task {
@@ -21,6 +22,10 @@ class PropulsionTask : public Task {
 
   SimpleOdometry m_odometry;
   PropulsionController m_controller;
+  RobotSimulator m_robot_simulator;
+
+  bool m_use_simulator{false};
+
   uint16_t m_encoder_left{0};
   uint16_t m_encoders_right{0};
   uint16_t m_telemetry_counter{0};
@@ -39,6 +44,10 @@ class PropulsionTask : public Task {
 
   void measureNormal(float angle, float distance);
   void measurePointLongi(Vector2D point, float sensor_offset);
+
+  void setMotorsPwm(float left_pwm, float right_pwm);
+
+  void sendTelemetryMessages();
 
   static unsigned char s_message_queue_buffer[1024];
   static unsigned char s_urgent_message_queue_buffer[1024];
