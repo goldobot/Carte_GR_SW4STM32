@@ -167,7 +167,12 @@ void CommDeserializer::do_parse() {
         // Advance fifo at beginning of message
         pop_data(ptr - buff);
         // Goto next stage
-        m_state = ReadBody;
+        if (m_message_size + 4 < m_buffer_size) {
+          m_state = ReadBody;
+        } else {
+          m_statistics.crc_errors++;
+          m_state = SearchMagic;
+        }
       } break;
       case ReadBody: {
         // Check for reception of whole message
