@@ -26,6 +26,8 @@ class IODeviceQueue {
   // Use map_push to access the next area of the queue to write and unmap_push to commit the write
   // without copy
   size_t map_push(uint8_t** buffer);
+  size_t map_push_2(uint8_t** buffer,
+                    uint8_t* head);  // dirty hack, map on 1/4 of queue size boundaries
   void unmap_push(uint8_t* buffer, size_t size);
 
   size_t map_pop(uint8_t** buffer);

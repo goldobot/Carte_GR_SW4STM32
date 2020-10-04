@@ -40,7 +40,7 @@ void hal_i2c_init(IODevice* device, const IODeviceConfigI2c* config) {
   IRQn_Type ev_irq_n;
   IRQn_Type er_irq_n;
 
-  I2C_HandleTypeDef* i2c_handle = &g_i2c_handles[i2c_index];
+  I2C_HandleTypeDef* hi2c = &g_i2c_handles[i2c_index];
   I2C_TypeDef* i2c_instance;
 
   switch (config->device_id) {
@@ -65,6 +65,17 @@ void hal_i2c_init(IODevice* device, const IODeviceConfigI2c* config) {
     default:
       break;
   }
+
+  /* Interrupt Init */
+  HAL_NVIC_SetPriority(ev_irq_n, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY, 0);
+  HAL_NVIC_EnableIRQ(ev_irq_n);
+
+  HAL_NVIC_SetPriority(er_irq_n, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY, 0);
+  HAL_NVIC_EnableIRQ(er_irq_n);
+
+  hi2c->Instance = i2c_instance;
+
+  HAL_I2C_Init(hi2c);
 }
 
 }  // namespace platform

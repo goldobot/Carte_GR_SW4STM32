@@ -43,31 +43,24 @@ void init_io_device(IODeviceConfig* config) {
 
   // Non blocking io (fifo mode)
   if (!(device->io_flags & IODeviceFlags::RxBlocking)) {
-    device->start_rx_fifo();
+    device->try_start_rx_fifo();
   }
 }
 
 void io_device_rx_complete_callback_fifo(IORequest* req, IODevice* device) {
-  assert(req->state == IORequestState::RxComplete);
+  assert(req->state == IORequestState::Complete);
   device->rx_queue.unmap_push(req->rx_ptr, req->size - req->remaining);
 
-  req->state = IORequestState::Ready;
-  req->rx_ptr = nullptr;
-  req->size = 0;
-  req->remaining = 0;
-
   uint8_t* ptr;
-  auto size = device->rx_queue.map_push(&ptr);
+  auto size = device->rx_queue.map_push_2(&ptr, device->rx_next_head);
 
   if (size > 0) {
-    req->rx_ptr = ptr;
-    req->size = size;
-    device->rx_functions->start_request(req, device->device_index);
+    device->queue_rx_request(ptr, size, io_device_rx_complete_callback_fifo);
   }
 }
 
 void io_device_tx_complete_callback_fifo(IORequest* req, IODevice* device) {
-  assert(req->state == IORequestState::TxComplete);
+  assert(req->state == IORequestState::Complete);
   device->tx_queue.unmap_pop(req->tx_ptr, req->size - req->remaining);
 
   req->state = IORequestState::Ready;
@@ -85,15 +78,11 @@ void io_device_tx_complete_callback_fifo(IORequest* req, IODevice* device) {
   }
 }
 
-void IODevice::start_rx_fifo() {
-  uint8_t* ptr;
-  auto size = rx_queue.map_push(&ptr);
-
-  if (size > 0) {
-    rx_request.rx_ptr = ptr;
-    rx_request.size = size;
-    rx_request.callback = &io_device_rx_complete_callback_fifo;
-    hal_callback_send(HalCallback{DeviceType::IODevice, this - g_io_devices, 0});
+void IODevice::try_start_rx_fifo() {
+  auto rx_state = rx_request.state.load();
+  if (rx_state == IORequestState::Ready || rx_state == IORequestState::Complete ||
+      rx_request_next.state.load() == IORequestState::Ready) {
+    schedule_callback(0);
   }
 }
 
@@ -105,12 +94,12 @@ void IODevice::start_tx_fifo() {
     tx_request.tx_ptr = ptr;
     tx_request.size = size;
     tx_request.callback = &io_device_tx_complete_callback_fifo;
-    hal_callback_send(HalCallback{DeviceType::IODevice, this - g_io_devices, 1});
+    schedule_callback(1);
   }
 }
 
 void io_device_rx_complete_callback_blocking(IORequest* req, IODevice* device) {
-  assert(req->state == IORequestState::RxComplete);
+  assert(req->state == IORequestState::Complete);
   device->rx_queue.unmap_push(req->rx_ptr, req->size - req->remaining);
 
   req->state = IORequestState::Ready;
@@ -121,7 +110,7 @@ void io_device_rx_complete_callback_blocking(IORequest* req, IODevice* device) {
 }
 
 void io_device_tx_complete_callback_blocking(IORequest* req, IODevice* device) {
-  assert(req->state == IORequestState::TxComplete);
+  assert(req->state == IORequestState::Complete);
   device->tx_queue.unmap_pop(req->tx_ptr, req->size - req->remaining);
 
   req->state = IORequestState::Ready;
@@ -141,10 +130,10 @@ size_t IODevice::read(uint8_t* buffer, size_t buffer_size) {
     rx_request.rx_ptr = buffer;
     rx_request.size = buffer_size;
     rx_request.callback = &io_device_rx_complete_callback_blocking;
-    rx_functions->start_request(&rx_request, device_index);
+    schedule_callback(0);
     while (true) {
       xSemaphoreTake(rx_semaphore, portMAX_DELAY);
-      if (rx_request.state == IORequestState::RxComplete) {
+      if (rx_request.state == IORequestState::Complete) {
         rx_request.state = IORequestState::Ready;
         return rx_request.size - rx_request.remaining;
       }
@@ -157,18 +146,9 @@ size_t IODevice::read(uint8_t* buffer, size_t buffer_size) {
   {
     // Update state of rx request to read received data without waiting for end
     // of current transfer.
-    taskENTER_CRITICAL();
-    rx_functions->update_request(&rx_request, device_index);
-    rx_queue.unmap_push(rx_request.rx_ptr, rx_request.size - rx_request.remaining);
-    taskEXIT_CRITICAL();
-
+    schedule_callback(2);
     auto bytes_read = rx_queue.pop(buffer, buffer_size);
-
-    taskENTER_CRITICAL();
-    if (rx_request.state == IORequestState::Ready) {
-      start_rx_fifo();
-    }
-    taskEXIT_CRITICAL();
+    try_start_rx_fifo();
     return bytes_read;
   }
   return 0;
@@ -183,10 +163,10 @@ size_t IODevice::write(const uint8_t* buffer, size_t buffer_size) {
     tx_request.tx_ptr = (uint8_t*)buffer;
     tx_request.size = buffer_size;
     tx_request.callback = &io_device_tx_complete_callback_blocking;
-    tx_functions->start_request(&rx_request, device_index);
+    schedule_callback(1);
     while (true) {
       xSemaphoreTake(tx_semaphore, portMAX_DELAY);
-      if (tx_request.state == IORequestState::TxComplete) {
+      if (tx_request.state == IORequestState::Complete) {
         tx_request.state = IORequestState::Ready;
         return tx_request.size - tx_request.remaining;
       }
@@ -224,12 +204,7 @@ size_t IODevice::map_read(uint8_t** buffer) {
   } else {
     // Update state of rx request to read received data without waiting for end
     // of current transfer.
-    taskENTER_CRITICAL();
-    if (rx_request.state == IORequestState::RxBusy) {
-      rx_functions->update_request(&rx_request, device_index);
-      rx_queue.unmap_push(rx_request.rx_ptr, rx_request.size - rx_request.remaining);
-    }
-    taskEXIT_CRITICAL();
+    schedule_callback(2);
     auto retval = rx_queue.map_pop(buffer);
     return retval;
   }
@@ -239,12 +214,7 @@ void IODevice::unmap_read(uint8_t* buffer, size_t size) {
   if (size != 0) {
     rx_queue.unmap_pop(buffer, size);
   }
-
-  taskENTER_CRITICAL();
-  if (rx_request.state == IORequestState::Ready) {
-    start_rx_fifo();
-  }
-  taskEXIT_CRITICAL();
+  try_start_rx_fifo();
 }
 
 size_t IODevice::map_write(uint8_t** buffer) {
@@ -257,7 +227,7 @@ size_t IODevice::map_write(uint8_t** buffer) {
     // Update state of tx request to get an accurate measure of space remaining
     // in the tx queue.
     taskENTER_CRITICAL();
-    if (tx_request.state == IORequestState::TxBusy) {
+    if (tx_request.state == IORequestState::Busy) {
       tx_functions->update_request(&tx_request, device_index);
       tx_queue.unmap_pop(tx_request.tx_ptr, tx_request.size - tx_request.remaining);
     }
@@ -275,14 +245,61 @@ void IODevice::unmap_write(uint8_t* buffer, size_t size) {
   }
 }
 
+void IODevice::schedule_callback(uint8_t callback_id) {
+  hal_callback_send(
+      HalCallback{DeviceType::IODevice, static_cast<uint8_t>(this - g_io_devices), callback_id});
+}
+
+bool IODevice::queue_rx_request(uint8_t* buffer, size_t size, IORequestCallback callback) {
+  if (rx_request_next.state.load() != IORequestState::Ready || size == 0) {
+    return false;
+  }
+  rx_request_next.rx_ptr = buffer;
+  rx_request_next.size = size;
+  rx_request_next.callback = callback;
+  rx_request_next.state.store(IORequestState::Pending);
+  rx_next_head = buffer + size;
+  return true;
+}
+
 void hal_iodevice_callback(int id, int callback_id) {
   IODevice* device = &g_io_devices[id];
   switch (callback_id) {
-    case 0:
-      device->rx_functions->start_request(&device->rx_request, device->device_index);
-      break;
+    case 0: {
+      auto state = device->rx_request.state.load();
+      if (state == IORequestState::Ready || state == IORequestState::Complete) {
+        uint8_t* ptr;
+        auto size = device->rx_queue.map_push_2(&ptr, device->rx_next_head);
+        auto& req = device->rx_request;
+
+        if (size > 0) {
+          device->rx_next_head = ptr + size;
+          req.rx_ptr = ptr;
+          req.size = size;
+          req.callback = &io_device_rx_complete_callback_fifo;
+          device->rx_functions->start_request(&device->rx_request, device->device_index);
+        }
+      };
+      uint8_t* ptr;
+      auto size = device->rx_queue.map_push_2(&ptr, device->rx_next_head);
+      device->queue_rx_request(ptr, size, &io_device_rx_complete_callback_fifo);
+    } break;
     case 1:
-      device->tx_functions->start_request(&device->tx_request, device->device_index);
+      if (device->tx_request.state == IORequestState::Ready) {
+        device->tx_functions->start_request(&device->tx_request, device->device_index);
+      }
+      break;
+    case 2:
+      if (device->rx_request.state == IORequestState::Busy) {
+        auto& req = device->rx_request;
+        device->rx_functions->update_request(&req, device->device_index);
+        device->rx_queue.unmap_push(req.rx_ptr, req.size - req.remaining);
+      }
+      break;
+    case 3:
+      if (device->tx_request.state == IORequestState::Busy) {
+        device->tx_functions->update_request(&device->tx_request, device->device_index);
+      }
       break;
   }
 }

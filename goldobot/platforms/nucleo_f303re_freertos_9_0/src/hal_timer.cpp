@@ -252,20 +252,18 @@ void pwm_set(int pwm_id, float value) {
   }
 }
 
-uint16_t encoder_get(int id)
-{
-	auto descr = g_encoders[id];
-	auto htim = &g_tim_handles[descr.timer_id];
+uint16_t encoder_get(int id) {
+  auto descr = g_encoders[id];
+  auto htim = &g_tim_handles[descr.timer_id];
 
-	if(descr.flags & 0x01) //reverse direction flag
-	{
-		return htim->Instance->ARR - htim->Instance->CNT;
-	} else
-	{
-		return htim->Instance->CNT;
-	}
+  if (descr.flags & 0x01)  // reverse direction flag
+  {
+    return htim->Instance->ARR - htim->Instance->CNT;
+  } else {
+    return htim->Instance->CNT;
+  }
 
-	return 0;
+  return 0;
 }
 
 }  // namespace hal

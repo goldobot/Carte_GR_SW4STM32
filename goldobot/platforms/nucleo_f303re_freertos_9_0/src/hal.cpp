@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <cstring>
 
+#include "FreeRTOS.h"
+#include "core_cm4.h"
 #include "goldobot/platform/hal_gpio.hpp"
 #include "goldobot/platform/hal_i2c.hpp"
 #include "goldobot/platform/hal_io_device.hpp"
@@ -12,12 +14,8 @@
 #include "goldobot/platform/hal_spi.hpp"
 #include "goldobot/platform/hal_timer.hpp"
 #include "goldobot/platform/hal_uart.hpp"
-
-#include "stm32f3xx_hal.h"
-#include "core_cm4.h"
-
-#include "FreeRTOS.h"
 #include "semphr.h"
+#include "stm32f3xx_hal.h"
 #include "task.h"
 
 // Configuration structures
@@ -71,9 +69,23 @@ void init() {
   uart_config.tx_pin = PinID{0, 2};
   uart_config.rx_buffer_size = 256;
   uart_config.tx_buffer_size = 256;
-  uart_config.io_flags = /*IODeviceFlags::RxDma |*/ IODeviceFlags::TxDma;
+  uart_config.io_flags = IODeviceFlags::RxDma | IODeviceFlags::TxDma;
 
   init_io_device(&uart_config);
+
+  DeviceConfigGpio dbg1;
+  dbg1.device_type = DeviceType::Gpio;
+  dbg1.id = 30;
+  dbg1.dir = 1;
+  dbg1.pin.port = 0;
+  dbg1.pin.pin = 4;
+  hal_gpio_init(&dbg1);
+
+  dbg1.id = 31;
+  dbg1.dir = 1;
+  dbg1.pin.port = 1;
+  dbg1.pin.pin = 0;
+  hal_gpio_init(&dbg1);
 }
 
 TickType_t get_tick_count() { return xTaskGetTickCount(); }

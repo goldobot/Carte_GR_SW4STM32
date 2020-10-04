@@ -1,6 +1,8 @@
 #pragma once
 #include <assert.h>
 
+#include <atomic>
+
 #include "FreeRTOS.h"
 #include "goldobot/hal.hpp"
 #include "goldobot/platform/hal_io_device_queue.hpp"
@@ -17,23 +19,14 @@ struct IODevice;
 typedef void (*IORequestCallback)(IORequest*, IODevice* device);
 typedef void (*IORequestFunction)(IORequest*, uint32_t device_index);
 
-enum class IORequestState : uint32_t {
-  Ready,
-  TxBusy,
-  TxComplete,
-  RxBusy,
-  RxComplete,
-  RxTxBusy,
-  RxTxComplete,
-  Error
-};
+enum class IORequestState : uint32_t { Ready, Pending, Busy, Complete, Error };
 
 struct IORequest {
   uint8_t* rx_ptr;
   uint8_t* tx_ptr;
   uint32_t size;
-  volatile uint32_t remaining;
-  volatile IORequestState state{IORequestState::Ready};
+  std::atomic<uint32_t> remaining;
+  std::atomic<IORequestState> state{IORequestState::Ready};
   IORequestCallback callback;
 };
 
@@ -54,8 +47,11 @@ class IODevice {
   size_t map_write(uint8_t** buffer);
   void unmap_write(uint8_t* buffer, size_t size);
 
-  void start_rx_fifo();
+  void try_start_rx_fifo();
   void start_tx_fifo();
+
+  void schedule_callback(uint8_t callback_id);
+  bool queue_rx_request(uint8_t* buffer, size_t size, IORequestCallback callback);
 
   uint32_t device_index;  // index of raw device (0 for UART1 for example)
   uint16_t io_flags;
@@ -64,6 +60,8 @@ class IODevice {
   IODeviceFunctions* rx_functions;
   IODeviceQueue rx_queue;
   IORequest rx_request;
+  IORequest rx_request_next;
+  uint8_t* rx_next_head{nullptr};
   SemaphoreHandle_t rx_semaphore;
 
   IODeviceFunctions* tx_functions;

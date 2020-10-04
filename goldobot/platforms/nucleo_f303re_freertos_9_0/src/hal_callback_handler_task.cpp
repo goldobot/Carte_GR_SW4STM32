@@ -10,10 +10,19 @@ namespace platform {
 QueueHandle_t g_hal_callback_queue;
 TaskHandle_t g_hal_callback_handler_task_handle;
 
+HalCallback g_hal_callbacks_debug[16];
+int g_foo = 0;
+
 void hal_callback_handler_task_function(void* thisptr) {
   while (true) {
     HalCallback callback;
     if (xQueueReceive(g_hal_callback_queue, &callback, portMAX_DELAY) == pdTRUE) {
+      goldobot::hal::gpio_set(31, true);
+
+      g_hal_callbacks_debug[g_foo++] = callback;
+      if (g_foo == 16) {
+        g_foo = 0;
+      }
       switch (callback.device_type) {
         case DeviceType::Uart:
           hal_uart_callback(callback.device_index, callback.callback_index);
@@ -24,6 +33,7 @@ void hal_callback_handler_task_function(void* thisptr) {
         default:
           break;
       }
+      goldobot::hal::gpio_set(31, false);
     }
   }
 }
