@@ -5,8 +5,8 @@
 #include <algorithm>
 #include <cstring>
 
-#include "FreeRTOS.h"
-#include "core_cm4.h"
+
+
 #include "goldobot/platform/hal_gpio.hpp"
 #include "goldobot/platform/hal_i2c.hpp"
 #include "goldobot/platform/hal_io_device.hpp"
@@ -14,9 +14,13 @@
 #include "goldobot/platform/hal_spi.hpp"
 #include "goldobot/platform/hal_timer.hpp"
 #include "goldobot/platform/hal_uart.hpp"
+
+#include "FreeRTOS.h"
 #include "semphr.h"
-#include "stm32f3xx_hal.h"
 #include "task.h"
+
+#include "stm32f3xx_hal.h"
+#include "core_cm4.h"
 
 // Configuration structures
 
