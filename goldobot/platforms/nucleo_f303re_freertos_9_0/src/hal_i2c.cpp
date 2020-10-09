@@ -4,6 +4,7 @@
 
 extern "C" {
 #include "stm32f3xx_hal_i2c.h"
+#include "stm32f3xx_hal_i2c_ex.h"
 #include "stm32f3xx_ll_bus.h"
 #include "stm32f3xx_ll_gpio.h"
 
@@ -66,6 +67,9 @@ void hal_i2c_init(IODevice* device, const IODeviceConfigI2c* config) {
       break;
   }
 
+
+  device->device_index = i2c_index;
+
   /* Interrupt Init */
   HAL_NVIC_SetPriority(ev_irq_n, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY, 0);
   HAL_NVIC_EnableIRQ(ev_irq_n);
@@ -74,8 +78,27 @@ void hal_i2c_init(IODevice* device, const IODeviceConfigI2c* config) {
   HAL_NVIC_EnableIRQ(er_irq_n);
 
   hi2c->Instance = i2c_instance;
+  hi2c->Init.Timing = config->timing;
+  hi2c->Init.OwnAddress1 = 0;
+  hi2c->Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c->Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c->Init.OwnAddress2 = 0;
+  hi2c->Init.OwnAddress2Masks = I2C_OA2_NOMASK;
+  hi2c->Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c->Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+
+  LL_GPIO_InitTypeDef GPIO_InitStruct;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+
+  hal_gpio_init_pin_af(config->device_id, 0, config->scl_pin, GPIO_InitStruct);
+  hal_gpio_init_pin_af(config->device_id, 1, config->sda_pin, GPIO_InitStruct);
 
   HAL_I2C_Init(hi2c);
+  HAL_I2CEx_ConfigAnalogFilter(hi2c, I2C_ANALOGFILTER_ENABLE);
+  HAL_I2CEx_ConfigDigitalFilter(hi2c, 0);
+
 }
 
 }  // namespace platform

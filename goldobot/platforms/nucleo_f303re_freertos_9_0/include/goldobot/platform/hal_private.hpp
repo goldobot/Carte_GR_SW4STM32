@@ -58,6 +58,7 @@ struct IODeviceFlags {
 
 struct EncoderFlags {
   static constexpr uint8_t ReverseDirection = 0x01;
+  static constexpr uint8_t HallMode = 0x02; // CH1 is replaced by XOR of CH1, CH2, CH3, used for hall encoders
 };
 
 struct GpioFlags {
@@ -115,9 +116,9 @@ struct IODeviceConfigUart : IODeviceConfig {
 };
 
 struct IODeviceConfigI2c : IODeviceConfig {
-  PinID rx_pin;
-  PinID tx_pin;
-  uint32_t baudrate;
+  PinID scl_pin;
+  PinID sda_pin;
+  uint32_t timing;
 };
 
 struct IODeviceConfigSpi : IODeviceConfig {
@@ -125,7 +126,7 @@ struct IODeviceConfigSpi : IODeviceConfig {
   PinID mosi_pin;
   PinID miso_pin;
   PinID nss_pin;
-  uint32_t baudrate_prescaler;
+  uint16_t baudrate_prescaler;
 };
 struct GpioDevice {
   uint8_t port;

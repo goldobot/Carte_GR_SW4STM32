@@ -175,13 +175,21 @@ void hal_encoder_init(const DeviceConfigEncoder* config) {
 
   sConfig.EncoderMode = TIM_ENCODERMODE_TI12;
   sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
-  sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
+  sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI; // TIM_TI1SELECTION_XORCOMBINATION
   sConfig.IC1Prescaler = TIM_ICPSC_DIV1;
   sConfig.IC1Filter = 0;
   sConfig.IC2Polarity = TIM_ICPOLARITY_RISING;
   sConfig.IC2Selection = TIM_ICSELECTION_DIRECTTI;
   sConfig.IC2Prescaler = TIM_ICPSC_DIV1;
   sConfig.IC2Filter = 0;
+
+  if(config->flags & EncoderFlags::HallMode)
+  {
+	  HAL_TIM_ConfigTI1Input(tim, TIM_TI1SELECTION_XORCOMBINATION);
+  } else
+  {
+	  HAL_TIM_ConfigTI1Input(tim, TIM_TI1SELECTION_CH1);
+  }
 
   HAL_TIM_Encoder_Init(tim, &sConfig);
 
@@ -199,6 +207,7 @@ void hal_encoder_init(const DeviceConfigEncoder* config) {
 
   hal_gpio_init_pin_af(config->device_id, 0, config->ch1_pin, GPIO_InitStruct);
   hal_gpio_init_pin_af(config->device_id, 2, config->ch2_pin, GPIO_InitStruct);
+  hal_gpio_init_pin_af(config->device_id, 4, config->ch3_pin, GPIO_InitStruct);
 
   HAL_TIM_Encoder_Start(tim, TIM_CHANNEL_1);
 }
@@ -256,7 +265,7 @@ uint16_t encoder_get(int id) {
   auto descr = g_encoders[id];
   auto htim = &g_tim_handles[descr.timer_id];
 
-  if (descr.flags & 0x01)  // reverse direction flag
+  if (descr.flags & EncoderFlags::ReverseDirection)  // reverse direction flag
   {
     return htim->Instance->ARR - htim->Instance->CNT;
   } else {
