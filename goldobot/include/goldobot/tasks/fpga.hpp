@@ -13,11 +13,21 @@ struct FpgaServoState {
   uint32_t target_timestamp{0};
 };
 
+enum class FpgaSpiTransactionStatus {
+  Ok,
+  CrcError,
+  ApbBusy,
+};
+
 class FpgaTask : public Task {
  public:
   FpgaTask();
   const char *name() const override;
   void taskFunction() override;
+
+  FpgaSpiTransactionStatus spiTransaction(uint8_t command, uint32_t arg, uint32_t &result);
+  FpgaSpiTransactionStatus spiTransaction(uint8_t command, uint32_t arg, uint32_t &result,
+                                          int retries);
 
   int goldo_fpga_master_spi_read_word(unsigned int apb_addr, unsigned int *pdata);
   int goldo_fpga_master_spi_write_word(unsigned int apb_addr, unsigned int data);
@@ -32,10 +42,8 @@ class FpgaTask : public Task {
   int goldo_fpga_set_columns_offset(int col_id, int col_offset);
 
  private:
-  unsigned char spi_buf_out[64];
-  unsigned char spi_buf_in[64];
-  unsigned int m_last_crc;
-  unsigned int m_last_dbg;
+  unsigned char spi_buf_out[8];
+  unsigned char spi_buf_in[8];
   int goldo_fpga_send_spi_frame(void);
   void process_message();
 
@@ -46,7 +54,7 @@ class FpgaTask : public Task {
 
   uint32_t m_last_timestamp{0};
 
-  ServosConfig *m_servos_config;
+  ServosConfig *m_servos_config{nullptr};
   float m_servos_positions[16];
   uint16_t m_servos_speeds[16];
   uint16_t m_servos_target_positions[16];
@@ -56,17 +64,8 @@ class FpgaTask : public Task {
   unsigned char MyLittleCRC(unsigned char INCRC, unsigned char INBIT);
   unsigned char swap_bits(unsigned char IN);
   unsigned char CalculateCRC(unsigned char INCRC, unsigned char INBYTE);
-  int goldo_fpga_check_crc(unsigned char *buf5, unsigned char recv_crc);
-  void goldo_send_log_uint32(const char *msg, unsigned int val);
+  FpgaSpiTransactionStatus goldo_fpga_check_crc(unsigned char *buf5, unsigned char recv_crc);
 
-  int m_total_spi_frame_cnt;
-  int m_strange_err_cnt;
-  int m_addr1_crc_err_cnt;
-  int m_addr2_crc_err_cnt;
-  int m_write1_crc_err_cnt;
-  int m_write2_crc_err_cnt;
-  int m_read1_crc_err_cnt;
-  int m_read2_crc_err_cnt;
-  int m_apb_err_cnt;
+  int m_total_spi_frame_cnt{0};
 };
 }  // namespace goldobot

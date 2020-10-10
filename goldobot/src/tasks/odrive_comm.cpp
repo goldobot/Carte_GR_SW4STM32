@@ -51,8 +51,8 @@ void ODriveCommTask::taskFunction() {
     if (m_stream_parser.packetReady()) {
       size_t packet_size = m_stream_parser.packetSize();
       m_stream_parser.popPacket(s_scratchpad, sizeof(s_scratchpad));
-      Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ODriveResponsePacket, s_scratchpad,
-                                                      packet_size);
+      Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ODriveResponsePacket,
+                                                      s_scratchpad, packet_size);
     }
 
     // Process messages

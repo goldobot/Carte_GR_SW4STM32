@@ -3,6 +3,8 @@
 #include "goldobot/hal.hpp"
 #include "goldobot/robot.hpp"
 
+#include <cassert>
+
 #ifndef M_PI
 #define M_PI (3.14159265358979323846)
 #endif
@@ -40,13 +42,13 @@ void PropulsionTask::doStep() {
   }
 
   // Update odometry
-  if (!m_use_simulator) {
-    uint16_t left = hal::encoder_get(0);
-    uint16_t right = hal::encoder_get(1);
-    m_odometry.update(left, right);
-  } else {
+  if (Robot::instance().robotConfig().use_simulator) {
     uint16_t left = m_robot_simulator.encoderLeft();
     uint16_t right = m_robot_simulator.encoderRight();
+    m_odometry.update(left, right);
+  } else {
+    uint16_t left = hal::encoder_get(0);
+    uint16_t right = hal::encoder_get(1);
     m_odometry.update(left, right);
   }
 
@@ -72,7 +74,7 @@ void PropulsionTask::doStep() {
   if (m_controller.state() != PropulsionController::State::Inactive) {
     setMotorsPwm(m_controller.leftMotorPwm(), m_controller.rightMotorPwm());
   }
-  if (m_use_simulator) {
+  if (Robot::instance().robotConfig().use_simulator) {
     m_robot_simulator.doStep();
   }
 
@@ -238,7 +240,7 @@ void PropulsionTask::processUrgentMessage() {
     case CommMessageType::DbgSetMotorsPwm: {
       float pwm[2];
       m_urgent_message_queue.pop_message((unsigned char*)&pwm, 8);
-      setMotorsPwm(pwm[0], pwm[1]);
+      setMotorsPwm(pwm[0], pwm[1], true);
     } break;
     case CommMessageType::PropulsionMeasurePoint: {
       float buff[4];
@@ -307,12 +309,57 @@ void PropulsionTask::measureNormal(float angle, float distance) {
   m_controller.resetPose(pose.position.x, pose.position.y, pose.yaw);
 }
 
-void PropulsionTask::setMotorsPwm(float left_pwm, float right_pwm) {
-  if (m_use_simulator) {
+void PropulsionTask::setODriveVelocitySetPoint(int axis, float vel_setpoint,
+                                               float current_feedforward) {
+  assert(axis >= 0 && axis < 2);
+  uint16_t endpoint = m_odrive_set_velocity_setpoint_endpoints[axis];
+
+  uint8_t buff[12];
+
+  *reinterpret_cast<uint16_t*>(buff + 0) = m_odrive_seq | 0x4000;
+  *reinterpret_cast<uint16_t*>(buff + 2) = endpoint + 1;
+  *reinterpret_cast<uint16_t*>(buff + 4) = 0;
+  *reinterpret_cast<float*>(buff + 6) = vel_setpoint;
+  *reinterpret_cast<uint16_t*>(buff + 10) = m_odrive_key;
+  m_odrive_seq = (m_odrive_seq + 1) & 0xbfff;
+  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::ODriveRequestPacket, buff, 12);
+
+  *reinterpret_cast<uint16_t*>(buff + 0) = m_odrive_seq | 0x4000;
+  *reinterpret_cast<uint16_t*>(buff + 2) = endpoint + 2;
+  *reinterpret_cast<uint16_t*>(buff + 4) = 0;
+  *reinterpret_cast<float*>(buff + 6) = current_feedforward;
+  *reinterpret_cast<uint16_t*>(buff + 10) = m_odrive_key;
+  m_odrive_seq = (m_odrive_seq + 1) & 0xbfff;
+  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::ODriveRequestPacket, buff, 12);
+
+  *reinterpret_cast<uint16_t*>(buff + 0) = m_odrive_seq | 0x4000;
+  *reinterpret_cast<uint16_t*>(buff + 2) = endpoint;
+  *reinterpret_cast<uint16_t*>(buff + 4) = 0;
+  *reinterpret_cast<uint16_t*>(buff + 6) = m_odrive_key;
+  m_odrive_seq = (m_odrive_seq + 1) & 0xbfff;
+  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::ODriveRequestPacket, buff, 8);
+}
+
+void PropulsionTask::setMotorsPwm(float left_pwm, float right_pwm, bool immediate) {
+  if (Robot::instance().robotConfig().use_simulator) {
     m_robot_simulator.m_left_pwm = left_pwm;
     m_robot_simulator.m_right_pwm = right_pwm;
   } else if (Robot::instance().robotConfig().use_odrive_uart) {
-    // uint8_t buff[8];
+    if (immediate) {
+      setODriveVelocitySetPoint(0, left_pwm, 0);
+      setODriveVelocitySetPoint(1, right_pwm, 0);
+      return;
+    }
+    if (m_odrive_cnt == 0) {
+      setODriveVelocitySetPoint(0, left_pwm, 0);
+      setODriveVelocitySetPoint(1, right_pwm, 0);
+    }
+    m_odrive_cnt++;
+    if (m_odrive_cnt == 10) {
+      m_odrive_cnt = 0;
+    }
+
+    //
     // Robot::instance().mainExchangeIn().pushMessage(CommMessageType::ODrivePacket, buff,
     // sizeof(buff));
 

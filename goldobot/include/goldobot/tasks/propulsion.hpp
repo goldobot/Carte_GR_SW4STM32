@@ -34,6 +34,11 @@ class PropulsionTask : public Task {
   bool m_adversary_detection_enabled{true};
   bool m_recalage_goldenium_armed{false};
 
+  uint16_t m_odrive_seq{4096};
+  uint16_t m_odrive_key{0x7411};
+  uint16_t m_odrive_set_velocity_setpoint_endpoints[2] = {158, 316};
+  uint16_t m_odrive_cnt{0};  // send one message every 10 ms
+
   void doStep();
   void processMessage();
   void processUrgentMessage();
@@ -45,7 +50,8 @@ class PropulsionTask : public Task {
   void measureNormal(float angle, float distance);
   void measurePointLongi(Vector2D point, float sensor_offset);
 
-  void setMotorsPwm(float left_pwm, float right_pwm);
+  void setMotorsPwm(float left_pwm, float right_pwm, bool immediate = false);
+  void setODriveVelocitySetPoint(int axis, float vel_setpoint, float current_feedforward);
 
   void sendTelemetryMessages();
 
