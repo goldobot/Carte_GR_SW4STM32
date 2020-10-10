@@ -123,7 +123,8 @@ enum class CommMessageType : uint16_t {
   RobotEndLoadConfigStatus = 403,
 
   // ODrive
-  ODrivePacket = 410,
+  ODriveRequestPacket = 410,
+  ODriveResponsePacket = 411,
 
   // HAL
   HalGpioGet = 500,

@@ -1,6 +1,7 @@
+#include "FreeRTOS.h"
+#include "semphr.h"
 
 #include "goldobot/platform/hal_spi.hpp"
-
 #include "goldobot/platform/hal_gpio.hpp"
 
 extern "C" {
@@ -9,15 +10,36 @@ extern "C" {
 #include "stm32f3xx_ll_gpio.h"
 
 void goldobot_hal_spi_irq_handler(int index);
+void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef* hspi);
 }
+
+
 
 namespace goldobot {
 namespace hal {
 namespace platform {
 SPI_HandleTypeDef g_spi_handles[3];
+IODevice* g_spi_io_devices[3];
+
+inline uint8_t get_spi_index(SPI_HandleTypeDef* hspi)
+{
+	return static_cast<uint8_t>(hspi - g_spi_handles);
+}
+
 }
 }  // namespace hal
 };  // namespace goldobot
+
+void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef* hspi)
+{
+  using namespace goldobot::hal::platform;
+  uint8_t uart_index = get_spi_index(hspi);
+  auto io_device = g_spi_io_devices[uart_index];
+
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+  xSemaphoreGiveFromISR(io_device->tx_semaphore, &xHigherPriorityTaskWoken);
+  portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+}
 
 using namespace goldobot::hal::platform;
 
@@ -27,7 +49,7 @@ namespace goldobot {
 namespace hal {
 namespace platform {
 
-void* g_spi_io_devices[3];
+
 
 namespace {
 int baudrate_prescaler_flag(int baudrate_prescaler) {
@@ -122,5 +144,16 @@ void hal_spi_init(IODevice* device, const IODeviceConfigSpi* config) {
 }
 
 }  // namespace platform
+
+void spi_read_write(int id, uint8_t* read_buffer, const uint8_t* write_buffer, size_t size)
+{
+	auto hspi = &g_spi_handles[g_io_devices[id].device_index];
+	auto& io_device = g_io_devices[id];
+	HAL_SPI_TransmitReceive_IT(hspi, const_cast<uint8_t*>(write_buffer), read_buffer, size);
+	while(xSemaphoreTake(io_device.tx_semaphore, portMAX_DELAY) != pdTRUE && HAL_SPI_GetState(hspi) != HAL_SPI_STATE_READY)
+	{
+	}
+}
+
 }  // namespace hal
 };  // namespace goldobot

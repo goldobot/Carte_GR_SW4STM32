@@ -116,38 +116,9 @@ void FpgaTask::taskFunction() {
 }
 
 int FpgaTask::goldo_fpga_send_spi_frame(void) {
-  // hal::send_spi_frame(spi_buf_out, spi_buf_in);
+  hal::spi_read_write(4, spi_buf_in, spi_buf_out, SPI_FRAME_SZ);
   m_total_spi_frame_cnt++;
   return 0;
-#if 0 /* FIXME : TODO : cleanup (old code) */
-/*
-  int i;
-  volatile uint8_t *spi_dr = (uint8_t *) 0x4001300c;
-  volatile uint32_t *spi_sr = (uint32_t *) 0x40013008;
-  int pool_cnt = 0;
-
-  spi_buf_in[0] = *spi_dr;
-  for (i=0; i<SPI_FRAME_SZ; i++) {
-  pool_cnt = 0;
-  while (((*spi_sr)&2)==0) {
-    pool_cnt++;
-    if (pool_cnt>POOL_MAX_CNT)
-      return -1;
-  }
-  *spi_dr = spi_buf_out[i];
-  pool_cnt = 0;
-  while (((*spi_sr)&1)==0){
-    pool_cnt++;
-    if (pool_cnt>POOL_MAX_CNT)
-      return -1;
-  }
-  spi_buf_in[i] = *spi_dr;
-  }
-  //while (((*spi_sr)&1)==0);
-  spi_buf_in[SPI_FRAME_SZ] = *spi_dr;
-  return 0;
-*/
-#endif
 }
 
 int FpgaTask::goldo_fpga_master_spi_read_word(unsigned int apb_addr, unsigned int *pdata) {

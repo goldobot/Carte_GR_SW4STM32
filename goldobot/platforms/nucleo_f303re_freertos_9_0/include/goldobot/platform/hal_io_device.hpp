@@ -3,10 +3,11 @@
 
 #include <atomic>
 
-#include "FreeRTOS.h"
 #include "goldobot/hal.hpp"
 #include "goldobot/platform/hal_io_device_queue.hpp"
 #include "goldobot/platform/hal_private.hpp"
+
+#include "FreeRTOS.h"
 #include "semphr.h"
 
 namespace goldobot {
