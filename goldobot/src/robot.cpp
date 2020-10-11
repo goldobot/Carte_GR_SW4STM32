@@ -97,7 +97,7 @@ bool Robot::endLoadConfig(uint16_t crc) {
     m_odrive_comm_task.init();
   }
   // m_arms_task.init();
-  // m_fpga_task.init();
+  m_fpga_task.init();
 
   start();
   m_match_state = MatchState::Idle;
