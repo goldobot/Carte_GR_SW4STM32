@@ -102,7 +102,7 @@ int FpgaTask::goldo_fpga_send_spi_frame(void) {
 }
 
 FpgaSpiTransactionStatus FpgaTask::spiTransaction(uint8_t command, uint32_t arg, uint32_t &result) {
-  spi_buf_out[0] = 0x30;
+  spi_buf_out[0] = command;
   spi_buf_out[1] = (arg >> 24) & 0xff;
   spi_buf_out[2] = (arg >> 16) & 0xff;
   spi_buf_out[3] = (arg >> 8) & 0xff;
@@ -362,7 +362,7 @@ FpgaSpiTransactionStatus FpgaTask::goldo_fpga_check_crc(unsigned char *buf5,
   calc_crc = CalculateCRC(calc_crc, recv_crc);
 
   calc_crc_inv = CalculateCRC(calc_crc_inv, ~recv_crc);
-
+  return FpgaSpiTransactionStatus::Ok;
   if (calc_crc_inv == 0x00) return FpgaSpiTransactionStatus::ApbBusy; /* apb busy */
   if (calc_crc != 0x00) return FpgaSpiTransactionStatus::CrcError;    /* spi bus glitch */
   return FpgaSpiTransactionStatus::Ok;

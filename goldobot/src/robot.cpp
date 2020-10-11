@@ -96,7 +96,7 @@ bool Robot::endLoadConfig(uint16_t crc) {
   if (m_robot_config->use_odrive_uart) {
     m_odrive_comm_task.init();
   }
-  // m_arms_task.init();
+  m_arms_task.init();
   m_fpga_task.init();
 
   start();

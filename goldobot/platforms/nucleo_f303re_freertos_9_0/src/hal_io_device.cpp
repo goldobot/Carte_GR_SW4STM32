@@ -100,23 +100,11 @@ void IODevice::start_tx_fifo() {
 
 void io_device_rx_complete_callback_blocking(IORequest* req, IODevice* device) {
   assert(req->state == IORequestState::Complete);
-  device->rx_queue.unmap_push(req->rx_ptr, req->size - req->remaining);
-
-  req->state = IORequestState::Ready;
-  req->rx_ptr = nullptr;
-  req->size = 0;
-  req->remaining = 0;
   xSemaphoreGive(device->rx_semaphore);
 }
 
 void io_device_tx_complete_callback_blocking(IORequest* req, IODevice* device) {
   assert(req->state == IORequestState::Complete);
-  device->tx_queue.unmap_pop(req->tx_ptr, req->size - req->remaining);
-
-  req->state = IORequestState::Ready;
-  req->tx_ptr = nullptr;
-  req->size = 0;
-  req->remaining = 0;
   xSemaphoreGive(device->tx_semaphore);
 }
 

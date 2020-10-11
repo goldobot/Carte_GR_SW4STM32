@@ -56,7 +56,6 @@ class IODevice {
 
   uint32_t device_index;  // index of raw device (0 for UART1 for example)
   uint16_t io_flags;
-  PinID txen_pin;  // gpio pin that is set to 1 when transmitting
 
   IODeviceFunctions* rx_functions;
   IODeviceQueue rx_queue;

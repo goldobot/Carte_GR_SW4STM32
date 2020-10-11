@@ -60,6 +60,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef* huart) {
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart) {
   uint8_t uart_index = get_uart_index(huart);
+  hal_gpio_pin_set(g_uart_txen_pins[uart_index], false);
   hal_callback_send_from_isr(HalCallback{DeviceType::Uart, uart_index, 1, 0});
 };
 
@@ -194,6 +195,9 @@ void uart_start_tx_request_dma(IORequest* req, uint32_t device_index) {
   auto uart_handle = &g_uart_handles[device_index];
   req->remaining = req->size;
   req->state = IORequestState::Busy;
+
+  hal_gpio_pin_set(g_uart_txen_pins[device_index], true);
+
   auto status = HAL_UART_Transmit_DMA(uart_handle, req->tx_ptr, req->size);
   assert(status == HAL_OK);
 }
@@ -276,6 +280,15 @@ void hal_usart_init(IODevice* device, const IODeviceConfigUart* config) {
 
   hal_gpio_init_pin_af(config->device_id, 0, config->rx_pin, GPIO_InitStruct);
   hal_gpio_init_pin_af(config->device_id, 1, config->tx_pin, GPIO_InitStruct);
+
+  g_uart_txen_pins[uart_index] = config->txen_pin;
+  if(config->txen_pin.port != 0x255){
+	  LL_GPIO_InitTypeDef GPIO_InitStruct;
+	  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	  GPIO_InitStruct.Pull = GPIO_NOPULL;
+	  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+	  hal_gpio_init_pin(config->txen_pin, GPIO_InitStruct);
+  }
 
   /* USART2 interrupt Init */
   HAL_NVIC_SetPriority(irq_n, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY, 0);
