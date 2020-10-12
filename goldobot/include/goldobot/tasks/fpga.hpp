@@ -19,15 +19,18 @@ enum class FpgaSpiTransactionStatus {
   ApbBusy,
 };
 
+enum class FpgaSpiTransactionDir { Read, Write };
+
 class FpgaTask : public Task {
  public:
   FpgaTask();
   const char *name() const override;
   void taskFunction() override;
 
-  FpgaSpiTransactionStatus spiTransaction(uint8_t command, uint32_t arg, uint32_t &result);
-  FpgaSpiTransactionStatus spiTransaction(uint8_t command, uint32_t arg, uint32_t &result,
-                                          int retries);
+  FpgaSpiTransactionStatus spiTransaction(uint8_t command, FpgaSpiTransactionDir dir, uint32_t arg,
+                                          uint32_t &result);
+  FpgaSpiTransactionStatus spiTransaction(uint8_t command, FpgaSpiTransactionDir dir, uint32_t arg,
+                                          uint32_t &result, int retries);
 
   int goldo_fpga_master_spi_read_word(unsigned int apb_addr, unsigned int *pdata);
   int goldo_fpga_master_spi_write_word(unsigned int apb_addr, unsigned int data);

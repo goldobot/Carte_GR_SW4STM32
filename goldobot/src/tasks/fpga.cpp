@@ -91,7 +91,7 @@ void FpgaTask::taskFunction() {
       }
     }
 
-    delay(1);
+    delay(5);
   } /* while(1) */
 }
 
@@ -101,7 +101,8 @@ int FpgaTask::goldo_fpga_send_spi_frame(void) {
   return 0;
 }
 
-FpgaSpiTransactionStatus FpgaTask::spiTransaction(uint8_t command, uint32_t arg, uint32_t &result) {
+FpgaSpiTransactionStatus FpgaTask::spiTransaction(uint8_t command, FpgaSpiTransactionDir dir,
+                                                  uint32_t arg, uint32_t &result) {
   spi_buf_out[0] = command;
   spi_buf_out[1] = (arg >> 24) & 0xff;
   spi_buf_out[2] = (arg >> 16) & 0xff;
@@ -112,18 +113,20 @@ FpgaSpiTransactionStatus FpgaTask::spiTransaction(uint8_t command, uint32_t arg,
   std::memset(spi_buf_in, 0, sizeof(spi_buf_in));
 
   goldo_fpga_send_spi_frame();
-  auto status = goldo_fpga_check_crc(spi_buf_out, spi_buf_in[5]);
+  auto status = (dir == FpgaSpiTransactionDir::Write)
+                    ? goldo_fpga_check_crc(spi_buf_out, spi_buf_in[5])
+                    : goldo_fpga_check_crc(spi_buf_in, spi_buf_in[5]);
   if (status == FpgaSpiTransactionStatus::Ok) {
     result = (spi_buf_in[1] << 24) + (spi_buf_in[2] << 16) + (spi_buf_in[3] << 8) + (spi_buf_in[4]);
   }
   return status;
 }
 
-FpgaSpiTransactionStatus FpgaTask::spiTransaction(uint8_t command, uint32_t arg, uint32_t &result,
-                                                  int retries) {
+FpgaSpiTransactionStatus FpgaTask::spiTransaction(uint8_t command, FpgaSpiTransactionDir dir,
+                                                  uint32_t arg, uint32_t &result, int retries) {
   FpgaSpiTransactionStatus status;
   for (int i = 0; i < retries; i++) {
-    status = spiTransaction(command, arg, result);
+    status = spiTransaction(command, dir, arg, result);
     if (status == FpgaSpiTransactionStatus::Ok) {
       return status;
     }
@@ -135,12 +138,14 @@ int FpgaTask::goldo_fpga_master_spi_read_word(unsigned int apb_addr, unsigned in
   uint32_t val;
 
   /* 1) sending APB_ADDR */
-  if (spiTransaction(0x30, apb_addr, val, 4) != FpgaSpiTransactionStatus::Ok) {
+  if (spiTransaction(0x30, FpgaSpiTransactionDir::Write, apb_addr, val, 4) !=
+      FpgaSpiTransactionStatus::Ok) {
     return 0;
   }
 
   /* 2) reading data */
-  if (spiTransaction(0x50, 0, val, 4) != FpgaSpiTransactionStatus::Ok) {
+  if (spiTransaction(0x50, FpgaSpiTransactionDir::Read, 0, val, 4) !=
+      FpgaSpiTransactionStatus::Ok) {
     return 0;
   }
   *pdata = val;
@@ -151,12 +156,14 @@ int FpgaTask::goldo_fpga_master_spi_write_word(unsigned int apb_addr, unsigned i
   uint32_t val;
 
   /* 1) sending APB_ADDR */
-  if (spiTransaction(0x30, apb_addr, val, 4) != FpgaSpiTransactionStatus::Ok) {
+  if (spiTransaction(0x30, FpgaSpiTransactionDir::Write, apb_addr, val, 4) !=
+      FpgaSpiTransactionStatus::Ok) {
     return 0;
   }
 
   /* 2) writing data */
-  if (spiTransaction(0x40, 0, val, 4) != FpgaSpiTransactionStatus::Ok) {
+  if (spiTransaction(0x40, FpgaSpiTransactionDir::Write, data, val, 4) !=
+      FpgaSpiTransactionStatus::Ok) {
     return 0;
   }
   return 0;
@@ -242,9 +249,7 @@ void FpgaTask::process_message() {
       unsigned char buff[8];
       m_message_queue.pop_message(buff, 4);
       uint32_t apb_addr = *(uint32_t *)(buff);
-      if (goldo_fpga_master_spi_read_word(apb_addr, &apb_data) != 0) {
-        apb_data = 0xdeadbeef;
-      }
+      goldo_fpga_master_spi_read_word(apb_addr, &apb_data);
       std::memcpy(buff + 4, (unsigned char *)&apb_data, 4);
       Robot::instance().mainExchangeOut().pushMessage(CommMessageType::FpgaDbgReadReg,
                                                       (unsigned char *)buff, 8);
@@ -362,7 +367,7 @@ FpgaSpiTransactionStatus FpgaTask::goldo_fpga_check_crc(unsigned char *buf5,
   calc_crc = CalculateCRC(calc_crc, recv_crc);
 
   calc_crc_inv = CalculateCRC(calc_crc_inv, ~recv_crc);
-  return FpgaSpiTransactionStatus::Ok;
+
   if (calc_crc_inv == 0x00) return FpgaSpiTransactionStatus::ApbBusy; /* apb busy */
   if (calc_crc != 0x00) return FpgaSpiTransactionStatus::CrcError;    /* spi bus glitch */
   return FpgaSpiTransactionStatus::Ok;

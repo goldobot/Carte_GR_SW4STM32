@@ -33,8 +33,8 @@ inline uint8_t get_spi_index(SPI_HandleTypeDef* hspi)
 void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef* hspi)
 {
   using namespace goldobot::hal::platform;
-  uint8_t uart_index = get_spi_index(hspi);
-  auto io_device = g_spi_io_devices[uart_index];
+  uint8_t spi_index = get_spi_index(hspi);
+  auto io_device = g_spi_io_devices[spi_index];
 
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
   xSemaphoreGiveFromISR(io_device->tx_semaphore, &xHigherPriorityTaskWoken);
