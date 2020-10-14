@@ -1,7 +1,8 @@
 #include "main.h"
 
-#include "cmsis_os.h"
 #include "goldobot/goldobot_main.h"
+
+#include "cmsis_os.h"
 
 osThreadId defaultTaskHandle;
 /* USER CODE BEGIN PV */

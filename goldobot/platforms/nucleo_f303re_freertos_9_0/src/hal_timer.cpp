@@ -2,6 +2,7 @@
 
 #include "goldobot/platform/hal_gpio.hpp"
 #include "goldobot/platform/hal_private.hpp"
+
 #include "stm32f3xx_hal.h"
 extern "C" {
 #include "stm32f3xx_hal_tim.h"
@@ -175,7 +176,7 @@ void hal_encoder_init(const DeviceConfigEncoder* config) {
 
   sConfig.EncoderMode = TIM_ENCODERMODE_TI12;
   sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
-  sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI; // TIM_TI1SELECTION_XORCOMBINATION
+  sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;  // TIM_TI1SELECTION_XORCOMBINATION
   sConfig.IC1Prescaler = TIM_ICPSC_DIV1;
   sConfig.IC1Filter = 0;
   sConfig.IC2Polarity = TIM_ICPOLARITY_RISING;
@@ -183,12 +184,10 @@ void hal_encoder_init(const DeviceConfigEncoder* config) {
   sConfig.IC2Prescaler = TIM_ICPSC_DIV1;
   sConfig.IC2Filter = 0;
 
-  if(config->flags & EncoderFlags::HallMode)
-  {
-	  HAL_TIM_ConfigTI1Input(tim, TIM_TI1SELECTION_XORCOMBINATION);
-  } else
-  {
-	  HAL_TIM_ConfigTI1Input(tim, TIM_TI1SELECTION_CH1);
+  if (config->flags & EncoderFlags::HallMode) {
+    HAL_TIM_ConfigTI1Input(tim, TIM_TI1SELECTION_XORCOMBINATION);
+  } else {
+    HAL_TIM_ConfigTI1Input(tim, TIM_TI1SELECTION_CH1);
   }
 
   HAL_TIM_Encoder_Init(tim, &sConfig);

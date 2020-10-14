@@ -1,9 +1,9 @@
 #include "goldobot/sequence_engine.hpp"
 
-#include <cstring>
-
 #include "goldobot/message_types.hpp"
 #include "goldobot/robot.hpp"
+
+#include <cstring>
 
 #define FLAG_Z (1 << 0)
 #define FLAG_N (1 << 1)

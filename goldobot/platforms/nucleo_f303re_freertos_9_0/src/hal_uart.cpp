@@ -5,6 +5,7 @@
 #include "goldobot/platform/hal_gpio.hpp"
 #include "goldobot/platform/hal_io_device.hpp"
 #include "goldobot/platform/hal_private.hpp"
+
 #include "stm32f3xx_hal.h"
 
 extern "C" {
@@ -27,9 +28,8 @@ UART_HandleTypeDef g_uart_handles[5];
 IODevice* g_uart_io_devices[5];
 PinID g_uart_txen_pins[5];
 
-inline uint8_t get_uart_index(UART_HandleTypeDef* huart)
-{
-	return static_cast<uint8_t>(huart - g_uart_handles);
+inline uint8_t get_uart_index(UART_HandleTypeDef* huart) {
+  return static_cast<uint8_t>(huart - g_uart_handles);
 }
 
 }  // namespace platform
@@ -282,12 +282,12 @@ void hal_usart_init(IODevice* device, const IODeviceConfigUart* config) {
   hal_gpio_init_pin_af(config->device_id, 1, config->tx_pin, GPIO_InitStruct);
 
   g_uart_txen_pins[uart_index] = config->txen_pin;
-  if(config->txen_pin.port != 0x255){
-	  LL_GPIO_InitTypeDef GPIO_InitStruct;
-	  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	  GPIO_InitStruct.Pull = GPIO_NOPULL;
-	  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	  hal_gpio_init_pin(config->txen_pin, GPIO_InitStruct);
+  if (config->txen_pin.port != 0x255) {
+    LL_GPIO_InitTypeDef GPIO_InitStruct;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    hal_gpio_init_pin(config->txen_pin, GPIO_InitStruct);
   }
 
   /* USART2 interrupt Init */

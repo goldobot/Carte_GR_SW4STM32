@@ -1,9 +1,9 @@
 #include "goldobot/platform/hal_io_device_queue.hpp"
 
-#include <cstring>
-
 #include "FreeRTOS.h"
 #include "task.h"
+
+#include <cstring>
 
 namespace goldobot {
 namespace hal {

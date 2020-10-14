@@ -1,8 +1,8 @@
 #include "goldobot/robot.hpp"
 
-#include <cstring>
-
 #include "goldobot/utils/crc.hpp"
+
+#include <cstring>
 
 using namespace goldobot;
 

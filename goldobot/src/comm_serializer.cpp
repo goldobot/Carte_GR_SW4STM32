@@ -1,8 +1,8 @@
 #include "goldobot/comm_serializer.hpp"
 
-#include <algorithm>
-
 #include "goldobot/utils/crc.hpp"
+
+#include <algorithm>
 
 using namespace goldobot;
 

@@ -1,14 +1,14 @@
 #pragma once
-#include <assert.h>
-
-#include <atomic>
-
 #include "goldobot/hal.hpp"
 #include "goldobot/platform/hal_io_device_queue.hpp"
 #include "goldobot/platform/hal_private.hpp"
 
 #include "FreeRTOS.h"
 #include "semphr.h"
+
+#include <assert.h>
+
+#include <atomic>
 
 namespace goldobot {
 namespace hal {

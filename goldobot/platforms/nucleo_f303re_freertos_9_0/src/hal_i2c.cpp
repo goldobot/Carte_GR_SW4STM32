@@ -67,7 +67,6 @@ void hal_i2c_init(IODevice* device, const IODeviceConfigI2c* config) {
       break;
   }
 
-
   device->device_index = i2c_index;
 
   /* Interrupt Init */
@@ -98,7 +97,6 @@ void hal_i2c_init(IODevice* device, const IODeviceConfigI2c* config) {
   HAL_I2C_Init(hi2c);
   HAL_I2CEx_ConfigAnalogFilter(hi2c, I2C_ANALOGFILTER_ENABLE);
   HAL_I2CEx_ConfigDigitalFilter(hi2c, 0);
-
 }
 
 }  // namespace platform

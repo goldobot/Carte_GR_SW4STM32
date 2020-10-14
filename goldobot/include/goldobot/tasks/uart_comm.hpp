@@ -1,10 +1,10 @@
 #pragma once
-#include <cstdint>
-
 #include "goldobot/comm_deserializer.hpp"
 #include "goldobot/comm_serializer.hpp"
 #include "goldobot/platform/message_queue.hpp"
 #include "goldobot/platform/task.hpp"
+
+#include <cstdint>
 
 namespace goldobot {
 class UARTCommTask : public Task {

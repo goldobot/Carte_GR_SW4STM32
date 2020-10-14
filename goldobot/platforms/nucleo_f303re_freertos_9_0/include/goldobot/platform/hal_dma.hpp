@@ -1,5 +1,6 @@
 #pragma once
 #include "goldobot/platform/hal_private.hpp"
+
 #include "stm32f3xx_hal.h"
 extern "C" {
 #include "stm32f3xx_hal_dma.h"

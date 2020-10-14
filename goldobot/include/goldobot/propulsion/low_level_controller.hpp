@@ -1,11 +1,11 @@
 #pragma once
-#include <cstdint>
-
 #include "goldobot/core/geometry.hpp"
 #include "goldobot/core/pid_controller.hpp"
 #include "goldobot/core/trajectory_buffer.hpp"
 #include "goldobot/core/trapezoidal_speed_profile.hpp"
 #include "goldobot/propulsion/controller_config.hpp"
+
+#include <cstdint>
 
 namespace goldobot {
 class LowLevelController {

@@ -66,20 +66,44 @@ ForEachMacros:
   - foreach
   - Q_FOREACH
   - BOOST_FOREACH
-IncludeBlocks:   Preserve
+IncludeBlocks:   Regroup
 IncludeCategories:
   - Regex:           '^<ext/.*\.h>'
-    Priority:        2
+    Priority:        12
     SortPriority:    0
   - Regex:           '^<.*\.h>'
-    Priority:        1
+    Priority:        11
     SortPriority:    0
   - Regex:           '^<.*'
-    Priority:        2
+    Priority:        12
     SortPriority:    0
-  - Regex:           '.*'
+  - Regex:           '\"goldobot/.*\"'
     Priority:        3
-    SortPriority:    0
+    SortPriority:    5
+  - Regex:           '\"stm32f3xx_hal\.h\"'
+    Priority:        4
+    SortPriority:    6
+  - Regex:           '\"stm32f3xx_hal_.*\.h\"'
+    Priority:        4
+    SortPriority:    7
+  - Regex:           '\"stm32f3xx_ll_.*\.h\"'
+    Priority:        4
+    SortPriority:    7
+  - Regex:           '\"core_cm4\.h\"'
+    Priority:        4
+    SortPriority:    8
+  - Regex:           '\"FreeRTOS\.h\"'
+    Priority:        5
+    SortPriority:    9
+  - Regex:           '\"task\.h\"'
+    Priority:        5
+    SortPriority:    10
+  - Regex:           '\"semphr\.h\"'
+    Priority:        5
+    SortPriority:    10
+  - Regex:           '.*'
+    Priority:        6
+    SortPriority:    20
 IncludeIsMainRegex: '([-_](test|unittest))?$'
 IncludeIsMainSourceRegex: ''
 IndentCaseLabels: true

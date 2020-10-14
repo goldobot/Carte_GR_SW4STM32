@@ -1,8 +1,8 @@
 #pragma once
-#include <cstdint>
-
 #include "goldobot/enums.hpp"
 #include "goldobot/platform/message_exchange.hpp"
+
+#include <cstdint>
 
 namespace goldobot {
 struct Op {

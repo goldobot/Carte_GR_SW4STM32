@@ -1,7 +1,7 @@
 #pragma once
-#include <assert.h>
-
 #include "goldobot/hal.hpp"
+
+#include <assert.h>
 
 namespace goldobot {
 namespace hal {

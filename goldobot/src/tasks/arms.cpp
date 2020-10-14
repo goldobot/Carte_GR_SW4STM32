@@ -1,11 +1,11 @@
 #include "goldobot/tasks/arms.hpp"
 
+#include "goldobot/hal.hpp"
+#include "goldobot/robot.hpp"
+
 #include <string.h>
 
 #include <algorithm>
-
-#include "goldobot/hal.hpp"
-#include "goldobot/robot.hpp"
 
 using namespace goldobot;
 
@@ -53,6 +53,8 @@ void ArmsTask::taskFunction() {
       process_message();
       // Periodically check servo positions and torques
     }
+    delay_periodic(1);
+    continue;
 
     dynamixels_read_data(m_config.servos[servo_idx].id, 0x24,
                          (unsigned char*)&m_current_state[servo_idx], 6);
@@ -318,6 +320,8 @@ void ArmsTask::dynamixels_transmit_packet(uint8_t id, uint8_t command, unsigned 
 
 DynamixelStatusError ArmsTask::dynamixels_receive_packet() {
   memset(m_dynamixels_buffer, 0, 255);
+  delay(1);
+  auto foo = hal::io_read(2, m_dynamixels_buffer, 256);
   // Hal::uart_receive(1, (char*)m_dynamixels_buffer, 256, false);
   uint16_t bytes_received = 0;
   for (unsigned i = 0; i < 10; i++) {

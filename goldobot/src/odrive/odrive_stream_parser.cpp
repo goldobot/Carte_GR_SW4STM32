@@ -1,8 +1,8 @@
 #include "goldobot/odrive/odrive_stream_parser.hpp"
 
-#include <cstring>
-
 #include "goldobot/odrive/odrive_utils.hpp"
+
+#include <cstring>
 
 namespace goldobot {
 

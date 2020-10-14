@@ -1,12 +1,12 @@
 #include "goldobot/tasks/main.hpp"
 
-#include <cmath>
-#include <cstring>
-
 #include "goldobot/hal.hpp"
 #include "goldobot/messages.hpp"
 #include "goldobot/robot.hpp"
 #include "goldobot/tasks/uart_comm.hpp"
+
+#include <cmath>
+#include <cstring>
 
 using namespace goldobot;
 

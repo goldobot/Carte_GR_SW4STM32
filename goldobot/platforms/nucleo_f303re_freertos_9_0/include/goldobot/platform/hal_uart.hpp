@@ -1,6 +1,7 @@
 #pragma once
-#include "FreeRTOS.h"
 #include "goldobot/platform/hal_io_device.hpp"
+
+#include "FreeRTOS.h"
 #include "semphr.h"
 
 namespace goldobot {

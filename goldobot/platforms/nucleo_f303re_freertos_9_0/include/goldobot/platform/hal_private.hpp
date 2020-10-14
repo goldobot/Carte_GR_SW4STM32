@@ -1,9 +1,10 @@
 #pragma once
-#include <assert.h>
+#include "goldobot/hal.hpp"
 
 #include "FreeRTOS.h"
-#include "goldobot/hal.hpp"
 #include "semphr.h"
+
+#include <assert.h>
 
 namespace goldobot {
 namespace hal {
@@ -58,7 +59,8 @@ struct IODeviceFlags {
 
 struct EncoderFlags {
   static constexpr uint8_t ReverseDirection = 0x01;
-  static constexpr uint8_t HallMode = 0x02; // CH1 is replaced by XOR of CH1, CH2, CH3, used for hall encoders
+  static constexpr uint8_t HallMode =
+      0x02;  // CH1 is replaced by XOR of CH1, CH2, CH3, used for hall encoders
 };
 
 struct GpioFlags {

@@ -1,8 +1,8 @@
 #pragma once
-#include <cstdint>
-
 #include "goldobot/core/geometry.hpp"
 #include "goldobot/core/pid_controller.hpp"
+
+#include <cstdint>
 
 namespace goldobot {
 class TrajectoryBuffer;

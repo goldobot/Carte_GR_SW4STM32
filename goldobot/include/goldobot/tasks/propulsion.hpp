@@ -1,11 +1,11 @@
 #pragma once
-#include <cstdint>
-
 #include "goldobot/platform/message_queue.hpp"
 #include "goldobot/platform/task.hpp"
 #include "goldobot/propulsion/controller.hpp"
 #include "goldobot/propulsion/simple_odometry.hpp"
 #include "goldobot/robot_simulator.hpp"
+
+#include <cstdint>
 
 namespace goldobot {
 class PropulsionTask : public Task {

@@ -1,10 +1,8 @@
-#include "FreeRTOS.h"
-#include "task.h"
-
 #include "stm32f3xx_hal.h"
 #include "core_cm4.h"
 
-
+#include "FreeRTOS.h"
+#include "task.h"
 
 extern "C" {
 void goldo_trace_task_switched_out(void* task);

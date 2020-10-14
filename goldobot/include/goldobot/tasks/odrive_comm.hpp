@@ -1,10 +1,10 @@
 #pragma once
-#include <cstdint>
-
 #include "goldobot/odrive/odrive_stream_parser.hpp"
 #include "goldobot/odrive/odrive_stream_writer.hpp"
 #include "goldobot/platform/message_queue.hpp"
 #include "goldobot/platform/task.hpp"
+
+#include <cstdint>
 
 namespace goldobot {
 class ODriveCommTask : public Task {

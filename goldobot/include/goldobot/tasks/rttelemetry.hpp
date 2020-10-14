@@ -1,7 +1,7 @@
 #pragma once
-#include <cstdint>
-
 #include "goldobot/platform/task.hpp"
+
+#include <cstdint>
 
 namespace goldobot {
 class RtTelemetryTask : public Task {

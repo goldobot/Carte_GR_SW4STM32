@@ -7,10 +7,11 @@
 
 #include "goldobot/tasks/fpga.hpp"
 
-#include <cstring>
 #include "goldobot/hal.hpp"
 #include "goldobot/platform/message_exchange.hpp"
 #include "goldobot/robot.hpp"
+
+#include <cstring>
 
 #define SPI_FRAME_SZ 6
 #define POOL_MAX_CNT 100000

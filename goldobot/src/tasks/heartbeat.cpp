@@ -1,9 +1,10 @@
 #include "goldobot/tasks/heartbeat.hpp"
 
-#include "FreeRTOS.h"
 #include "goldobot/hal.hpp"
 #include "goldobot/messages.hpp"
 #include "goldobot/robot.hpp"
+
+#include "FreeRTOS.h"
 
 using namespace goldobot;
 

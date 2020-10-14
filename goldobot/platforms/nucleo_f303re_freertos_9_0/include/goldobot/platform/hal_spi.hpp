@@ -1,6 +1,7 @@
 #pragma once
 #include "goldobot/platform/hal_io_device.hpp"
 #include "goldobot/platform/hal_private.hpp"
+
 #include "stm32f3xx_hal.h"
 
 extern "C" {

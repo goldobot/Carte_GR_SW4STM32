@@ -1,6 +1,4 @@
 #pragma once
-#include <cstdint>
-
 #include "goldobot/core/circular_buffer.hpp"
 #include "goldobot/core/geometry.hpp"
 #include "goldobot/core/pid_controller.hpp"
@@ -9,6 +7,8 @@
 #include "goldobot/messages.hpp"
 #include "goldobot/propulsion/controller_config.hpp"
 #include "goldobot/propulsion/low_level_controller.hpp"
+
+#include <cstdint>
 
 namespace goldobot {
 class SimpleOdometry;

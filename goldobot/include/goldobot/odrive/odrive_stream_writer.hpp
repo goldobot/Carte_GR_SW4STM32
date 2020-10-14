@@ -1,7 +1,7 @@
 #pragma once
-#include <cstdint>
-
 #include "goldobot/core/circular_buffer.hpp"
+
+#include <cstdint>
 
 namespace goldobot {
 

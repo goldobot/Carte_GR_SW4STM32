@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 
 namespace goldobot {
 enum class Side : uint8_t { Unknown = 0, Yellow = 1, Purple = 2 };

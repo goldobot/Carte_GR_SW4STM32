@@ -1,6 +1,6 @@
-#include <cmath>
-
 #include "goldobot/core/trajectory_buffer.hpp"
+
+#include <cmath>
 
 using namespace goldobot;
 

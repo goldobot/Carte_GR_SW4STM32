@@ -1,12 +1,12 @@
 #pragma once
-#include <cstdint>
-
 #include "goldobot/message_types.hpp"
 #include "goldobot/platform/message_queue.hpp"
 #include "goldobot/platform/task.hpp"
 #include "goldobot/propulsion/controller.hpp"
 #include "goldobot/propulsion/simple_odometry.hpp"
 #include "goldobot/sequence_engine.hpp"
+
+#include <cstdint>
 
 namespace goldobot {
 class MainTask : public Task {

@@ -1,6 +1,4 @@
 #pragma once
-#include <cstdint>
-
 #include "goldobot/enums.hpp"
 #include "goldobot/hal.hpp"
 #include "goldobot/platform/config.hpp"
@@ -15,6 +13,8 @@
 #include "goldobot/tasks/propulsion.hpp"
 #include "goldobot/tasks/rttelemetry.hpp"
 #include "goldobot/tasks/uart_comm.hpp"
+
+#include <cstdint>
 
 namespace goldobot {
 

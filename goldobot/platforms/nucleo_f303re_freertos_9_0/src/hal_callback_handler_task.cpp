@@ -1,5 +1,6 @@
-#include "FreeRTOS.h"
 #include "goldobot/platform/hal_private.hpp"
+
+#include "FreeRTOS.h"
 #include "semphr.h"
 #include "task.h"
 

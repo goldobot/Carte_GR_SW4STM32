@@ -206,7 +206,7 @@ void IODevice::unmap_read(uint8_t* buffer, size_t size) {
 }
 
 size_t IODevice::map_write(uint8_t** buffer) {
-  if (io_flags & IODeviceFlags::RxBlocking) {
+  if (io_flags & IODeviceFlags::TxBlocking) {
     // mmapped io only works in fifo mode
     *buffer = nullptr;
     return 0;

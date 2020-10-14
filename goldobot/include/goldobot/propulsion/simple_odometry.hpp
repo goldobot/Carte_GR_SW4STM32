@@ -1,8 +1,8 @@
 #pragma once
-#include <cstdint>
-
 #include "goldobot/core/geometry.hpp"
 #include "goldobot/propulsion/odometry_config.hpp"
+
+#include <cstdint>
 
 namespace goldobot {
 class SimpleOdometry {
