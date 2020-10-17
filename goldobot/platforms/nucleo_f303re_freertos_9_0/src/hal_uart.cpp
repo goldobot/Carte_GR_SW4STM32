@@ -11,6 +11,7 @@
 extern "C" {
 #include "stm32f3xx_hal_uart.h"
 #include "stm32f3xx_ll_bus.h"
+#include "stm32f3xx_ll_usart.h"
 }
 
 extern "C" {
@@ -39,7 +40,17 @@ inline uint8_t get_uart_index(UART_HandleTypeDef* huart) {
 using namespace goldobot::hal::platform;
 
 void goldobot_hal_uart_irq_handler(int uart_index) {
+  auto& huart = g_uart_handles[uart_index];
+  bool idle_detected{false};
+  if (HAL_IS_BIT_SET(huart.Instance->CR1, UART_IT_IDLE) &&
+      HAL_IS_BIT_SET(huart.Instance->ISR, UART_FLAG_IDLE)) {
+    __HAL_UART_CLEAR_FLAG(&huart, USART_ICR_IDLECF);
+    idle_detected = true;
+  }
   HAL_UART_IRQHandler(&g_uart_handles[uart_index]);
+  if (idle_detected) {
+    hal_callback_send_from_isr(HalCallback{DeviceType::Uart, static_cast<uint8_t>(uart_index), 3});
+  }
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef* huart) {
@@ -132,6 +143,10 @@ void hal_uart_callback(int uart_index, int callback_id) {
         }
       }
       return;
+    } break;
+    case 3:  // rx idle interrupt
+    {
+      int a = 1;
     } break;
     default:
       break;
@@ -307,6 +322,10 @@ void hal_usart_init(IODevice* device, const IODeviceConfigUart* config) {
 
   auto status = HAL_UART_Init(uart_handle);
   assert(status == HAL_OK);
+
+  if (config->io_flags & IODeviceFlags::IdleInterrupt) {
+    __HAL_UART_ENABLE_IT(uart_handle, UART_IT_IDLE);
+  }
 
   if (config->io_flags & IODeviceFlags::RxDma) {
     DMA_InitTypeDef DMAInit;

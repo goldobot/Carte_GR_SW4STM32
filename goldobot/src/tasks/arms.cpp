@@ -56,14 +56,15 @@ void ArmsTask::taskFunction() {
     delay_periodic(1);
     continue;
 
-    dynamixels_read_data(m_config.servos[servo_idx].id, 0x24,
-                         (unsigned char*)&m_current_state[servo_idx], 6);
+    // dynamixels_read_data(m_config.servos[servo_idx].id, 0x24,
+    // (unsigned char*)&m_current_state[servo_idx], 6);
     unsigned char buff[8];
     buff[0] = m_config.servos[servo_idx].id;
     buff[1] = 0x24;
     memcpy(buff + 2, &m_current_state[servo_idx], 6);
-    Robot::instance().mainExchangeOut().pushMessage(CommMessageType::DbgDynamixelGetRegisters, buff,
-                                                    8);
+    // Robot::instance().mainExchangeOut().pushMessage(CommMessageType::DbgDynamixelGetRegisters,
+    // buff,
+    //                                               8);
 
     servo_idx++;
     if (servo_idx == m_config.num_servos) {
@@ -83,45 +84,8 @@ void ArmsTask::taskFunction() {
 
 void ArmsTask::shutdown() {
   unsigned char buff = 0;
-  dynamixels_write_data(254, 0x18, &buff, 1);
+  // dynamixels_write_data(254, 0x18, &buff, 1);
 }
-
-bool ArmsTask::dynamixels_read_data(uint8_t id, uint8_t address, unsigned char* buffer,
-                                    uint8_t size) {
-  unsigned char tmp_buff[2];
-  tmp_buff[0] = address;
-  tmp_buff[1] = size;
-  dynamixels_transmit_packet(id, AX_READ_DATA, tmp_buff, 2);
-  auto received = dynamixels_receive_packet();
-  if (received == DynamixelStatusError::Ok) {
-    memcpy(buffer, m_dynamixels_buffer + 5, size);
-  }
-  return received == DynamixelStatusError::Ok;
-}
-
-bool ArmsTask::dynamixels_write_data(uint8_t id, uint8_t address, unsigned char* buffer,
-                                     uint8_t size) {
-  unsigned char tmp_buff[16];
-  tmp_buff[0] = address;
-  memcpy(tmp_buff + 1, buffer, size);
-  dynamixels_transmit_packet(id, AX_WRITE_DATA, tmp_buff, size + 1);
-  bool received =
-      dynamixels_receive_packet() == DynamixelStatusError::Ok && m_dynamixels_receive_error == 0;
-  return received;
-}
-
-bool ArmsTask::dynamixels_reg_write(uint8_t id, uint8_t address, unsigned char* buffer,
-                                    uint8_t size) {
-  unsigned char tmp_buff[32];
-  tmp_buff[0] = address;
-  memcpy(tmp_buff + 1, buffer, size);
-  dynamixels_transmit_packet(id, AX_REG_WRITE, tmp_buff, size + 1);
-  bool received =
-      dynamixels_receive_packet() == DynamixelStatusError::Ok && m_dynamixels_receive_error == 0;
-  return received;
-}
-
-void ArmsTask::dynamixels_action() { dynamixels_transmit_packet(0xFE, AX_ACTION, nullptr, 0); }
 
 void ArmsTask::go_to_position(uint8_t pos_id, uint16_t speed_percent, int torque_settings) {
   int pos_idx = pos_id * m_config.num_servos;
@@ -143,7 +107,7 @@ void ArmsTask::go_to_position(uint8_t pos_id, uint16_t speed_percent, int torque
     uint16_t tar_pos = m_config.positions_ptr[pos_idx + i];
     const auto& servo = m_config.servos[i];
 
-    dynamixels_read_data(servo.id, 0x24, (unsigned char*)&prev_pos, 2);
+    // dynamixels_read_data(servo.id, 0x24, (unsigned char*)&prev_pos, 2);
     prev_posa[i] = prev_pos;
     int diff_angle = abs(tar_pos - prev_pos);
     switch (servo.type) {
@@ -191,14 +155,15 @@ void ArmsTask::go_to_position(uint8_t pos_id, uint16_t speed_percent, int torque
     }
     // Write new register values
     int k = 0;
-    while (!dynamixels_reg_write(m_config.servos[i].id, 0x1E, (unsigned char*)buff, 6) && k < 5) {
-      k++;
-      delay(2);
-    }
+    // while (!dynamixels_reg_write(m_config.servos[i].id, 0x1E, (unsigned char*)buff, 6) && k < 5)
+    // {
+    //  k++;
+    //  delay(2);
+    //  }
   }
-  dynamixels_action();
+  // dynamixels_action();
   // Do it twice in case of error
-  dynamixels_action();
+  // dynamixels_action();
 
   // Set time of end
   m_arm_state = ArmState::Moving;
@@ -208,7 +173,7 @@ void ArmsTask::go_to_position(uint8_t pos_id, uint16_t speed_percent, int torque
 void ArmsTask::process_message() {
   auto message_size = m_message_queue.message_size();
   switch (m_message_queue.message_type()) {
-    case CommMessageType::DbgDynamixelsList: {
+    /*case CommMessageType::DbgDynamixelsList: {
       m_message_queue.pop_message(nullptr, 0);
       uint8_t buff[4] = {25, 1};
       for (unsigned id = 0; id < 0xFE; id++) {
@@ -293,64 +258,9 @@ void ArmsTask::process_message() {
       Robot::instance().mainExchangeOut().pushMessage(CommMessageType::DynamixelStatusPacket,
                                                       (unsigned char*)buff, 21);
 
-    } break;
+    } break;*/
     default:
       m_message_queue.pop_message(nullptr, 0);
       break;
   }
-}
-
-void ArmsTask::dynamixels_transmit_packet(uint8_t id, uint8_t command, unsigned char* parameters,
-                                          uint8_t num_parameters) {
-  DynamixelPacketHeader& header = *reinterpret_cast<DynamixelPacketHeader*>(m_dynamixels_buffer);
-  header.magic = 0xFFFF;
-  header.id = id;
-  header.length = num_parameters + 2;
-  header.command = command;
-  memcpy(m_dynamixels_buffer + 5, parameters, num_parameters);
-
-  uint8_t checksum = 0;
-  for (unsigned i = 2; i < 5 + num_parameters; i++) {
-    checksum += m_dynamixels_buffer[i];
-  }
-  checksum = ~checksum;
-  m_dynamixels_buffer[5 + num_parameters] = checksum;
-  hal::io_write(2, m_dynamixels_buffer, 6 + num_parameters);
-}
-
-DynamixelStatusError ArmsTask::dynamixels_receive_packet() {
-  memset(m_dynamixels_buffer, 0, 255);
-  delay(1);
-  auto foo = hal::io_read(2, m_dynamixels_buffer, 256);
-  // Hal::uart_receive(1, (char*)m_dynamixels_buffer, 256, false);
-  uint16_t bytes_received = 0;
-  for (unsigned i = 0; i < 10; i++) {
-    // bytes_received = Hal::uart_bytes_received(1);
-
-    // search for magic 0xFF
-    if (bytes_received >= 4 && bytes_received >= m_dynamixels_buffer[3] + 4) {
-      // Hal::uart_receive_abort(1);
-
-      // Check checksum
-      m_dynamixels_receive_id = m_dynamixels_buffer[2];
-      m_dynamixels_receive_num_parameters = m_dynamixels_buffer[3] - 2;
-      m_dynamixels_receive_error = m_dynamixels_buffer[4];
-      m_dynamixels_receive_params = m_dynamixels_buffer + 5;
-
-      uint8_t checksum = 0;
-      for (unsigned i = 2; i < 5 + m_dynamixels_receive_num_parameters; i++) {
-        checksum += m_dynamixels_buffer[i];
-      }
-      checksum = ~checksum;
-
-      if (checksum == m_dynamixels_buffer[5 + m_dynamixels_receive_num_parameters]) {
-        return DynamixelStatusError::Ok;
-      } else {
-        return DynamixelStatusError::ChecksumError;
-      }
-    }
-    delay(1);
-  }
-  // Hal::uart_receive_abort(1);
-  return DynamixelStatusError::TimeoutError;
 }

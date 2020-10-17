@@ -159,7 +159,6 @@ void hal_encoder_init(const DeviceConfigEncoder* config) {
   g_encoders[config->tim_index].timer_id = timer_index;
   g_encoders[config->tim_index].flags = config->flags;
 
-  TIM_HandleTypeDef* tim_handle = &g_tim_handles[timer_index];
   TIM_TypeDef* instance = start_timer_clock(config->device_id);
 
   TIM_Encoder_InitTypeDef sConfig = {0};

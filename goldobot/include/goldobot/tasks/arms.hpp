@@ -11,8 +11,6 @@ struct DynamixelsConfig {
   uint16_t m_torque_settings[3 * 8];
 };
 
-enum class DynamixelStatusError { Ok, ChecksumError, TimeoutError };
-
 struct DynamixelState {
   uint16_t position;
   uint16_t speed;
@@ -27,23 +25,10 @@ class ArmsTask : public Task {
   // Dirty provisional api
 
   void go_to_position(uint8_t pos_id, uint16_t speed_percent, int torque_setting = 0);
+
   // Disable all dynamixels torque
   void shutdown();
 
-  //! \brief Read data from dynamixel registers
-  bool dynamixels_read_data(uint8_t id, uint8_t address, unsigned char* buffer, uint8_t size);
-  bool dynamixels_write_data(uint8_t id, uint8_t address, unsigned char* buffer, uint8_t size);
-  // \brief Write data to dynamixel buffer. data is transferred to control registers on ACTION
-  // packet
-  bool dynamixels_reg_write(uint8_t id, uint8_t address, unsigned char* buffer, uint8_t size);
-  void dynamixels_action();
-
-  // void _execute_command(int arm_id, const ArmCommand& command);
-
-  // private:
-  void dynamixels_transmit_packet(uint8_t id, uint8_t command, unsigned char* parameters,
-                                  uint8_t num_parameters);
-  DynamixelStatusError dynamixels_receive_packet();
   void taskFunction() override;
 
   ArmConfig m_config;

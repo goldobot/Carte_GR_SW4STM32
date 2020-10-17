@@ -55,6 +55,7 @@ struct IODeviceFlags {
   static constexpr uint16_t TxBlocking = 0x02;
   static constexpr uint16_t RxDma = 0x04;
   static constexpr uint16_t TxDma = 0x08;
+  static constexpr uint16_t IdleInterrupt = 0x0100;
 };
 
 struct EncoderFlags {

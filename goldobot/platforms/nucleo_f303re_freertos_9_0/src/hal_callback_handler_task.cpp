@@ -47,7 +47,6 @@ void hal_callback_handler_task_start() {
 };
 
 void hal_callback_send(const HalCallback& callback) {
-  BaseType_t xHigherPriorityTaskWoken;
   xQueueSend(g_hal_callback_queue, &callback, portMAX_DELAY);
 }
 

@@ -47,16 +47,15 @@ enum class CommMessageType : uint16_t {
   DbgGetPropulsionConfig = 66,
   DbgSetPropulsionConfig = 67,
 
-  // Dynamixels debug
-  DbgDynamixelsList = 72,
-  DbgDynamixelDescr = 73,
-  DbgDynamixelSetTorqueEnable = 74,
-  DbgDynamixelSetGoalPosition = 75,
-  DbgDynamixelSetTorqueLimit = 76,
-  DbgDynamixelGetRegisters = 77,
-  DbgDynamixelSetRegisters = 78,
-  DynamixelSendPacket = 79,
-  DynamixelStatusPacket = 200,
+  // Dynamixels
+  DynamixelsPing = 70,
+  DynamixelsRead = 71,
+  DynamixelsWrite = 72,
+  DynamixelsRegWrite = 73,
+  DynamixelsAction = 74,
+  DynamixelsReboot = 75,
+  DynamixelsSyncWrite = 76,
+  DynamixelsReadStatus = 77,
 
   // Propulsion debug
   DbgSetMotorsEnable = 80,
