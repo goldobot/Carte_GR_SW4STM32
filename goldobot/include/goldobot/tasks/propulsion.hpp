@@ -35,9 +35,13 @@ class PropulsionTask : public Task {
   bool m_recalage_goldenium_armed{false};
 
   uint16_t m_odrive_seq{4096};
-  uint16_t m_odrive_key{0x7411};
-  uint16_t m_odrive_set_velocity_setpoint_endpoints[2] = {158, 316};
-  uint16_t m_odrive_cnt{0};  // send one message every 10 ms
+  static constexpr uint16_t c_odrive_key{0x9b40};  // firmware 5.1
+  static constexpr uint16_t c_odrive_endpoint_input_vel[2] = {195, 424};
+  static constexpr uint16_t c_odrive_endpoint_requested_state[2] = {74, 303};
+  static constexpr uint16_t c_odrive_endpoint_control_mode[2] = {208, 437};
+  static constexpr uint32_t c_odrive_consts_axis_state[2] = {1, 8};  // idle, closed_loop
+  static constexpr uint32_t c_odrive_consts_control_mode = 2;        // velocity control
+  uint16_t m_odrive_cnt{0};                                          // send one message every 10 ms
 
   void doStep();
   void processMessage();
@@ -50,8 +54,14 @@ class PropulsionTask : public Task {
   void measureNormal(float angle, float distance);
   void measurePointLongi(Vector2D point, float sensor_offset);
 
+  void setMotorsEnable(bool enable);
   void setMotorsPwm(float left_pwm, float right_pwm, bool immediate = false);
-  void setODriveVelocitySetPoint(int axis, float vel_setpoint, float current_feedforward);
+
+  void ODriveSetMotorsEnable(bool enable);
+  void ODriveSetVelocitySetPoint(int axis, float vel_setpoint, float current_feedforward);
+
+  template <typename T>
+  void ODriveWriteEndpoint(uint16_t endpoint, T val);
 
   void sendTelemetryMessages();
 
