@@ -40,18 +40,13 @@ int MainTask::remainingMatchTime() {
 }
 
 void MainTask::taskFunction() {
-  Robot::instance().mainExchangeIn().subscribe({5, 5, &m_message_queue});
-  Robot::instance().mainExchangeIn().subscribe({40, 50, &m_message_queue});
-  Robot::instance().mainExchangeIn().subscribe({90, 90, &m_message_queue});
-  Robot::instance().mainExchangeIn().subscribe({166, 166, &m_message_queue});
-  Robot::instance().mainExchangeIn().subscribe({400, 402, &m_message_queue});
-  Robot::instance().mainExchangeIn().subscribe({322, 322, &m_message_queue});
+  Robot::instance().mainExchangeIn().subscribe({6, 9, &m_message_queue});
 
   messages::MsgMatchStateChange msg{Robot::instance().matchState(), Robot::instance().side()};
-  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange,
+  /*Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange,
                                                  (unsigned char*)&msg, sizeof(msg));
   Robot::instance().mainExchangeOut().pushMessage(CommMessageType::MatchStateChange,
-                                                  (unsigned char*)&msg, sizeof(msg));
+                                                  (unsigned char*)&msg, sizeof(msg));*/
 
   // Config loop
   while (Robot::instance().matchState() == MatchState::Unconfigured) {
@@ -63,10 +58,10 @@ void MainTask::taskFunction() {
   {
     messages::MsgMatchStateChange post_state{Robot::instance().matchState(),
                                              Robot::instance().side()};
-    Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange,
-                                                   (unsigned char*)&post_state, sizeof(post_state));
-    Robot::instance().mainExchangeOut().pushMessage(
-        CommMessageType::MatchStateChange, (unsigned char*)&post_state, sizeof(post_state));
+    /* Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange,
+                                                    (unsigned char*)&post_state,
+     sizeof(post_state)); Robot::instance().mainExchangeOut().pushMessage(
+         CommMessageType::MatchStateChange, (unsigned char*)&post_state, sizeof(post_state));*/
   }
 
   while (1) {
@@ -137,10 +132,10 @@ void MainTask::taskFunction() {
     messages::MsgMatchStateChange post_state{Robot::instance().matchState(),
                                              Robot::instance().side()};
     if (post_state.match_state != prev_state.match_state || post_state.side != prev_state.side) {
-      Robot::instance().mainExchangeIn().pushMessage(
+      /*Robot::instance().mainExchangeIn().pushMessage(
           CommMessageType::MatchStateChange, (unsigned char*)&post_state, sizeof(post_state));
       Robot::instance().mainExchangeOut().pushMessage(
-          CommMessageType::MatchStateChange, (unsigned char*)&post_state, sizeof(post_state));
+          CommMessageType::MatchStateChange, (unsigned char*)&post_state, sizeof(post_state));*/
     }
 
     delay(1);
@@ -150,21 +145,21 @@ void MainTask::taskFunction() {
 void MainTask::process_message_config() {
   int msg_size = m_message_queue.message_size();
   switch (m_message_queue.message_type()) {
-    case CommMessageType::RobotBeginLoadConfig: {
+    case CommMessageType::RobotConfigLoadBegin: {
       m_message_queue.pop_message(nullptr, 0);
       Robot::instance().beginLoadConfig();
     } break;
 
-    case CommMessageType::RobotLoadConfig: {
+    case CommMessageType::RobotConfigLoadChunk: {
       m_message_queue.pop_message(m_scratchpad, msg_size);
       Robot::instance().loadConfig((char*)m_scratchpad, msg_size);
     } break;
 
-    case CommMessageType::RobotEndLoadConfig: {
+    case CommMessageType::RobotConfigLoadEnd: {
       uint16_t crc;
       m_message_queue.pop_message((unsigned char*)&crc, 2);
-      uint8_t status = Robot::instance().endLoadConfig(crc);
-      Robot::instance().mainExchangeOut().pushMessage(CommMessageType::RobotEndLoadConfigStatus,
+      uint8_t status = Robot::instance().endLoadConfig(crc) ? 0 : 1;
+      Robot::instance().mainExchangeOut().pushMessage(CommMessageType::RobotConfigLoadStatus,
                                                       (unsigned char*)&status, 1);
     } break;
     default:
@@ -175,58 +170,58 @@ void MainTask::process_message_config() {
 void MainTask::process_message() {
   int msg_size = m_message_queue.message_size();
   switch (m_message_queue.message_type()) {
-    case CommMessageType::GetNucleoFirmwareVersion: {
-      // std::memset(my_firmware_ver,0,MY_FIRMWARE_VER_SZ);
-      // std::strncpy(my_firmware_ver, GOLDO_GIT_VERSION, MY_FIRMWARE_VER_SZ);
-      m_message_queue.pop_message(nullptr, 0);
-      Robot::instance().mainExchangeOut().pushMessage(CommMessageType::GetNucleoFirmwareVersion,
-                                                      (unsigned char*)my_firmware_ver,
-                                                      MY_FIRMWARE_VER_SZ);
-    } break;
+      /*case CommMessageType::GetNucleoFirmwareVersion: {
+        // std::memset(my_firmware_ver,0,MY_FIRMWARE_VER_SZ);
+        // std::strncpy(my_firmware_ver, GOLDO_GIT_VERSION, MY_FIRMWARE_VER_SZ);
+        m_message_queue.pop_message(nullptr, 0);
+        Robot::instance().mainExchangeOut().pushMessage(CommMessageType::GetNucleoFirmwareVersion,
+                                                        (unsigned char*)my_firmware_ver,
+                                                        MY_FIRMWARE_VER_SZ);
+      } break;*/
+      /*
+          case CommMessageType::SetMatchState: {
+            MatchState state;
+            m_message_queue.pop_message((unsigned char*)&state, sizeof(MatchState));
+            Robot::instance().setMatchState(state);
+          } break;
+          case CommMessageType::MainSequenceBeginLoad:
+            m_sequence_engine.beginLoad();
+            m_message_queue.pop_message(nullptr, 0);
+            break;
 
-    case CommMessageType::SetMatchState: {
-      MatchState state;
-      m_message_queue.pop_message((unsigned char*)&state, sizeof(MatchState));
-      Robot::instance().setMatchState(state);
-    } break;
-    case CommMessageType::MainSequenceBeginLoad:
-      m_sequence_engine.beginLoad();
-      m_message_queue.pop_message(nullptr, 0);
-      break;
+          case CommMessageType::MainSequenceEndLoad:
+            m_sequence_engine.endLoad();
+            m_message_queue.pop_message(nullptr, 0);
+            break;
 
-    case CommMessageType::MainSequenceEndLoad:
-      m_sequence_engine.endLoad();
-      m_message_queue.pop_message(nullptr, 0);
-      break;
-
-    case CommMessageType::MainSequenceLoadData:
-      m_message_queue.pop_message(g_temp_buffer, 32);
-      m_sequence_engine.loadData(g_temp_buffer, msg_size);
-      break;
-    case CommMessageType::MainSequenceStartSequence:
-      uint16_t seq_id;
-      m_message_queue.pop_message((unsigned char*)(&seq_id), 2);
-      m_sequence_engine.startSequence(seq_id);
-      break;
-    case CommMessageType::MainSequenceAbortSequence:
-      m_message_queue.pop_message(nullptr, 0);
-      m_sequence_engine.abortSequence();
-      break;
-    case CommMessageType::PropulsionStateChanged: {
-      uint8_t buff[2];
-      m_message_queue.pop_message((unsigned char*)(&buff), 2);
-      m_sequence_engine.updatePropulsionState((PropulsionState)buff[0]);
-    } break;
-    case CommMessageType::ArmsStateChange: {
-      uint8_t buff[2];
-      m_message_queue.pop_message((unsigned char*)(&buff), 2);
-      m_sequence_engine.updateArmState((ArmState)buff[1]);
-    } break;
-    case CommMessageType::FpgaServoState: {
-      uint8_t buff[2];
-      m_message_queue.pop_message((unsigned char*)(&buff), 2);
-      m_sequence_engine.updateServoState(buff[0], buff[1]);
-    } break;
+          case CommMessageType::MainSequenceLoadData:
+            m_message_queue.pop_message(g_temp_buffer, 32);
+            m_sequence_engine.loadData(g_temp_buffer, msg_size);
+            break;
+          case CommMessageType::MainSequenceStartSequence:
+            uint16_t seq_id;
+            m_message_queue.pop_message((unsigned char*)(&seq_id), 2);
+            m_sequence_engine.startSequence(seq_id);
+            break;
+          case CommMessageType::MainSequenceAbortSequence:
+            m_message_queue.pop_message(nullptr, 0);
+            m_sequence_engine.abortSequence();
+            break;
+          case CommMessageType::PropulsionStateChanged: {
+            uint8_t buff[2];
+            m_message_queue.pop_message((unsigned char*)(&buff), 2);
+            m_sequence_engine.updatePropulsionState((PropulsionState)buff[0]);
+          } break;
+          case CommMessageType::ArmsStateChange: {
+            uint8_t buff[2];
+            m_message_queue.pop_message((unsigned char*)(&buff), 2);
+            m_sequence_engine.updateArmState((ArmState)buff[1]);
+          } break;
+          case CommMessageType::FpgaServoState: {
+            uint8_t buff[2];
+            m_message_queue.pop_message((unsigned char*)(&buff), 2);
+            m_sequence_engine.updateServoState(buff[0], buff[1]);
+          } break;*/
 
     default:
       m_message_queue.pop_message(nullptr, 0);

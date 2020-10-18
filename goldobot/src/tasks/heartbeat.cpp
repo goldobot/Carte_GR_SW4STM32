@@ -30,7 +30,7 @@ void HeartbeatTask::taskFunction() {
     exchange.pushMessage(CommMessageType::Heartbeat, (unsigned char*)&clock, sizeof(clock));
 
     uint16_t remaining_time = Robot::instance().remainingMatchTime();
-    exchange.pushMessage(CommMessageType::MatchRemainingTime, (unsigned char*)&remaining_time, 2);
+    exchange.pushMessage(CommMessageType::MatchTimer, (unsigned char*)&remaining_time, 2);
 
     i++;
     if (i == 10) {
@@ -47,13 +47,14 @@ void HeartbeatTask::taskFunction() {
       if (hal::gpio_get(i)) gpio |= (1 << i);
     }
 
-    Robot::instance().mainExchangeOut().pushMessage(CommMessageType::GPIODebug,
-                                                    (unsigned char*)&gpio, sizeof(gpio));
+    /* Robot::instance().mainExchangeOut().pushMessage(CommMessageType::GPIODebug,
+                                                     (unsigned char*)&gpio, sizeof(gpio));
 
-    messages::MsgMatchStateChange post_state{Robot::instance().matchState(),
-                                             Robot::instance().side()};
-    Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange,
-                                                   (unsigned char*)&post_state, sizeof(post_state));
+     messages::MsgMatchStateChange post_state{Robot::instance().matchState(),
+                                              Robot::instance().side()};
+     Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange,
+                                                    (unsigned char*)&post_state,
+     sizeof(post_state));*/
 
     delay_periodic(100);
   }

@@ -32,17 +32,17 @@ void DebugTask::processMessage() {
   auto message_type = (CommMessageType)m_message_queue.message_type();
 
   switch (message_type) {
-    case CommMessageType::HalGpioGet: {
+    case CommMessageType::DbgGpioGet: {
       m_message_queue.pop_message(buff, 1);
       bool val = hal::gpio_get(buff[0]);
       buff[1] = val ? 1 : 0;
-      exchange_out.pushMessage(CommMessageType::HalGpioGet, buff, 2);
+      exchange_out.pushMessage(CommMessageType::DbgGpioGet, buff, 2);
     } break;
-    case CommMessageType::HalGpioSet: {
+    case CommMessageType::DbgGpioSet: {
       m_message_queue.pop_message(buff, 2);
       hal::gpio_set(buff[0], buff[1]);
     } break;
-    case CommMessageType::HalPwmSet: {
+    case CommMessageType::DbgPwmSet: {
       m_message_queue.pop_message(buff, 5);
       float pwm = *reinterpret_cast<float*>(&buff[1]);
       hal::pwm_set(buff[0], pwm);

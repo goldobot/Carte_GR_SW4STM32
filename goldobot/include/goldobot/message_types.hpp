@@ -2,7 +2,66 @@
 #include <cstdint>
 
 namespace goldobot {
+
 enum class CommMessageType : uint16_t {
+  CommUartStats,
+  CommUartPing,
+  Heartbeat,
+  HeapStats,
+  Reset,
+
+  MatchTimer,
+
+  RobotConfigLoadBegin,
+  RobotConfigLoadChunk,
+  RobotConfigLoadEnd,
+  RobotConfigLoadStatus,
+
+  ODriveRequestPacket,
+  ODriveResponsePacket,
+
+  DbgGpioGet,
+  DbgGpioGetStatus,
+  DbgGpioSet,
+  DbgPwmSet,
+
+  DynamixelsRead,
+  DynamixelsReadStatus,
+  DynamixelsWrite,
+
+  FpgaReadReg,
+  FpgaReadRegStatus,
+  FpgaWriteReg,
+
+  PropulsionEnableSet,
+  PropulsionMotorsEnableSet,
+  PropulsionMotorsVelocitySetpointsSet,
+
+  PropulsionTelemetry,
+  PropulsionTelemetryEx,
+  PropulsionPose,
+  PropulsionExecuteRotation,
+  PropulsionExecutePointTo,
+  PropulsionExecuteFaceDirection,
+  PropulsionExecuteTranslation,
+  PropulsionExecuteMoveTo,
+  PropulsionExecuteTrajectory,
+  PropulsionSetTargetPose,
+  PropulsionMeasureNormal,
+  PropulsionSetControlLevels,
+  PropulsionEnterManualControl,
+  PropulsionExecuteReposition,
+  PropulsionExitManualControl,
+
+  OdometryConfigGet,
+  OdometryConfigGetStatus,
+  OdometryConfigSet,
+  PropulsionConfigGet,
+  PropulsionConfigGetStatus,
+  PropulsionConfigSet
+
+};
+enum class CommMessageType2 : uint16_t {
   // General messages
   Sync = 0,       // "goldobot" synchronization message, used to synchronize stream parser
   Heartbeat = 1,  // Current OS time in ms as uint32, sent every 10th of second
@@ -136,4 +195,4 @@ enum class CommMessageType : uint16_t {
   RplidarRobotDetection = 1280,
 
 };
-}
+}  // namespace goldobot

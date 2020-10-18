@@ -55,9 +55,9 @@ void FpgaTask::taskFunction() {
 
     if (apb_data != m_sensors_state) {
       m_sensors_state = apb_data;
-      Robot::instance().setSensorsState(apb_data),
-          Robot::instance().mainExchangeOut().pushMessage(CommMessageType::SensorsChange,
-                                                          (unsigned char *)&m_sensors_state, 4);
+      // Robot::instance().setSensorsState(apb_data),
+      // Robot::instance().mainExchangeOut().pushMessage(CommMessageType::SensorsChange,
+      //                                                  (unsigned char *)&m_sensors_state, 4);
     }
 
     // Recompute servo targets
@@ -87,8 +87,8 @@ void FpgaTask::taskFunction() {
 
       if (was_moving && m_servos_positions[i] == m_servos_target_positions[i]) {
         unsigned char buff[2] = {(unsigned char)i, false};
-        Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaServoState,
-                                                       (unsigned char *)buff, 2);
+        // Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaServoState,
+        //                                               (unsigned char *)buff, 2);
       }
     }
 
@@ -245,25 +245,25 @@ void FpgaTask::process_message() {
   // auto message_size = m_message_queue.message_size();
 
   switch (message_type) {
-    case CommMessageType::FpgaDbgReadReg: {
+    case CommMessageType::FpgaReadReg: {
       unsigned int apb_data = 0xdeadbeef;
       unsigned char buff[8];
       m_message_queue.pop_message(buff, 4);
       uint32_t apb_addr = *(uint32_t *)(buff);
       goldo_fpga_master_spi_read_word(apb_addr, &apb_data);
       std::memcpy(buff + 4, (unsigned char *)&apb_data, 4);
-      Robot::instance().mainExchangeOut().pushMessage(CommMessageType::FpgaDbgReadReg,
+      Robot::instance().mainExchangeOut().pushMessage(CommMessageType::FpgaReadRegStatus,
                                                       (unsigned char *)buff, 8);
     } break;
 
-    case CommMessageType::FpgaDbgWriteReg: {
+    case CommMessageType::FpgaWriteReg: {
       unsigned char buff[12];
       m_message_queue.pop_message(buff, 8);
       uint32_t apb_addr = *(uint32_t *)(buff);
       uint32_t apb_data = *(uint32_t *)(buff + 4);
       goldo_fpga_master_spi_write_word(apb_addr, apb_data);
     } break;
-    case CommMessageType::FpgaCmdDCMotor: {
+    /*case CommMessageType::FpgaCmdDCMotor: {
       unsigned char buff[3];
       m_message_queue.pop_message(buff, 3);
       int motor_id = buff[0];
@@ -291,7 +291,7 @@ void FpgaTask::process_message() {
       }
       m_servos_target_positions[motor_id] = pwm;
       m_servos_speeds[motor_id] = (m_servos_config->servos[motor_id].max_speed * buff[3]) / 100;
-    } break;
+    } break;*/
     default:
       m_message_queue.pop_message(nullptr, 0);
       break;

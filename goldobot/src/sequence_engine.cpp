@@ -93,8 +93,9 @@ bool SequenceEngine::execOp(const Op& op) {
     case 65:  // propulsion.enable
     {
       uint8_t b = true;
-      m_exchange_commands->pushMessage(CommMessageType::DbgSetPropulsionEnable, (unsigned char*)&b,
-                                       1);
+      // m_exchange_commands->pushMessage(CommMessageType::DbgSetPropulsionEnable, (unsigned
+      // char*)&b,
+      //                                 1);
       m_propulsion_state_dirty = true;
       m_pc++;
       return true;
@@ -106,8 +107,8 @@ bool SequenceEngine::execOp(const Op& op) {
     case 67:  // propulsion.disable
     {
       uint8_t b = false;
-      Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DbgSetPropulsionEnable,
-                                                     (unsigned char*)&b, 1);
+      // Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DbgSetPropulsionEnable,
+      //                                               (unsigned char*)&b, 1);
       m_propulsion_state_dirty = true;
       m_pc++;
       return true;
@@ -133,8 +134,9 @@ bool SequenceEngine::execOp(const Op& op) {
       return false;
     case 127:  // propulsion.set_pose
     {
-      m_exchange_commands->pushMessage(CommMessageType::DbgPropulsionSetPose, m_vars + 4 * op.arg1,
-                                       12);
+      // m_exchange_commands->pushMessage(CommMessageType::DbgPropulsionSetPose, m_vars + 4 *
+      // op.arg1,
+      //                                  12);
     }
       m_pc++;
       return true;
@@ -146,8 +148,8 @@ bool SequenceEngine::execOp(const Op& op) {
       params[2] = *(float*)(m_vars + 4 * (op.arg2));
       params[3] = *(float*)(m_vars + 4 * (op.arg2 + 1));
       params[4] = *(float*)(m_vars + 4 * (op.arg2 + 2));
-      m_exchange_commands->pushMessage(CommMessageType::DbgPropulsionExecutePointTo,
-                                       (unsigned char*)params, sizeof(params));
+      //  m_exchange_commands->pushMessage(CommMessageType::DbgPropulsionExecutePointTo,
+      //                                  (unsigned char*)params, sizeof(params));
     }
       m_propulsion_state_dirty = true;
       m_pc++;
@@ -161,8 +163,8 @@ bool SequenceEngine::execOp(const Op& op) {
       params[3] = *(float*)(m_vars + 4 * (op.arg2 + 1));
       params[4] = *(float*)(m_vars + 4 * (op.arg2 + 2));
 
-      m_exchange_commands->pushMessage(CommMessageType::DbgPropulsionExecuteMoveTo,
-                                       (unsigned char*)params, sizeof(params));
+      // m_exchange_commands->pushMessage(CommMessageType::DbgPropulsionExecuteMoveTo,
+      //                                  (unsigned char*)params, sizeof(params));
       m_propulsion_state_dirty = true;
       m_pc++;
       return false;
@@ -176,8 +178,8 @@ bool SequenceEngine::execOp(const Op& op) {
 
       memcpy(buff + 12, m_vars + 4 * op.arg1, op.arg2 * 8);
 
-      m_exchange_commands->pushMessage(CommMessageType::DbgPropulsionExecuteTrajectory, buff,
-                                       12 + op.arg2 * 8);
+      //  m_exchange_commands->pushMessage(CommMessageType::DbgPropulsionExecuteTrajectory, buff,
+      //                                 12 + op.arg2 * 8);
 
       m_propulsion_state_dirty = true;
       m_pc++;
@@ -191,8 +193,8 @@ bool SequenceEngine::execOp(const Op& op) {
       params[2] = *(float*)(m_vars + 4 * (op.arg2 + 1));
       params[3] = *(float*)(m_vars + 4 * (op.arg2 + 2));
 
-      m_exchange_commands->pushMessage(CommMessageType::DbgPropulsionExecuteRotation,
-                                       (unsigned char*)params, sizeof(params));
+      // m_exchange_commands->pushMessage(CommMessageType::DbgPropulsionExecuteRotation,
+      //                                (unsigned char*)params, sizeof(params));
       m_propulsion_state_dirty = true;
       m_pc++;
       return false;
@@ -215,8 +217,8 @@ bool SequenceEngine::execOp(const Op& op) {
       float params[2];
       params[0] = *(float*)(m_vars + 4 * op.arg1);
       params[1] = *(float*)(m_vars + 4 * (op.arg2));
-      m_exchange_commands->pushMessage(CommMessageType::DbgPropulsionExecuteReposition,
-                                       (unsigned char*)params, sizeof(params));
+      // m_exchange_commands->pushMessage(CommMessageType::DbgPropulsionExecuteReposition,
+      //                                  (unsigned char*)params, sizeof(params));
       m_propulsion_state_dirty = true;
       m_pc++;
       return false;
@@ -275,8 +277,8 @@ bool SequenceEngine::execOp(const Op& op) {
       unsigned char buff;
       buff = op.arg1;
 
-      m_exchange_commands->pushMessage(CommMessageType::PropulsionSetAdversaryDetectionEnable,
-                                       &buff, 1);
+      //   m_exchange_commands->pushMessage(CommMessageType::PropulsionSetAdversaryDetectionEnable,
+      //                                  &buff, 1);
     }
       m_pc++;
       return true;
@@ -294,8 +296,8 @@ bool SequenceEngine::execOp(const Op& op) {
       // arg: vector(border normal angle, projection of border point on normal
       float buff[4] = {get_var_float(op.arg1), get_var_float(op.arg1 + 1), get_var_float(op.arg2),
                        get_var_float(op.arg2 + 1)};
-      m_exchange_commands->pushMessage(CommMessageType::PropulsionMeasurePoint,
-                                       (unsigned char*)&buff, sizeof(buff));
+      // m_exchange_commands->pushMessage(CommMessageType::PropulsionMeasurePoint,
+      //                                 (unsigned char*)&buff, sizeof(buff));
       m_pc++;
       return false;
     }
@@ -336,7 +338,7 @@ bool SequenceEngine::execOp(const Op& op) {
       unsigned char buff[3];
       buff[0] = 0;
       *(int16_t*)(buff + 1) = *(int*)(m_vars + 4 * op.arg1);
-      m_exchange_commands->pushMessage(CommMessageType::FpgaCmdDCMotor, buff, 3);
+      // m_exchange_commands->pushMessage(CommMessageType::FpgaCmdDCMotor, buff, 3);
     }
       m_pc++;
       return true;
@@ -345,7 +347,7 @@ bool SequenceEngine::execOp(const Op& op) {
       unsigned char buff[3];
       buff[0] = op.arg1;
       *(int16_t*)(buff + 1) = *(int*)(m_vars + 4 * op.arg2);
-      m_exchange_commands->pushMessage(CommMessageType::FpgaCmdDCMotor, buff, 3);
+      //  m_exchange_commands->pushMessage(CommMessageType::FpgaCmdDCMotor, buff, 3);
     }
       m_pc++;
       return true;
@@ -359,7 +361,7 @@ bool SequenceEngine::execOp(const Op& op) {
       buff[0] = op.arg1;
       buff[1] = op.arg2;
       *(uint16_t*)(buff + 2) = op.arg3;  // speed in % of max speed
-      m_exchange_commands->pushMessage(CommMessageType::DbgArmsGoToPosition, buff, 4);
+      //  m_exchange_commands->pushMessage(CommMessageType::DbgArmsGoToPosition, buff, 4);
       m_arm_state_dirty = true;
     }
       m_pc++;
@@ -371,13 +373,13 @@ bool SequenceEngine::execOp(const Op& op) {
       buff[0] = op.arg1;
       *(uint16_t*)(buff + 1) = *(int*)(m_vars + 4 * op.arg2);
       buff[3] = op.arg3;
-      m_exchange_commands->pushMessage(CommMessageType::FpgaCmdServo, buff, 4);
+      //   m_exchange_commands->pushMessage(CommMessageType::FpgaCmdServo, buff, 4);
     }
       m_pc++;
       return true;
     case 143:  // arms.shutdown
     {
-      m_exchange_commands->pushMessage(CommMessageType::ArmsShutdown, nullptr, 0);
+      //  m_exchange_commands->pushMessage(CommMessageType::ArmsShutdown, nullptr, 0);
     }
       m_pc++;
       return true;
@@ -471,13 +473,15 @@ void SequenceEngine::endLoad() {
   if (crc == header->crc16) {
     unsigned char buff[1];
     buff[0] = 1;
-    Robot::instance().mainExchangeOut().pushMessage(CommMessageType::MainSequenceLoadStatus, buff,
-                                                    1);
+    //  Robot::instance().mainExchangeOut().pushMessage(CommMessageType::MainSequenceLoadStatus,
+    //  buff,
+    //                                                    1);
   } else {
     unsigned char buff[1];
     buff[0] = 0;
-    Robot::instance().mainExchangeOut().pushMessage(CommMessageType::MainSequenceLoadStatus, buff,
-                                                    1);
+    // Robot::instance().mainExchangeOut().pushMessage(CommMessageType::MainSequenceLoadStatus,
+    // buff,
+    //                                                1);
   }
   m_num_vars = header->num_vars;
   m_num_seqs = header->num_seqs;

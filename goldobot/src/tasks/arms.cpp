@@ -40,7 +40,7 @@ void ArmsTask::taskFunction() {
   unsigned char buff[2];
   buff[0] = 0;
   buff[1] = (unsigned char)m_arm_state;
-  Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ArmsStateChange, buff, 2);
+  // Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ArmsStateChange, buff, 2);
 
   int servo_idx = 0;
   while (1) {
@@ -75,8 +75,8 @@ void ArmsTask::taskFunction() {
       unsigned char buff[2];
       buff[0] = 0;  // arm id, 0 for now since we have only one arm
       buff[1] = (unsigned char)m_arm_state;
-      Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ArmsStateChange, buff, 2);
-      Robot::instance().mainExchangeIn().pushMessage(CommMessageType::ArmsStateChange, buff, 2);
+      // Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ArmsStateChange, buff, 2);
+      // Robot::instance().mainExchangeIn().pushMessage(CommMessageType::ArmsStateChange, buff, 2);
     }
     delay_periodic(1);
   }

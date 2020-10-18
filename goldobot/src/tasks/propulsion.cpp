@@ -67,10 +67,10 @@ void PropulsionTask::doStep() {
     buff[0] = (uint8_t)m_controller.state();
     buff[1] = (uint8_t)m_previous_state;
     m_previous_state = m_controller.state();
-    Robot::instance().mainExchangeIn().pushMessage(CommMessageType::PropulsionStateChanged,
-                                                   (unsigned char*)buff, 2);
-    Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionStateChanged,
+    /* Robot::instance().mainExchangeIn().pushMessage(CommMessageType::PropulsionStateChanged,
                                                     (unsigned char*)buff, 2);
+     Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionStateChanged,
+                                                     (unsigned char*)buff, 2);*/
   }
 
   if (m_controller.state() != PropulsionController::State::Inactive) {
@@ -114,10 +114,10 @@ void PropulsionTask::processMessage() {
   auto message_type = (CommMessageType)m_message_queue.message_type();
 
   switch (message_type) {
-    case CommMessageType::DbgPropulsionExecuteTrajectory:
+    case CommMessageType::PropulsionExecuteTrajectory:
       onMsgExecuteTrajectory();
       break;
-    case CommMessageType::DbgPropulsionExecuteRotation: {
+    case CommMessageType::PropulsionExecuteRotation: {
       float params[4];
       m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
       m_controller.executeRotation(params[0], params[1], params[2], params[3]);
@@ -127,7 +127,7 @@ void PropulsionTask::processMessage() {
       m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
       m_controller.executeTranslation(params[0], params[1], params[2], params[3]);
     } break;
-    case CommMessageType::DbgPropulsionExecutePointTo:
+    case CommMessageType::PropulsionExecutePointTo:
       onMsgExecutePointTo();
       break;
     case CommMessageType::PropulsionExecuteFaceDirection: {
@@ -135,12 +135,12 @@ void PropulsionTask::processMessage() {
       m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
       m_controller.executeFaceDirection(params[0], params[1], params[2], params[3]);
     } break;
-    case CommMessageType::DbgPropulsionExecuteMoveTo: {
+    case CommMessageType::PropulsionExecuteMoveTo: {
       float params[5];
       m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
       m_controller.executeMoveTo(*(Vector2D*)(params), params[2], params[3], params[4]);
     } break;
-    case CommMessageType::DbgPropulsionExecuteReposition: {
+    case CommMessageType::PropulsionExecuteReposition: {
       float params[2];
       m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
       m_controller.executeRepositioning(params[0], params[1]);
@@ -177,39 +177,39 @@ void PropulsionTask::processUrgentMessage() {
   auto message_type = (CommMessageType)m_urgent_message_queue.message_type();
 
   switch (message_type) {
-    case CommMessageType::DbgPropulsionSetPose: {
-      float pose[3];
-      m_urgent_message_queue.pop_message((unsigned char*)&pose, 12);
-      m_controller.resetPose(pose[0], pose[1], pose[2]);
-    } break;
-    case CommMessageType::PropulsionSetAdversaryDetectionEnable: {
+      /* case CommMessageType::PropulsionSetPose: {
+         float pose[3];
+         m_urgent_message_queue.pop_message((unsigned char*)&pose, 12);
+         m_controller.resetPose(pose[0], pose[1], pose[2]);
+       } break;*/
+    /*case CommMessageType::PropulsionSetAdversaryDetectionEnable: {
       uint8_t buff;
       m_urgent_message_queue.pop_message((unsigned char*)&buff, 1);
       m_adversary_detection_enabled = (bool)buff;
-    } break;
-    case CommMessageType::DbgGetOdometryConfig: {
+    } break;*/
+    case CommMessageType::OdometryConfigGet: {
       auto config = m_odometry.config();
-      Robot::instance().mainExchangeOut().pushMessage(CommMessageType::DbgGetOdometryConfig,
+      Robot::instance().mainExchangeOut().pushMessage(CommMessageType::OdometryConfigGetStatus,
                                                       (unsigned char*)&config, sizeof(config));
       m_urgent_message_queue.pop_message(nullptr, 0);
     } break;
-    case CommMessageType::DbgSetOdometryConfig: {
+    case CommMessageType::OdometryConfigSet: {
       OdometryConfig config;
       m_urgent_message_queue.pop_message((unsigned char*)&config, sizeof(config));
       m_odometry.setConfig(config);
     } break;
-    case CommMessageType::DbgGetPropulsionConfig: {
+    case CommMessageType::PropulsionConfigGet: {
       auto config = m_controller.config();
-      Robot::instance().mainExchangeOut().pushMessage(CommMessageType::DbgGetPropulsionConfig,
+      Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionConfigGetStatus,
                                                       (unsigned char*)&config, sizeof(config));
       m_urgent_message_queue.pop_message(nullptr, 0);
     } break;
-    case CommMessageType::DbgSetPropulsionConfig: {
+    case CommMessageType::PropulsionConfigSet: {
       PropulsionControllerConfig config;
       m_urgent_message_queue.pop_message((unsigned char*)&config, sizeof(config));
       m_controller.setConfig(config);
     } break;
-    case CommMessageType::CmdEmergencyStop:
+    /*case CommMessageType::CmdEmergencyStop:
       m_controller.emergencyStop();
       m_urgent_message_queue.pop_message(nullptr, 0);
       break;
@@ -222,8 +222,8 @@ void PropulsionTask::processUrgentMessage() {
       while (m_message_queue.message_ready()) {
         m_message_queue.pop_message(nullptr, 0);
       }
-      break;
-    case CommMessageType::DbgSetPropulsionEnable: {
+      break;*/
+    case CommMessageType::PropulsionEnableSet: {
       uint8_t enabled;
       m_urgent_message_queue.pop_message((unsigned char*)&enabled, 1);
       m_controller.setEnable(enabled);
@@ -234,24 +234,24 @@ void PropulsionTask::processUrgentMessage() {
         }
       }
     } break;
-    case CommMessageType::DbgSetMotorsEnable: {
+    case CommMessageType::PropulsionMotorsEnableSet: {
       uint8_t enabled;
       m_urgent_message_queue.pop_message((unsigned char*)&enabled, 1);
       setMotorsEnable(enabled);
     } break;
-    case CommMessageType::DbgSetMotorsPwm: {
+    case CommMessageType::PropulsionMotorsVelocitySetpointsSet: {
       float pwm[2];
       m_urgent_message_queue.pop_message((unsigned char*)&pwm, 8);
       setMotorsPwm(pwm[0], pwm[1], true);
     } break;
-    case CommMessageType::PropulsionMeasurePoint: {
-      float buff[4];
-      m_urgent_message_queue.pop_message((unsigned char*)&buff, sizeof(buff));
-      m_odometry.measurePerpendicularPoint(buff[0], buff[1], *(Vector2D*)(buff + 2));
-      auto pose = m_odometry.pose();
-      // Set controller to new pose
-      m_controller.resetPose(pose.position.x, pose.position.y, pose.yaw);
-    } break;
+      /* case CommMessageType::PropulsionMeasurePoint: {
+         float buff[4];
+         m_urgent_message_queue.pop_message((unsigned char*)&buff, sizeof(buff));
+         m_odometry.measurePerpendicularPoint(buff[0], buff[1], *(Vector2D*)(buff + 2));
+         auto pose = m_odometry.pose();
+         // Set controller to new pose
+         m_controller.resetPose(pose.position.x, pose.position.y, pose.yaw);
+       } break;*/
     default:
       m_urgent_message_queue.pop_message(nullptr, 0);
       break;
@@ -379,11 +379,9 @@ void PropulsionTask::setMotorsPwm(float left_pwm, float right_pwm, bool immediat
 
 void PropulsionTask::taskFunction() {
   // Register for messages
-  Robot::instance().mainExchangeIn().subscribe({84, 97, &m_message_queue});
-  Robot::instance().mainExchangeIn().subscribe({64, 68, &m_urgent_message_queue});
-  Robot::instance().mainExchangeIn().subscribe({80, 83, &m_urgent_message_queue});
-  Robot::instance().mainExchangeIn().subscribe({32, 32, &m_urgent_message_queue});
-  Robot::instance().mainExchangeIn().subscribe({98, 102, &m_urgent_message_queue});
+  // Robot::instance().mainExchangeIn().subscribe({84, 97, &m_message_queue});
+  Robot::instance().mainExchangeIn().subscribe({22, 24});
+  // Robot::instance().mainExchangeIn().subscribe({80, 83, &m_urgent_message_queue});
 
   m_use_simulator = Robot::instance().robotConfig().use_simulator;
   m_robot_simulator.m_config = Robot::instance().robotSimulatorConfig();

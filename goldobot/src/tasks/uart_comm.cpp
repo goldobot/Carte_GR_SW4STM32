@@ -80,7 +80,7 @@ void UARTCommTask::taskFunction() {
       memcpy(msg, &deserializer_statistics, sizeof(CommDeserializer::Statistics));
       memcpy(msg + sizeof(CommDeserializer::Statistics), &serializer_statistics,
              sizeof(CommSerializer::Statistics));
-      send_message(CommMessageType::CommStats, (char*)msg, sizeof(msg));
+      send_message(CommMessageType::CommUartStats, (char*)msg, sizeof(msg));
       m_last_timestamp = timestamp;
     }
     // Wait for next tick
@@ -97,7 +97,7 @@ void UARTCommTask::process_message(uint16_t message_type) {
   uint16_t msg_type = m_deserializer.message_type();
   size_t msg_size = m_deserializer.message_size();
   m_deserializer.pop_message(s_scratch_buffer, msg_size);
-  if (msg_type == static_cast<uint16_t>(CommMessageType::Ping)) {
+  if (msg_type == static_cast<uint16_t>(CommMessageType::CommUartPing)) {
     m_serializer.push_message(msg_type, (const unsigned char*)(s_scratch_buffer), msg_size);
   } else {
     Robot::instance().mainExchangeIn().pushMessage((CommMessageType)msg_type, s_scratch_buffer,
