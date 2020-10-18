@@ -196,7 +196,7 @@ void PropulsionTask::processUrgentMessage() {
     case CommMessageType::OdometryConfigSet: {
       OdometryConfig config;
       m_urgent_message_queue.pop_message((unsigned char*)&config, sizeof(config));
-      m_odometry.setConfig(config);
+      m_odometry.setConfig(config, 1e-3f);
     } break;
     case CommMessageType::PropulsionConfigGet: {
       auto config = m_controller.config();
@@ -240,8 +240,8 @@ void PropulsionTask::processUrgentMessage() {
       setMotorsEnable(enabled);
     } break;
     case CommMessageType::PropulsionMotorsVelocitySetpointsSet: {
-      float pwm[2];
-      m_urgent_message_queue.pop_message((unsigned char*)&pwm, 8);
+      float pwm[4];
+      m_urgent_message_queue.pop_message((unsigned char*)&pwm, 16);
       setMotorsPwm(pwm[0], pwm[1], true);
     } break;
       /* case CommMessageType::PropulsionMeasurePoint: {
@@ -293,7 +293,7 @@ PropulsionController& PropulsionTask::controller() { return m_controller; }
 
 void PropulsionTask::measureNormal(float angle, float distance) {
   auto pose = m_odometry.pose();
-  Vector2D normal{cos(angle), sin(angle)};
+  Vector2D normal{cosf(angle), sinf(angle)};
   // Check if front or back is touching the border
   float dot = normal.x * cos(pose.yaw) + normal.y * sin(pose.yaw);
   if (dot > 0) {
@@ -380,7 +380,7 @@ void PropulsionTask::setMotorsPwm(float left_pwm, float right_pwm, bool immediat
 void PropulsionTask::taskFunction() {
   // Register for messages
   // Robot::instance().mainExchangeIn().subscribe({84, 97, &m_message_queue});
-  Robot::instance().mainExchangeIn().subscribe({22, 24});
+  Robot::instance().mainExchangeIn().subscribe({22, 24, &m_urgent_message_queue});
   // Robot::instance().mainExchangeIn().subscribe({80, 83, &m_urgent_message_queue});
 
   m_use_simulator = Robot::instance().robotConfig().use_simulator;

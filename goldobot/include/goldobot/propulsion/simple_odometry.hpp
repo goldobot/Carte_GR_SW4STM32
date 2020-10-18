@@ -14,7 +14,7 @@ class SimpleOdometry {
   const RobotPose& pose() const;
 
   const OdometryConfig& config() const;
-  void setConfig(const OdometryConfig& config);
+  void setConfig(const OdometryConfig& config, float period);
   void setPose(const RobotPose& pose);
 
   //! \brief Update current pose to be on specified line, with yaw normal to line.

@@ -6,12 +6,6 @@
 using namespace goldobot;
 
 SimpleOdometry::SimpleOdometry()
-    : m_left_encoder(0),
-      m_right_encoder(0),
-      m_x(0),
-      m_y(0),
-      m_yaw(0)
-
 {}
 
 uint16_t SimpleOdometry::leftEncoderValue() const { return m_left_encoder; }
@@ -20,12 +14,12 @@ uint16_t SimpleOdometry::rightEncoderValue() const { return m_right_encoder; }
 
 const RobotPose& SimpleOdometry::pose() const { return m_pose; }
 const OdometryConfig& SimpleOdometry::config() const { return m_config; }
-void SimpleOdometry::setConfig(const OdometryConfig& config) {
+void SimpleOdometry::setConfig(const OdometryConfig& config, float period) {
   m_config = config;
-  m_speed_coeff_1 = expf(-config.update_period / config.speed_filter_period);
-  m_speed_coeff_2 = (1.0f - m_speed_coeff_1) / config.update_period;
-  m_acceleration_coeff_1 = expf(-0.1 * config.update_period / config.speed_filter_period);
-  m_acceleration_coeff_2 = (1.0f - m_acceleration_coeff_1) / config.update_period;
+  m_speed_coeff_1 = expf(-period * config.speed_filter_frequency);
+  m_speed_coeff_2 = (1.0f - m_speed_coeff_1) / period;
+  m_acceleration_coeff_1 = expf(-period * config.accel_filter_frequency);
+  m_acceleration_coeff_2 = (1.0f - m_acceleration_coeff_1) / period;
 }
 
 void SimpleOdometry::reset(uint16_t left, uint16_t right) {
@@ -59,7 +53,8 @@ void SimpleOdometry::update(uint16_t left, uint16_t right) {
 
   double d_left = diff_left * m_config.dist_per_count_left;
   double d_right = diff_right * m_config.dist_per_count_right;
-  double d_yaw = (d_right - d_left) / m_config.wheel_spacing;
+  double d_yaw = (d_right - d_left) / (m_config.wheel_distance_left + m_config.wheel_distance_right);
+  // todo update for supporting assymetry between sides
   double d_trans = (d_left + d_right) * 0.5;
 
   m_x += d_trans * cos(m_yaw + d_yaw * 0.5);
