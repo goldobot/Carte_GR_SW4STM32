@@ -1,5 +1,4 @@
 #pragma once
-#include <cstdint>
 
 namespace goldobot {
 struct OdometryConfig {
@@ -15,7 +14,5 @@ struct OdometryConfig {
   float speed_filter_frequency;
   //! \brief speed filter cutoff frequency
   float accel_filter_frequency;
-  //! \brief period of the encoders counter.
-  uint16_t encoder_period;
 };
 }  // namespace goldobot

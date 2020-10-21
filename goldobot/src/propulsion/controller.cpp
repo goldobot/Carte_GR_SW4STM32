@@ -390,7 +390,7 @@ messages::PropulsionTelemetryEx PropulsionController::getTelemetryEx() const {
   msg.target_yaw_rate = (int16_t)(m_target_pose.yaw_rate * 1000);
   msg.longitudinal_error = (int16_t)(m_low_level_controller.m_longi_error * 4e3f);
   msg.lateral_error = (int16_t)(m_low_level_controller.m_lateral_error * 4e3f);
-  msg.left_acc = m_odometry->m_left_accumulator;
-  msg.right_acc = m_odometry->m_right_accumulator;
+  msg.left_acc = m_odometry->leftAccumulator();
+  msg.right_acc = m_odometry->rightAccumulator();
   return msg;
 }

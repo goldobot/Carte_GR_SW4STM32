@@ -36,7 +36,7 @@ const RobotSimulatorConfig& Robot::robotSimulatorConfig() const {
 
 void Robot::setOdometryConfig(const OdometryConfig& config) {
   *m_odometry_config = config;
-  odometry().setConfig(config, 1e-3f);
+  odometry().setConfig(config);
 }
 
 ServosConfig* Robot::servosConfig() { return m_servos_config; }
@@ -90,7 +90,7 @@ bool Robot::endLoadConfig(uint16_t crc) {
 
   m_main_task.sequenceEngine().endLoad();
 
-  odometry().setConfig(*m_odometry_config, 1e-3f);
+  odometry().setConfig(*m_odometry_config);
   m_propulsion_task.controller().setConfig(defaultPropulsionControllerConfig());
   m_propulsion_task.init();
   if (m_robot_config->use_odrive_uart) {

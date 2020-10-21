@@ -22,7 +22,9 @@ PropulsionTask::PropulsionTask()
       m_urgent_message_queue(s_urgent_message_queue_buffer, sizeof(s_urgent_message_queue_buffer)),
       m_controller(&m_odometry)
 
-{}
+{
+  m_odometry.setPeriod(1e-3f);  // 1kHz update loop
+}
 
 const char* PropulsionTask::name() const { return "propulsion"; }
 
@@ -196,7 +198,7 @@ void PropulsionTask::processUrgentMessage() {
     case CommMessageType::OdometryConfigSet: {
       OdometryConfig config;
       m_urgent_message_queue.pop_message((unsigned char*)&config, sizeof(config));
-      m_odometry.setConfig(config, 1e-3f);
+      m_odometry.setConfig(config);
     } break;
     case CommMessageType::PropulsionConfigGet: {
       auto config = m_controller.config();
