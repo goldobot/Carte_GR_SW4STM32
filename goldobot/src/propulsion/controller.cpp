@@ -30,7 +30,7 @@ const PropulsionControllerConfig& PropulsionController::config() const { return 
 
 void PropulsionController::setConfig(const PropulsionControllerConfig& config) {
   m_config = config;
-  m_low_level_controller.setConfig(m_config.low_level_config_static);
+  m_low_level_controller.setPidConfig(m_config.pid_configs[0]);
   m_low_level_controller.reset();
 }
 
@@ -202,7 +202,7 @@ void PropulsionController::updateReposition() {
 
 void PropulsionController::on_stopped_enter() {
   m_state = State::Stopped;
-  m_low_level_controller.setConfig(m_config.low_level_config_static);
+  m_low_level_controller.setPidConfig(m_config.pid_configs[0]);
   m_low_level_controller.m_longi_control_level = 2;
   m_low_level_controller.m_yaw_control_level = 2;
 
@@ -275,7 +275,7 @@ bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, f
   m_trajectory_buffer.push_segment(points, num_points);
   initMoveCommand(speed, acceleration, decceleration);
   m_state = State::FollowTrajectory;
-  m_low_level_controller.setConfig(m_config.low_level_config_static);
+  m_low_level_controller.setPidConfig(m_config.pid_configs[0]);
   m_low_level_controller.m_longi_control_level = 2;
   m_low_level_controller.m_yaw_control_level = 1;
   return true;
@@ -322,7 +322,7 @@ bool PropulsionController::executeRotation(float delta_yaw, float yaw_rate, floa
   m_final_pose.yaw_rate = 0;
 
   // Configure low level controller
-  m_low_level_controller.setConfig(m_config.low_level_config_static);
+  m_low_level_controller.setPidConfig(m_config.pid_configs[0]);
   m_low_level_controller.m_longi_control_level = 2;
   m_low_level_controller.m_yaw_control_level = 2;
 

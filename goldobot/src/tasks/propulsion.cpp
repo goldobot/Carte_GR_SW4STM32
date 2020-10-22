@@ -382,8 +382,12 @@ void PropulsionTask::setMotorsPwm(float left_pwm, float right_pwm, bool immediat
 void PropulsionTask::taskFunction() {
   // Register for messages
   // Robot::instance().mainExchangeIn().subscribe({84, 97, &m_message_queue});
+
+  // enable and set pwm direct
   Robot::instance().mainExchangeIn().subscribe({22, 24, &m_urgent_message_queue});
-  // Robot::instance().mainExchangeIn().subscribe({80, 83, &m_urgent_message_queue});
+
+  // configs
+  Robot::instance().mainExchangeIn().subscribe({40, 45, &m_urgent_message_queue});
 
   m_use_simulator = Robot::instance().robotConfig().use_simulator;
   m_robot_simulator.m_config = Robot::instance().robotSimulatorConfig();

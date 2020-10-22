@@ -13,6 +13,10 @@ class LowLevelController {
   void reset();
   void update(const RobotPose& current_pose, const RobotPose& target_pose);
   void setConfig(const PropulsionLowLevelControllerConfig& config);
+  void setPidConfig(const PropulsionLowLevelPIDConfig& config);
+
+  // Config
+  PropulsionLowLevelControllerConfig m_config;
 
   // PID controllers
   // Inner loop speed control PIDs

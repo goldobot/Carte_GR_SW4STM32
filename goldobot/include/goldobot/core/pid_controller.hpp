@@ -1,5 +1,6 @@
 #pragma once
 #include "goldobot/core/pid_config.hpp"
+#include "goldobot/core/derivative_filter.hpp"
 
 namespace goldobot {
 class PIDController {
@@ -7,28 +8,23 @@ class PIDController {
   PIDController();
   PIDController(const PIDConfig& config);
 
+  void setPeriod(float period);
+
   const PIDConfig& config() const;
-  void set_config(const PIDConfig& config);
-
-  void set_kp(float kp);
-  void set_ki(float ki);
-  void set_kd(float kd);
-
-  void set_feedforward(float feedforward);
+  void setConfig(const PIDConfig& config);
 
   float output() const;
-  void set_target(float target, float target_derivative = 0.0f);
   void reset();
-  float update(float current_value);
+  float step(float error);
 
  private:
   float clamp(float val, float min_val, float max_val) const;
 
   PIDConfig m_config;
+  float m_period{1.0f};
 
-  float m_target{0};
-  float m_target_derivative{0};
-  float m_previous_value{0};
+  DerivativeFilter m_derivative_filter;
+  float m_previous_error{0};
   float m_integral_term{0};
   float m_output{0};
   bool m_first_run{true};
