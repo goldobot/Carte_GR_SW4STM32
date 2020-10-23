@@ -25,7 +25,7 @@ FpgaTask::FpgaTask() : m_message_queue(m_message_queue_buffer, sizeof(m_message_
 const char *FpgaTask::name() const { return "fpga"; }
 
 void FpgaTask::taskFunction() {
-  Robot::instance().mainExchangeIn().subscribe({256, 322, &m_message_queue});
+  Robot::instance().mainExchangeIn().subscribe({19, 21, &m_message_queue});
   m_servos_config = Robot::instance().servosConfig();
 
   for (unsigned i = 0; i < 16; i++) {

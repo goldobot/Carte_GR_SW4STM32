@@ -13,7 +13,7 @@ struct ServoConfig {
 
 struct ServosConfig {
   uint16_t num_servos;
-  ServoConfig servos[16];
+  ServoConfig servos[32];
 };
 
 struct ArmConfig {
