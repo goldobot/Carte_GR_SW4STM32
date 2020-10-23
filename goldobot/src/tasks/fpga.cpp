@@ -61,6 +61,7 @@ void FpgaTask::taskFunction() {
     }
 
     // Recompute servo targets
+    /*
     uint32_t ts = hal::get_tick_count();
     float delta_t = (ts - m_last_timestamp) * 1e-3;
     m_last_timestamp = ts;
@@ -90,7 +91,7 @@ void FpgaTask::taskFunction() {
         // Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaServoState,
         //                                               (unsigned char *)buff, 2);
       }
-    }
+    }*/
 
     delay(5);
   } /* while(1) */

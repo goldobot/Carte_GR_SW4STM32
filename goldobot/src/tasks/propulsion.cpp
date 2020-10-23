@@ -122,12 +122,12 @@ void PropulsionTask::processMessage() {
     case CommMessageType::PropulsionExecuteRotation: {
       float params[4];
       m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
-      m_controller.executeRotation(params[0], params[1], params[2], params[3]);
+      m_controller.executeRotation(params[0], params[1]);
     } break;
     case CommMessageType::PropulsionExecuteTranslation: {
       float params[4];
       m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
-      m_controller.executeTranslation(params[0], params[1], params[2], params[3]);
+      m_controller.executeTranslation(params[0], params[1]);
     } break;
     case CommMessageType::PropulsionExecutePointTo:
       onMsgExecutePointTo();
@@ -135,12 +135,12 @@ void PropulsionTask::processMessage() {
     case CommMessageType::PropulsionExecuteFaceDirection: {
       float params[4];
       m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
-      m_controller.executeFaceDirection(params[0], params[1], params[2], params[3]);
+      m_controller.executeFaceDirection(params[0], params[1]);
     } break;
     case CommMessageType::PropulsionExecuteMoveTo: {
       float params[5];
       m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
-      m_controller.executeMoveTo(*(Vector2D*)(params), params[2], params[3], params[4]);
+      m_controller.executeMoveTo(*(Vector2D*)(params), params[2]);
     } break;
     case CommMessageType::PropulsionExecuteReposition: {
       float params[2];
@@ -179,11 +179,11 @@ void PropulsionTask::processUrgentMessage() {
   auto message_type = (CommMessageType)m_urgent_message_queue.message_type();
 
   switch (message_type) {
-      /* case CommMessageType::PropulsionSetPose: {
+       case CommMessageType::PropulsionPose: {
          float pose[3];
          m_urgent_message_queue.pop_message((unsigned char*)&pose, 12);
          m_controller.resetPose(pose[0], pose[1], pose[2]);
-       } break;*/
+       } break;
     /*case CommMessageType::PropulsionSetAdversaryDetectionEnable: {
       uint8_t buff;
       m_urgent_message_queue.pop_message((unsigned char*)&buff, 1);
@@ -286,7 +286,7 @@ void PropulsionTask::onMsgExecutePointTo() {
   float params[5];
   m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
 
-  m_controller.executePointTo(*(Vector2D*)(params), params[2], params[3], params[4]);
+  m_controller.executePointTo(*(Vector2D*)(params), params[2]);
 }
 
 SimpleOdometry& PropulsionTask::odometry() { return m_odometry; }
@@ -381,10 +381,10 @@ void PropulsionTask::setMotorsPwm(float left_pwm, float right_pwm, bool immediat
 
 void PropulsionTask::taskFunction() {
   // Register for messages
-  // Robot::instance().mainExchangeIn().subscribe({84, 97, &m_message_queue});
+  Robot::instance().mainExchangeIn().subscribe({28, 33, &m_message_queue});
 
   // enable and set pwm direct
-  Robot::instance().mainExchangeIn().subscribe({22, 24, &m_urgent_message_queue});
+  Robot::instance().mainExchangeIn().subscribe({22, 39, &m_urgent_message_queue});
 
   // configs
   Robot::instance().mainExchangeIn().subscribe({40, 45, &m_urgent_message_queue});

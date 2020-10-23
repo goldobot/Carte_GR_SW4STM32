@@ -30,6 +30,7 @@ const PropulsionControllerConfig& PropulsionController::config() const { return 
 
 void PropulsionController::setConfig(const PropulsionControllerConfig& config) {
   m_config = config;
+  m_low_level_controller.setConfig(config.low_level_config);
   m_low_level_controller.setPidConfig(m_config.pid_configs[0]);
   m_low_level_controller.reset();
 }
@@ -46,6 +47,14 @@ void PropulsionController::emergencyStop() {
   if (m_state == State::FollowTrajectory || m_state == State::Rotate) {
     m_state = State::EmergencyStop;
   }
+}
+
+void PropulsionController::setAccelerationLimits(float accel, float deccel, float angular_accel, float angular_deccel)
+{
+	m_accel = accel;
+	m_deccel = deccel;
+	m_angular_accel = angular_accel;
+	m_angular_deccel = angular_deccel;
 }
 
 void PropulsionController::update() {
@@ -267,13 +276,12 @@ bool PropulsionController::resetPose(float x, float y, float yaw) {
   return true;
 }
 
-bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, float speed,
-                                             float acceleration, float decceleration) {
+bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, float speed) {
   if (m_state != State::Stopped) {
     return false;
   }
   m_trajectory_buffer.push_segment(points, num_points);
-  initMoveCommand(speed, acceleration, decceleration);
+  initMoveCommand(speed, m_accel, m_deccel);
   m_state = State::FollowTrajectory;
   m_low_level_controller.setPidConfig(m_config.pid_configs[0]);
   m_low_level_controller.m_longi_control_level = 2;
@@ -281,36 +289,31 @@ bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, f
   return true;
 };
 
-bool PropulsionController::executePointTo(Vector2D point, float speed, float acceleration,
-                                          float decceleration) {
+bool PropulsionController::executePointTo(Vector2D point, float speed) {
   float diff_x = (point.x - m_current_pose.position.x);
   float diff_y = (point.y - m_current_pose.position.y);
   float target_yaw = atan2f(diff_y, diff_x);
-  return executeRotation(angleDiff(target_yaw, m_target_pose.yaw), speed, acceleration,
-                         decceleration);
+  return executeRotation(angleDiff(target_yaw, m_target_pose.yaw), speed);
 };
 
-bool PropulsionController::executeFaceDirection(float direction, float yaw_rate, float accel,
-                                                float deccel) {
-  return executeRotation(angleDiff(direction, m_target_pose.yaw), yaw_rate, accel, deccel);
+bool PropulsionController::executeFaceDirection(float direction, float yaw_rate) {
+  return executeRotation(angleDiff(direction, m_target_pose.yaw), yaw_rate);
 }
 
-bool PropulsionController::executeMoveTo(Vector2D point, float speed, float acceleration,
-                                         float decceleration) {
+bool PropulsionController::executeMoveTo(Vector2D point, float speed) {
   Vector2D traj[2];
   traj[0] = m_target_pose.position;
   traj[1] = point;
-  return executeTrajectory(traj, 2, speed, acceleration, decceleration);
+  return executeTrajectory(traj, 2, speed);
 };
 
-bool PropulsionController::executeRotation(float delta_yaw, float yaw_rate, float accel,
-                                           float deccel) {
+bool PropulsionController::executeRotation(float delta_yaw, float yaw_rate) {
   if (m_state != State::Stopped) {
     return false;
   }
   // Compute yaw ramp to go to target_angle from current target angle
   m_begin_yaw = m_target_pose.yaw;
-  m_speed_profile.update(delta_yaw, yaw_rate, accel, deccel);
+  m_speed_profile.update(delta_yaw, yaw_rate, m_accel, m_deccel);
   m_command_begin_time = m_time_base_ms;
   m_command_end_time =
       m_time_base_ms + static_cast<uint32_t>(ceilf(1000 * m_speed_profile.end_time()));
@@ -345,14 +348,13 @@ bool PropulsionController::executeRepositioning(float speed, float accel) {
   return true;
 }
 
-bool PropulsionController::executeTranslation(float distance, float speed, float accel,
-                                              float deccel) {
+bool PropulsionController::executeTranslation(float distance, float speed) {
   Vector2D target;
   float ux = cos(m_target_pose.yaw);
   float uy = sin(m_target_pose.yaw);
   target.x = m_target_pose.position.x + ux * distance;
   target.y = m_target_pose.position.y + uy * distance;
-  return executeMoveTo(target, speed, accel, deccel);
+  return executeMoveTo(target, speed);
 }
 
 void PropulsionController::enterManualControl() { m_state = State::ManualControl; }

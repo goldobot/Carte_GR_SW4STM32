@@ -65,17 +65,19 @@ class PropulsionController {
   float leftMotorPwm();
   float rightMotorPwm();
 
+  void setAccelerationLimits(float accel, float deccel, float angular_accel, float angular_deccel);
+
   //! \brief reset robot pose. Only works if state is Inactive or Stopped. Also change odometry.
   bool resetPose(float x, float y, float yaw);
 
-  bool executeTrajectory(Vector2D* points, int num_points, float speed, float acceleration,
-                         float decceleration);
+  bool executeTrajectory(Vector2D* points, int num_points, float speed);
   bool executeRepositioning(float speed, float accel);
-  bool executePointTo(Vector2D target, float yaw_rate, float accel, float deccel);
-  bool executeMoveTo(Vector2D target, float yaw_rate, float accel, float deccel);
-  bool executeRotation(float delta_yaw, float yaw_rate, float accel, float deccel);
-  bool executeFaceDirection(float direction, float yaw_rate, float accel, float deccel);
-  bool executeTranslation(float distance, float speed, float accel, float deccel);
+  bool executePointTo(Vector2D target, float yaw_rate);
+  bool executeMoveTo(Vector2D target, float speed);
+  bool executeRotation(float delta_yaw, float yaw_rate);
+
+  bool executeFaceDirection(float direction, float yaw_rate);
+  bool executeTranslation(float distance, float speed);
 
   //! \brief Emergency stop. Abort current PointTo of FollowTrajectory command and bring the robot
   //! to a stop.
@@ -107,7 +109,12 @@ class PropulsionController {
 
   float m_left_motor_pwm{0};
   float m_right_motor_pwm{0};
-  float m_pwm_limit{1.0f};
+  float m_pwm_limit{100.0f};
+
+  float m_accel{1};
+  float m_deccel{1};
+  float m_angular_accel{1};
+  float m_angular_deccel{1};
 
   // \todo should split management of parametrized trajectory in separate class
   TrajectoryBuffer m_trajectory_buffer;

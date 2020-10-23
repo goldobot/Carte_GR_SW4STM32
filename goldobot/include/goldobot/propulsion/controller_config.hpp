@@ -18,7 +18,7 @@ struct PropulsionLowLevelControllerConfig {
 
 struct PropulsionControllerConfig {
   PropulsionLowLevelControllerConfig low_level_config;
-  PropulsionLowLevelPIDConfig pid_configs[8];
+  PropulsionLowLevelPIDConfig pid_configs[4];
   float lookahead_distance;
   float lookahead_time;
   float static_pwm_limit;
