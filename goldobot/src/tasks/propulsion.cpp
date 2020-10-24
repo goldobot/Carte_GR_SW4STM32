@@ -78,6 +78,17 @@ void PropulsionTask::doStep() {
   if (m_controller.state() != PropulsionController::State::Inactive) {
     setMotorsPwm(m_controller.leftMotorPwm(), m_controller.rightMotorPwm());
   }
+
+  if(m_odrive_cnt == 0)
+  {
+	  m_odrive_seq_left_vel_estimate = ODriveQueueReadEndpoint<float>(c_odrive_endpoint_vel_estimate[0]);
+	  m_odrive_seq_right_vel_estimate = ODriveQueueReadEndpoint<float>(c_odrive_endpoint_vel_estimate[1]);
+
+  }
+	m_odrive_cnt++;
+	if (m_odrive_cnt == 10) {
+	  m_odrive_cnt = 0;
+	}
   if (m_use_simulator) {
     m_robot_simulator.doStep();
   }
@@ -86,6 +97,11 @@ void PropulsionTask::doStep() {
 }
 
 void PropulsionTask::sendTelemetryMessages() {
+	if(m_telemetry_counter == 0)
+	{
+		Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ODriveTelemetry,
+		                                                    (unsigned char*)&m_odrive_axis0_vel_estimate, 24);
+	}
 
   if (m_telemetry_counter % 20 == 0) {
     auto msg = m_controller.getTelemetryEx();
@@ -183,7 +199,39 @@ void PropulsionTask::processUrgentMessage() {
   auto message_type = (CommMessageType)m_urgent_message_queue.message_type();
 
   switch (message_type) {
-       case CommMessageType::PropulsionPose: {
+	  case CommMessageType::ODriveResponsePacket: {
+		uint8_t buff[6];
+		m_urgent_message_queue.pop_message((unsigned char*)&buff, 16);
+		uint16_t seq = *(uint16_t*)buff & 0x1fff;
+		// velocity
+		if(seq == m_odrive_seq_left_vel_estimate)
+		{
+			m_odrive_axis0_vel_estimate = *(float*)(buff+2);
+		}
+		if(seq == m_odrive_seq_right_vel_estimate)
+		{
+			m_odrive_axis1_vel_estimate = *(float*)(buff+2);
+		}
+		// axis error
+		if(seq == m_odrive_seq_axis0_error)
+		{
+			m_odrive_axis0_error = *(uint32_t*)(buff+2);
+		}
+		if(seq == m_odrive_seq_axis1_error)
+		{
+			m_odrive_axis1_error = *(uint32_t*)(buff+2);
+		}
+		if(seq == m_odrive_seq_axis0_motor_error)
+		{
+			m_odrive_axis0_motor_error = *(uint32_t*)(buff+2);
+		}
+		if(seq == m_odrive_seq_axis1_motor_error)
+		{
+			m_odrive_axis1_motor_error = *(uint32_t*)(buff+2);
+		}
+		//setMotorsPwm(pwm[0], pwm[1], true);
+	  } break;
+       case CommMessageType::PropulsionSetPose: {
          float pose[3];
          m_urgent_message_queue.pop_message((unsigned char*)&pose, 12);
          m_controller.resetPose(pose[0], pose[1], pose[2]);
@@ -320,6 +368,21 @@ void PropulsionTask::measureNormal(float angle, float distance) {
 }
 
 template <typename T>
+uint16_t PropulsionTask::ODriveQueueReadEndpoint(uint16_t endpoint) {
+  uint8_t buff[8];
+  auto seq = m_odrive_seq;
+
+  *reinterpret_cast<uint16_t*>(buff + 0) = seq | 0x4000;
+  *reinterpret_cast<uint16_t*>(buff + 2) = endpoint | 0x8000;
+  *reinterpret_cast<uint16_t*>(buff + 4) = sizeof(T);
+  *reinterpret_cast<uint16_t*>(buff + 6) = c_odrive_key;
+  m_odrive_seq = (m_odrive_seq + 1) & 0x1fff;
+  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::ODriveRequestPacket, buff,
+                                                 sizeof(buff));
+  return seq;
+}
+
+template <typename T>
 void PropulsionTask::ODriveWriteEndpoint(uint16_t endpoint, T val) {
   uint8_t buff[8 + sizeof(T)];
 
@@ -328,10 +391,12 @@ void PropulsionTask::ODriveWriteEndpoint(uint16_t endpoint, T val) {
   *reinterpret_cast<uint16_t*>(buff + 4) = 0;
   *reinterpret_cast<T*>(buff + 6) = val;
   *reinterpret_cast<uint16_t*>(buff + 6 + sizeof(T)) = c_odrive_key;
-  m_odrive_seq = (m_odrive_seq + 1) & 0xbfff;
+  m_odrive_seq = (m_odrive_seq + 1) & 0x1fff;
   Robot::instance().mainExchangeIn().pushMessage(CommMessageType::ODriveRequestPacket, buff,
                                                  sizeof(buff));
 }
+
+
 
 void PropulsionTask::ODriveSetMotorsEnable(bool enable) {
   // Set velocity control
@@ -372,7 +437,7 @@ void PropulsionTask::setMotorsPwm(float left_pwm, float right_pwm, bool immediat
       return;
     }
     if (m_odrive_cnt == 0) {
-      ODriveSetVelocitySetPoint(0, left_pwm, 0);
+      ODriveSetVelocitySetPoint(0, -left_pwm, 0);
       ODriveSetVelocitySetPoint(1, right_pwm, 0);
     }
     m_odrive_cnt++;
@@ -394,6 +459,9 @@ void PropulsionTask::taskFunction() {
 
   // configs
   Robot::instance().mainExchangeIn().subscribe({210, 219, &m_urgent_message_queue});
+
+  // orive responses
+  Robot::instance().exchangeInternal().subscribe({51, 51, &m_urgent_message_queue});
 
   m_use_simulator = Robot::instance().robotConfig().use_simulator;
   m_robot_simulator.m_config = Robot::instance().robotSimulatorConfig();

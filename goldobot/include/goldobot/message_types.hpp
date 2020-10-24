@@ -23,6 +23,7 @@ enum class CommMessageType : uint16_t {
 
   ODriveRequestPacket=50,
   ODriveResponsePacket,
+  ODriveTelemetry,
 
   DynamixelsRead=60,
   DynamixelsReadStatus,

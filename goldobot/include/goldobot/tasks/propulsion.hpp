@@ -34,8 +34,30 @@ class PropulsionTask : public Task {
   bool m_adversary_detection_enabled{true};
   bool m_recalage_goldenium_armed{false};
 
-  uint16_t m_odrive_seq{4096};
+  uint16_t m_odrive_seq{1};
+
+  uint16_t m_odrive_seq_left_vel_estimate{0};
+  uint16_t m_odrive_seq_right_vel_estimate{0};
+
+  uint16_t m_odrive_seq_axis0_error{0};
+  uint16_t m_odrive_seq_axis1_error{0};
+
+  uint16_t m_odrive_seq_axis0_motor_error{0};
+  uint16_t m_odrive_seq_axis1_motor_error{0};
+
+  float m_odrive_axis0_vel_estimate{0};
+  float m_odrive_axis1_vel_estimate{0};
+
+  uint32_t m_odrive_axis0_error{0};
+  uint32_t m_odrive_axis1_error{0};
+
+  uint32_t m_odrive_axis0_motor_error{0};
+  uint32_t m_odrive_axis1_motor_error{0};
+
   static constexpr uint16_t c_odrive_key{0x9b40};  // firmware 5.1
+  static constexpr uint16_t c_odrive_endpoint_vel_estimate[2] = {249, 478};
+  static constexpr uint16_t c_odrive_endpoint_axis_error[2] = {71, 300};
+  static constexpr uint16_t c_odrive_endpoint_motor_error[2] = {132, 361};
   static constexpr uint16_t c_odrive_endpoint_input_vel[2] = {195, 424};
   static constexpr uint16_t c_odrive_endpoint_requested_state[2] = {74, 303};
   static constexpr uint16_t c_odrive_endpoint_control_mode[2] = {208, 437};
@@ -62,6 +84,8 @@ class PropulsionTask : public Task {
 
   template <typename T>
   void ODriveWriteEndpoint(uint16_t endpoint, T val);
+  template <typename T>
+  uint16_t ODriveQueueReadEndpoint(uint16_t endpoint);
 
   void sendTelemetryMessages();
 

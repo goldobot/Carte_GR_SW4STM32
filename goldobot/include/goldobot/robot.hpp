@@ -42,6 +42,7 @@ class Robot {
 
   MessageExchange& mainExchangeIn() { return m_main_exchange_in; };
   MessageExchange& mainExchangeOut() { return m_main_exchange_out; };
+  MessageExchange& exchangeInternal() { return m_exchange_internal; };
 
   const RobotConfig& robotConfig() const;
   const RobotSimulatorConfig& robotSimulatorConfig() const;
@@ -91,6 +92,7 @@ class Robot {
 
   MessageExchange m_main_exchange_in;
   MessageExchange m_main_exchange_out;
+  MessageExchange m_exchange_internal;
 
   static unsigned char s_config_area[16384];
   static Robot s_instance;

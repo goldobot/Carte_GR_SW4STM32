@@ -41,6 +41,7 @@ int MainTask::remainingMatchTime() {
 
 void MainTask::taskFunction() {
   Robot::instance().mainExchangeIn().subscribe({6, 9, &m_message_queue});
+  Robot::instance().mainExchangeIn().subscribe({200, 205, &m_message_queue});
 
   messages::MsgMatchStateChange msg{Robot::instance().matchState(), Robot::instance().side()};
   /*Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange,

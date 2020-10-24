@@ -45,14 +45,27 @@ void ODriveCommTask::taskFunction() {
       uint8_t* ptr;
       size_t bytes_available = hal::io_map_read(1, &ptr);
       size_t dtlen = m_stream_parser.pushData((unsigned char*)ptr, bytes_available);
+      if(bytes_available)
+      {
+    	  int a =1;
+      }
       hal::io_unmap_read(1, ptr, dtlen);
     }
 
     if (m_stream_parser.packetReady()) {
       size_t packet_size = m_stream_parser.packetSize();
       m_stream_parser.popPacket(s_scratchpad, sizeof(s_scratchpad));
-      Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ODriveResponsePacket,
-                                                      s_scratchpad, packet_size);
+      uint16_t sequence_number = *(uint16_t*) s_scratchpad;
+      if(sequence_number & 0x2000)
+      {
+    	  Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ODriveResponsePacket,
+    	                                                        s_scratchpad, packet_size);
+      } else
+      {
+    	  Robot::instance().exchangeInternal().pushMessage(CommMessageType::ODriveResponsePacket,
+    	      	                                                        s_scratchpad, packet_size);
+      }
+
     }
 
     // Process messages
