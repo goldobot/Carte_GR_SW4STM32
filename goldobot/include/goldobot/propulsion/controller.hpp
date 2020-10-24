@@ -66,6 +66,7 @@ class PropulsionController {
   float rightMotorPwm();
 
   void setAccelerationLimits(float accel, float deccel, float angular_accel, float angular_deccel);
+  void setTargetSpeed(float speed);
 
   //! \brief reset robot pose. Only works if state is Inactive or Stopped. Also change odometry.
   bool resetPose(float x, float y, float yaw);

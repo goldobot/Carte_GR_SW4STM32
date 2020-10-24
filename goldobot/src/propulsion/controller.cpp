@@ -57,6 +57,15 @@ void PropulsionController::setAccelerationLimits(float accel, float deccel, floa
 	m_angular_deccel = angular_deccel;
 }
 
+void PropulsionController::setTargetSpeed(float speed)
+{
+	// Todo: recompute parameter ramps with new speed
+	if(m_state == State::FollowTrajectory)
+	{
+
+	}
+}
+
 void PropulsionController::update() {
   m_current_pose = m_odometry->pose();
   switch (m_state) {

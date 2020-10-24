@@ -12,54 +12,59 @@ enum class CommMessageType : uint16_t {
 
   MatchTimer,
 
-  RobotConfigLoadBegin,
-  RobotConfigLoadChunk,
-  RobotConfigLoadEnd,
-  RobotConfigLoadStatus,
-
-  ODriveRequestPacket,
-  ODriveResponsePacket,
-
-  DbgGpioGet,
+  DbgGpioGet=20,
   DbgGpioGetStatus,
   DbgGpioSet,
   DbgPwmSet,
 
-  DynamixelsRead,
-  DynamixelsReadStatus,
-  DynamixelsWrite,
-
-  FpgaReadReg,
+  FpgaReadReg=30,
   FpgaReadRegStatus,
   FpgaWriteReg,
 
-  PropulsionEnableSet,
+  ODriveRequestPacket=50,
+  ODriveResponsePacket,
+
+  DynamixelsRead=60,
+  DynamixelsReadStatus,
+  DynamixelsWrite,
+
+  PropulsionEnableSet=100,
   PropulsionMotorsEnableSet,
   PropulsionMotorsVelocitySetpointsSet,
+  PropulsionSetTargetSpeed,
+  PropulsionSetAccelerationLimits,
+  PropulsionSetPose,
+  PropulsionSetTargetPose,
 
-  PropulsionTelemetry,
+  PropulsionTelemetry=120,
   PropulsionTelemetryEx,
   PropulsionPose,
+  PropulsionState,
+
+  PropulsionExecuteTranslation=140,
+  PropulsionExecuteMoveTo,
   PropulsionExecuteRotation,
   PropulsionExecutePointTo,
   PropulsionExecuteFaceDirection,
-  PropulsionExecuteTranslation,
-  PropulsionExecuteMoveTo,
   PropulsionExecuteTrajectory,
-  PropulsionSetTargetPose,
   PropulsionMeasureNormal,
   PropulsionSetControlLevels,
   PropulsionEnterManualControl,
   PropulsionExecuteReposition,
   PropulsionExitManualControl,
 
-  OdometryConfigGet,
+  RobotConfigLoadBegin=200,
+  RobotConfigLoadChunk,
+  RobotConfigLoadEnd,
+  RobotConfigLoadStatus,
+
+  OdometryConfigGet=210,
   OdometryConfigGetStatus,
   OdometryConfigSet,
-  PropulsionConfigGet,
+
+  PropulsionConfigGet=215,
   PropulsionConfigGetStatus,
   PropulsionConfigSet
-
 };
 enum class CommMessageType2 : uint16_t {
   // General messages

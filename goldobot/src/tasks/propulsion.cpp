@@ -86,15 +86,14 @@ void PropulsionTask::doStep() {
 }
 
 void PropulsionTask::sendTelemetryMessages() {
-  m_telemetry_counter++;
-  if (m_telemetry_counter == 20) {
+
+  if (m_telemetry_counter % 20 == 0) {
     auto msg = m_controller.getTelemetryEx();
     Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionTelemetryEx,
                                                     (unsigned char*)&msg, sizeof(msg));
-    m_telemetry_counter = 0;
   }
 
-  if (m_telemetry_counter == 40) {
+  if (m_telemetry_counter % 50 == 0) {
     float msg[3];
     msg[0] = m_odometry.pose().position.x;
     msg[1] = m_odometry.pose().position.y;
@@ -102,13 +101,18 @@ void PropulsionTask::sendTelemetryMessages() {
 
     Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionPose,
                                                     (unsigned char*)&msg, sizeof(msg));
-    m_telemetry_counter = 0;
   }
 
-  if (m_telemetry_counter % 5 == 0) {
+  if (m_telemetry_counter % 10 == 0) {
     auto msg = m_controller.getTelemetry();
     Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionTelemetry,
                                                     (unsigned char*)&msg, sizeof(msg));
+  }
+
+  m_telemetry_counter++;
+  if (m_telemetry_counter == 100)
+  {
+	  m_telemetry_counter = 0;
   }
 }
 
@@ -211,6 +215,11 @@ void PropulsionTask::processUrgentMessage() {
       m_urgent_message_queue.pop_message((unsigned char*)&config, sizeof(config));
       m_controller.setConfig(config);
     } break;
+    case CommMessageType::PropulsionSetTargetSpeed: {
+      float target_speed;
+      m_urgent_message_queue.pop_message((unsigned char*)&target_speed, sizeof(target_speed));
+      m_controller.setTargetSpeed(target_speed);
+    } break;
     /*case CommMessageType::CmdEmergencyStop:
       m_controller.emergencyStop();
       m_urgent_message_queue.pop_message(nullptr, 0);
@@ -263,22 +272,19 @@ void PropulsionTask::processUrgentMessage() {
 unsigned char exec_traj_buff[256];  // > 12 for traj params + 16*8 for points = 140
 
 void PropulsionTask::onMsgExecuteTrajectory() {
-  int num_points = 0;
-  float speed = 0.0;
-  float accel = 0.0;
-  float deccel = 0.0;
-  Vector2D* points = (Vector2D*)(exec_traj_buff + 12);
+
   auto msg_size = m_message_queue.message_size();
 
   if (msg_size < 140) {
-    m_message_queue.pop_message(exec_traj_buff, 140);
-    speed = *(float*)(exec_traj_buff);
-    accel = *(float*)(exec_traj_buff + 4);
-    deccel = *(float*)(exec_traj_buff + 8);
-    points = (Vector2D*)(exec_traj_buff + 12);
-    num_points = (msg_size - 12) / sizeof(Vector2D);
+	 m_message_queue.pop_message(exec_traj_buff, 140);
+	 int num_points = (msg_size - 4)/8;
+	 float speed = *(float*)(exec_traj_buff);
+	 Vector2D* points = (Vector2D*)(exec_traj_buff + 4);
+	 m_controller.executeTrajectory(points, num_points, speed);
+
+
   } else {
-    m_message_queue.pop_message(NULL, 140);
+    m_message_queue.pop_message(nullptr, 0);
   }
 }
 
@@ -380,14 +386,14 @@ void PropulsionTask::setMotorsPwm(float left_pwm, float right_pwm, bool immediat
 }
 
 void PropulsionTask::taskFunction() {
-  // Register for messages
-  Robot::instance().mainExchangeIn().subscribe({28, 33, &m_message_queue});
+  // queued commands
+  Robot::instance().mainExchangeIn().subscribe({140, 169, &m_message_queue});
 
-  // enable and set pwm direct
-  Robot::instance().mainExchangeIn().subscribe({22, 39, &m_urgent_message_queue});
+  // immediate commands
+  Robot::instance().mainExchangeIn().subscribe({100, 119, &m_urgent_message_queue});
 
   // configs
-  Robot::instance().mainExchangeIn().subscribe({40, 45, &m_urgent_message_queue});
+  Robot::instance().mainExchangeIn().subscribe({210, 219, &m_urgent_message_queue});
 
   m_use_simulator = Robot::instance().robotConfig().use_simulator;
   m_robot_simulator.m_config = Robot::instance().robotSimulatorConfig();

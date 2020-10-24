@@ -22,7 +22,7 @@ DynamixelsCommTask::DynamixelsCommTask()
 const char* DynamixelsCommTask::name() const { return "dynamixels_comm"; }
 
 void DynamixelsCommTask::taskFunction() {
-  Robot::instance().mainExchangeIn().subscribe({70, 80, &m_message_queue});
+  Robot::instance().mainExchangeIn().subscribe({60,79});
 
   while (1) {
     while (m_message_queue.message_ready()) {

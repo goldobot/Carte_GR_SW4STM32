@@ -30,7 +30,7 @@ const char* ODriveCommTask::name() const { return "odrive_comm"; }
 void ODriveCommTask::taskFunction() {
   set_priority(5);
 
-  Robot::instance().mainExchangeIn().subscribe({10, 10, &m_message_queue});  // odrive messages
+  Robot::instance().mainExchangeIn().subscribe({50, 59, &m_message_queue});  // odrive messages
 
   while (1) {
     {

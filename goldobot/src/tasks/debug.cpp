@@ -11,7 +11,7 @@ DebugTask::DebugTask() : m_message_queue(m_message_queue_buffer, sizeof(m_messag
 const char* DebugTask::name() const { return "debug"; }
 
 void DebugTask::taskFunction() {
-  Robot::instance().mainExchangeIn().subscribe({500, 550, &m_message_queue});
+  Robot::instance().mainExchangeIn().subscribe({20, 29, &m_message_queue});
 
   while (1) {
     doStep();

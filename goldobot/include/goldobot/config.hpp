@@ -35,6 +35,9 @@ struct RobotConfig {
   //! \brief use odrive uart interface for propulsion instead of pwm
   bool use_odrive_uart;
   bool use_simulator;
+
+  uint8_t num_sensors;
+  uint8_t sensors[32]; // msb: 0:gpio, 1: fpga, other bits id in [0:127]
 };
 
 }  // namespace goldobot
