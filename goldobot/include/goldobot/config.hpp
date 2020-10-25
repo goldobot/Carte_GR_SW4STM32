@@ -4,8 +4,8 @@
 namespace goldobot {
 
 struct ServoConfig {
-  uint8_t id;
   ServoType type;
+  uint8_t id;
   uint16_t cw_limit;
   uint16_t ccw_limit;
   uint16_t max_speed;
@@ -16,13 +16,16 @@ struct ServosConfig {
   ServoConfig servos[32];
 };
 
-struct ArmConfig {
-  uint16_t num_servos;
-  ServoConfig servos[8];
-  uint16_t num_positions;
-  uint16_t num_torques;
-  uint16_t* positions_ptr;
-  uint16_t* torques_ptr;
+struct SensorConfig
+{
+	int8_t type; // 0 unknown, 1: gpio, 2: fpga
+	int8_t id;
+};
+
+struct SensorsConfig
+{
+	int8_t num_sensors;
+	SensorConfig ensors[32];
 };
 
 struct RobotConfig {
@@ -36,8 +39,7 @@ struct RobotConfig {
   bool use_odrive_uart;
   bool use_simulator;
 
-  uint8_t num_sensors;
-  uint8_t sensors[32]; // msb: 0:gpio, 1: fpga, other bits id in [0:127]
+  SensorsConfig sensors;
 };
 
 }  // namespace goldobot

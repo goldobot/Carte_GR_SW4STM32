@@ -26,16 +26,6 @@ const char *FpgaTask::name() const { return "fpga"; }
 
 void FpgaTask::taskFunction() {
   Robot::instance().mainExchangeIn().subscribe({30, 49, &m_message_queue});
-  m_servos_config = Robot::instance().servosConfig();
-
-  for (unsigned i = 0; i < 16; i++) {
-    m_servos_positions[i] = -1;
-    m_servos_target_positions[i] = 0;
-  }
-
-  for (unsigned i = 0; i < 12; i++) {
-    goldo_fpga_cmd_servo(i, 0);
-  }
 
   m_last_timestamp = hal::get_tick_count();
 
@@ -55,43 +45,10 @@ void FpgaTask::taskFunction() {
 
     if (apb_data != m_sensors_state) {
       m_sensors_state = apb_data;
-      // Robot::instance().setSensorsState(apb_data),
-      // Robot::instance().mainExchangeOut().pushMessage(CommMessageType::SensorsChange,
-      //                                                  (unsigned char *)&m_sensors_state, 4);
+      Robot::instance().setSensorsState(apb_data);
+      //Robot::instance().mainExchangeOut().pushMessage(CommMessageType::SensorsChange,
+      //                                                 (unsigned char *)&m_sensors_state, 4);
     }
-
-    // Recompute servo targets
-    /*
-    uint32_t ts = hal::get_tick_count();
-    float delta_t = (ts - m_last_timestamp) * 1e-3;
-    m_last_timestamp = ts;
-    for (int i = 0; i < m_servos_config->num_servos; i++) {
-      if (m_servos_positions[i] < 0) {
-        continue;
-      }
-
-      bool was_moving = false;
-
-      if (m_servos_positions[i] > m_servos_target_positions[i]) {
-        m_servos_positions[i] = std::max<float>(
-            m_servos_target_positions[i], m_servos_positions[i] - m_servos_speeds[i] * delta_t);
-        goldo_fpga_cmd_servo(m_servos_config->servos[i].id, (unsigned int)m_servos_positions[i]);
-        was_moving = true;
-      }
-
-      if (m_servos_positions[i] < m_servos_target_positions[i]) {
-        m_servos_positions[i] = std::min<float>(
-            m_servos_target_positions[i], m_servos_positions[i] + m_servos_speeds[i] * delta_t);
-        goldo_fpga_cmd_servo(m_servos_config->servos[i].id, (unsigned int)m_servos_positions[i]);
-        was_moving = true;
-      }
-
-      if (was_moving && m_servos_positions[i] == m_servos_target_positions[i]) {
-        unsigned char buff[2] = {(unsigned char)i, false};
-        // Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaServoState,
-        //                                               (unsigned char *)buff, 2);
-      }
-    }*/
 
     delay(5);
   } /* while(1) */

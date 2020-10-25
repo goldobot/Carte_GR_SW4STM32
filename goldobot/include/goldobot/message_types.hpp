@@ -21,6 +21,9 @@ enum class CommMessageType : uint16_t {
   FpgaReadRegStatus,
   FpgaWriteReg,
 
+  ServoMove=40,
+  ServoState,
+
   ODriveRequestPacket=50,
   ODriveResponsePacket,
   ODriveTelemetry,

@@ -15,7 +15,7 @@ class ODriveCommTask : public Task {
  private:
   void taskFunction() override;
 
-  void processMessage();
+  bool processMessage();
 
   ODriveStreamWriter m_stream_writer;
   ODriveStreamParser m_stream_parser;

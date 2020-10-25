@@ -4,14 +4,13 @@
 #include "goldobot/platform/config.hpp"
 #include "goldobot/platform/message_exchange.hpp"
 #include "goldobot/robot_simulator.hpp"
-#include "goldobot/tasks/arms.hpp"
+#include "goldobot/tasks/servos.hpp"
 #include "goldobot/tasks/debug.hpp"
 #include "goldobot/tasks/fpga.hpp"
 #include "goldobot/tasks/heartbeat.hpp"
 #include "goldobot/tasks/main.hpp"
 #include "goldobot/tasks/odrive_comm.hpp"
 #include "goldobot/tasks/propulsion.hpp"
-#include "goldobot/tasks/rttelemetry.hpp"
 #include "goldobot/tasks/uart_comm.hpp"
 
 #include <cstdint>
@@ -47,7 +46,7 @@ class Robot {
   const RobotConfig& robotConfig() const;
   const RobotSimulatorConfig& robotSimulatorConfig() const;
 
-  ArmConfig* armConfig(int arm_id);
+  //ArmConfig* armConfig(int arm_id);
   ServosConfig* servosConfig();
 
   OdometryConfig odometryConfig();
@@ -71,11 +70,14 @@ class Robot {
   std::atomic<int> m_remaining_match_time{0};
   uint32_t m_sensors_state{0};
 
+  HeartbeatTask m_heartbeat_task;
+  MainTask m_main_task;
   DebugTask m_debug_task;
   PropulsionTask m_propulsion_task;
+  ServosTask m_servos_task;
+  FpgaTask m_fpga_task;
   UARTCommTask m_comm_task;
   ODriveCommTask m_odrive_comm_task;
-  HeartbeatTask m_heartbeat_task;
 
   OdometryConfig* m_odometry_config;
   RobotConfig* m_robot_config;
@@ -85,10 +87,6 @@ class Robot {
 
   unsigned char* m_load_config_ptr{0};
   uint16_t m_load_config_crc;
-
-  MainTask m_main_task;
-  ArmsTask m_arms_task;
-  FpgaTask m_fpga_task;
 
   MessageExchange m_main_exchange_in;
   MessageExchange m_main_exchange_out;

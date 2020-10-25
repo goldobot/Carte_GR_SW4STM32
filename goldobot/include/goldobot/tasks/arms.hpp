@@ -31,7 +31,7 @@ class ArmsTask : public Task {
 
   void taskFunction() override;
 
-  ArmConfig m_config;
+  //ArmConfig m_config;
 
   uint16_t m_current_position[8];
   uint16_t m_current_load[8];

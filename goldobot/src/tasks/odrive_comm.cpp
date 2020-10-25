@@ -69,8 +69,7 @@ void ODriveCommTask::taskFunction() {
     }
 
     // Process messages
-    while (m_message_queue.message_ready()) {
-      processMessage();
+    while (processMessage()) {
     }
 
     // Wait for next tick
@@ -78,12 +77,19 @@ void ODriveCommTask::taskFunction() {
   }
 }
 
-void ODriveCommTask::processMessage() {
+bool ODriveCommTask::processMessage() {
+  if(!m_message_queue.message_ready())
+  {
+	  return false;
+  }
   auto message_type = (CommMessageType)m_message_queue.message_type();
 
   switch (message_type) {
     case CommMessageType::ODriveRequestPacket: {
       auto packet_size = m_message_queue.message_size();
+      if(packet_size > m_stream_writer.availableSpace()) {
+    	  return false;
+      };
       m_message_queue.pop_message(s_scratchpad, 128);
       m_stream_writer.pushPacket((unsigned char*)s_scratchpad, packet_size);
     } break;
@@ -91,4 +97,5 @@ void ODriveCommTask::processMessage() {
       m_message_queue.pop_message(nullptr, 0);
       break;
   }
+  return true;
 }

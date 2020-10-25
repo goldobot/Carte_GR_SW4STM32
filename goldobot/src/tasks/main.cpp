@@ -43,12 +43,6 @@ void MainTask::taskFunction() {
   Robot::instance().mainExchangeIn().subscribe({6, 9, &m_message_queue});
   Robot::instance().mainExchangeIn().subscribe({200, 205, &m_message_queue});
 
-  messages::MsgMatchStateChange msg{Robot::instance().matchState(), Robot::instance().side()};
-  /*Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange,
-                                                 (unsigned char*)&msg, sizeof(msg));
-  Robot::instance().mainExchangeOut().pushMessage(CommMessageType::MatchStateChange,
-                                                  (unsigned char*)&msg, sizeof(msg));*/
-
   // Config loop
   while (Robot::instance().matchState() == MatchState::Unconfigured) {
     while (m_message_queue.message_ready()) {
@@ -56,14 +50,8 @@ void MainTask::taskFunction() {
     }
     delay(1);
   }
-  {
-    messages::MsgMatchStateChange post_state{Robot::instance().matchState(),
-                                             Robot::instance().side()};
-    /* Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange,
-                                                    (unsigned char*)&post_state,
-     sizeof(post_state)); Robot::instance().mainExchangeOut().pushMessage(
-         CommMessageType::MatchStateChange, (unsigned char*)&post_state, sizeof(post_state));*/
-  }
+
+
 
   while (1) {
     messages::MsgMatchStateChange prev_state{Robot::instance().matchState(),
@@ -127,8 +115,8 @@ void MainTask::taskFunction() {
       default:
         break;
     }
-    auto prev_seq_state = m_sequence_engine.state();
-    m_sequence_engine.doStep();
+    //auto prev_seq_state = m_sequence_engine.state();
+    //m_sequence_engine.doStep();
 
     messages::MsgMatchStateChange post_state{Robot::instance().matchState(),
                                              Robot::instance().side()};

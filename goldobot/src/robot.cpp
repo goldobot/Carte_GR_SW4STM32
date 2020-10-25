@@ -82,22 +82,25 @@ bool Robot::endLoadConfig(uint16_t crc) {
   m_robot_simulator_config = (RobotSimulatorConfig*)(s_config_area + offsets[i++]);
   m_odometry_config = (OdometryConfig*)(s_config_area + offsets[i++]);
   m_propulsion_controller_config = (PropulsionControllerConfig*)(s_config_area + offsets[i++]);
-  m_arms_task.m_config = *(ArmConfig*)(s_config_area + offsets[i++]);
+  //m_arms_task.m_config = *(ArmConfig*)(s_config_area + offsets[i++]);
   m_servos_config = (ServosConfig*)(s_config_area + offsets[i++]);
-  m_arms_task.m_config.positions_ptr = (uint16_t*)(s_config_area + offsets[i++]);
-  m_arms_task.m_config.torques_ptr = (uint16_t*)(s_config_area + offsets[i++]);
+  //m_arms_task.m_config.positions_ptr = (uint16_t*)(s_config_area + offsets[i++]);
+  //m_arms_task.m_config.torques_ptr = (uint16_t*)(s_config_area + offsets[i++]);
   m_main_task.sequenceEngine().setBuffer(s_config_area + offsets[i++]);
 
   m_main_task.sequenceEngine().endLoad();
 
+  if (m_robot_config->use_odrive_uart) {
+      m_odrive_comm_task.init();
+    }
+
   odometry().setConfig(*m_odometry_config);
   m_propulsion_task.controller().setConfig(defaultPropulsionControllerConfig());
   m_propulsion_task.init();
-  if (m_robot_config->use_odrive_uart) {
-    m_odrive_comm_task.init();
-  }
-  m_arms_task.init();
+
+
   m_fpga_task.init();
+  m_servos_task.init();
 
   start();
   m_match_state = MatchState::Idle;

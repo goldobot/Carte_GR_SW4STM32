@@ -6,12 +6,6 @@
 #include <cstdint>
 
 namespace goldobot {
-struct FpgaServoState {
-  uint16_t prev_value{0};
-  uint16_t target_value{0};
-  uint32_t prev_timestamp{0};
-  uint32_t target_timestamp{0};
-};
 
 enum class FpgaSpiTransactionStatus {
   Ok,
@@ -51,16 +45,10 @@ class FpgaTask : public Task {
   void process_message();
 
   MessageQueue m_message_queue;
-  unsigned char m_message_queue_buffer[128];
+  unsigned char m_message_queue_buffer[256];
 
   uint32_t m_sensors_state{0};
-
   uint32_t m_last_timestamp{0};
-
-  ServosConfig *m_servos_config{nullptr};
-  float m_servos_positions[16];
-  uint16_t m_servos_speeds[16];
-  uint16_t m_servos_target_positions[16];
 
   unsigned char m_crc_table[256];
   void generate_crc_table();
