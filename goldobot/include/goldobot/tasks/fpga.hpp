@@ -47,8 +47,10 @@ class FpgaTask : public Task {
   MessageQueue m_message_queue;
   unsigned char m_message_queue_buffer[256];
 
+  uint32_t m_gpio_sensors_state{0};
   uint32_t m_sensors_state{0};
   uint32_t m_last_timestamp{0};
+  uint8_t m_cnt{0};
 
   unsigned char m_crc_table[256];
   void generate_crc_table();

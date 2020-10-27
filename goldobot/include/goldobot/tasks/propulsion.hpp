@@ -37,8 +37,8 @@ class PropulsionTask : public Task {
   uint16_t m_odrive_seq{1};
   uint16_t m_odrive_calibration_state{0}; // 0 idle 1:calib axis0 2 calib axis1
 
-  uint16_t m_odrive_seq_left_vel_estimate{0};
-  uint16_t m_odrive_seq_right_vel_estimate{0};
+  uint16_t m_odrive_seq_axis0_vel_estimate{0};
+  uint16_t m_odrive_seq_axis1_vel_estimate{0};
 
   uint16_t m_odrive_seq_axis0_current_state{0};
   uint16_t m_odrive_seq_axis1_current_state{0};
@@ -90,6 +90,7 @@ class PropulsionTask : public Task {
   void ODriveSetMotorsEnable(bool enable);
   void ODriveSetVelocitySetPoint(int axis, float vel_setpoint, float current_feedforward);
   void ODriveStartMotorsCalibration();
+  void ODriveSendPolls();
 
   template <typename T>
   void ODriveWriteEndpoint(uint16_t endpoint, T val);

@@ -270,6 +270,8 @@ void PropulsionController::initMoveCommand(float speed, float accel, float decce
   m_command_begin_time = m_time_base_ms;
   m_command_end_time =
       m_time_base_ms + static_cast<uint32_t>(ceilf(1000 * m_speed_profile.end_time()));
+
+  m_pwm_limit = m_config.cruise_pwm_limit;
 }
 
 bool PropulsionController::resetPose(float x, float y, float yaw) {
@@ -401,7 +403,8 @@ messages::PropulsionTelemetryEx PropulsionController::getTelemetryEx() const {
   msg.target_yaw_rate = (int16_t)(m_target_pose.yaw_rate * 1000);
   msg.longitudinal_error = (int16_t)(m_low_level_controller.m_longi_error * 4e3f);
   msg.lateral_error = (int16_t)(m_low_level_controller.m_lateral_error * 4e3f);
-  msg.left_acc = m_odometry->leftAccumulator();
-  msg.right_acc = m_odometry->rightAccumulator();
+  msg.speed_error = (int16_t)(m_low_level_controller.m_lateral_error * 1e3f);
+  msg.yaw_error = (int16_t)(m_low_level_controller.m_yaw_error * 32767 / M_PI);
+
   return msg;
 }

@@ -43,14 +43,33 @@ void FpgaTask::taskFunction() {
       continue;
     }
 
-    if (apb_data != m_sensors_state) {
-      m_sensors_state = apb_data;
-      Robot::instance().setSensorsState(apb_data);
-      //Robot::instance().mainExchangeOut().pushMessage(CommMessageType::SensorsChange,
-      //                                                 (unsigned char *)&m_sensors_state, 4);
+    // Read gpio sensors
+    uint32_t gpio_state{0};
+    for(int i = 0; i < 32; i++)
+    {
+    	if(hal::gpio_get(i))
+    	{
+    		gpio_state |= 1 << i;
+    	}
     }
 
-    delay(5);
+
+    if (apb_data != m_sensors_state || gpio_state != m_gpio_sensors_state) {
+      m_sensors_state = apb_data;
+      m_gpio_sensors_state = gpio_state;
+      Robot::instance().setSensorsState(apb_data);
+      Robot::instance().mainExchangeOut().pushMessage(CommMessageType::SensorsState,
+                                                       (unsigned char *)&m_gpio_sensors_state, 8);
+      Robot::instance().exchangeInternal().pushMessage(CommMessageType::SensorsState,
+                                                             (unsigned char *)&m_gpio_sensors_state, 8);
+    }
+
+    m_cnt++;
+    if(m_cnt == 20)
+    {
+    	m_cnt = 0;
+    }
+    delay_periodic(5);
   } /* while(1) */
 }
 

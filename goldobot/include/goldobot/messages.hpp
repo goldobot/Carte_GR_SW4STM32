@@ -38,11 +38,9 @@ struct PropulsionTelemetryEx {
   int16_t target_yaw_rate;  // mradian per second
   int16_t longitudinal_error;
   int16_t lateral_error;
-  int16_t yaw_error;
   int16_t speed_error;
+  int16_t yaw_error;
   int16_t yaw_rate_error;
-  int32_t left_acc;
-  int32_t right_acc;
 };
 
 }  // namespace messages

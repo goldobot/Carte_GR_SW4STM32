@@ -26,7 +26,9 @@ class MainTask : public Task {
   void process_message();
   void process_message_config();
 
+  bool m_match_timer_running{false};
   uint32_t m_start_of_match_time;
+  uint32_t m_cnt{0};
   MessageQueue m_message_queue;
   static unsigned char s_message_queue_buffer[2048];
   unsigned char m_scratchpad[128];

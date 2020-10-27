@@ -29,9 +29,6 @@ void HeartbeatTask::taskFunction() {
     auto& exchange = Robot::instance().mainExchangeOut();
     exchange.pushMessage(CommMessageType::Heartbeat, (unsigned char*)&clock, sizeof(clock));
 
-    uint16_t remaining_time = Robot::instance().remainingMatchTime();
-    exchange.pushMessage(CommMessageType::MatchTimer, (unsigned char*)&remaining_time, 2);
-
     i++;
     if (i == 10) {
       i = 0;

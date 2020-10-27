@@ -10,7 +10,9 @@ enum class CommMessageType : uint16_t {
   HeapStats,
   Reset,
 
-  MatchTimer,
+  MatchTimer=10,
+  MatchTimerStart,
+  MatchEnd,
 
   DbgGpioGet=20,
   DbgGpioGetStatus,
@@ -20,6 +22,7 @@ enum class CommMessageType : uint16_t {
   FpgaReadReg=30,
   FpgaReadRegStatus,
   FpgaWriteReg,
+  SensorsState,
 
   ServoMove=40,
   ServoState,
@@ -56,6 +59,7 @@ enum class CommMessageType : uint16_t {
   PropulsionEnterManualControl,
   PropulsionExecuteReposition,
   PropulsionExitManualControl,
+  PropulsionCalibrateODrive,
 
   RobotConfigLoadBegin=200,
   RobotConfigLoadChunk,
@@ -70,6 +74,8 @@ enum class CommMessageType : uint16_t {
   PropulsionConfigGetStatus,
   PropulsionConfigSet
 };
+
+/*
 enum class CommMessageType2 : uint16_t {
   // General messages
   Sync = 0,       // "goldobot" synchronization message, used to synchronize stream parser
@@ -203,5 +209,5 @@ enum class CommMessageType2 : uint16_t {
 
   RplidarRobotDetection = 1280,
 
-};
+};*/
 }  // namespace goldobot
