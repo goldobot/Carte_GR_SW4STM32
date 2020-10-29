@@ -74,6 +74,7 @@ void MessageQueue::pop_data(size_t size) {
   if (m_begin_index >= m_buffer_size) {
     m_begin_index -= m_buffer_size;
   }
+  assert(m_begin_index < m_buffer_size);
 }
 
 void MessageQueue::pop_message(unsigned char* buffer, size_t size) {
@@ -85,7 +86,7 @@ void MessageQueue::pop_message(unsigned char* buffer, size_t size) {
     return;
   }
   if (buffer) {
-    read_data(m_begin_index, buffer, m_message_size);
+    read_data(m_begin_index, buffer, size);
   }
   pop_data(m_message_size);
   if (m_begin_index != m_end_index) {

@@ -34,8 +34,13 @@ MainTask::MainTask() : m_message_queue(s_message_queue_buffer, sizeof(s_message_
 const char* MainTask::name() const { return "main"; }
 
 int MainTask::remainingMatchTime() {
-  int elapsed_time = (hal::get_tick_count() - m_start_of_match_time) / 1000;
   int match_duration = 100;
+  if(!m_match_timer_running)
+  {
+	  return match_duration;
+  }
+  int elapsed_time = (hal::get_tick_count() - m_start_of_match_time) / 1000;
+
   return elapsed_time < match_duration ? match_duration - elapsed_time : 0;
 }
 
@@ -57,6 +62,17 @@ void MainTask::taskFunction() {
     }
 
     auto remaining_time = remainingMatchTime();
+
+    if(m_match_timer_running && remaining_time <= 5)
+        {
+    	      unsigned char buff[5];
+    	      buff[0] = 2;
+    	      *(uint16_t *)(buff + 1) = 10000;
+    	      *(uint8_t *)(buff + 3) = 100;
+        	  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::ServoMove,
+        	                                                      (unsigned char*)buff, 5);
+        }
+
     if(m_match_timer_running && remaining_time == 0)
     {
     	Robot::instance().mainExchangeOut().pushMessage(CommMessageType::MatchEnd,
@@ -68,6 +84,8 @@ void MainTask::taskFunction() {
     m_cnt++;
     if(m_cnt == 100)
     {
+    	uint8_t watchdog_id = 0;
+    	Robot::instance().exchangeInternal().pushMessage(CommMessageType::WatchdogReset,&watchdog_id, 1);
     	Robot::instance().mainExchangeOut().pushMessage(CommMessageType::MatchTimer,
     	    	                                                      (unsigned char*)&remaining_time, 4);
     	Robot::instance().exchangeInternal().pushMessage(CommMessageType::MatchTimer,

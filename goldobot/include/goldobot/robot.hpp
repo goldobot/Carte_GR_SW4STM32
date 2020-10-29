@@ -12,6 +12,7 @@
 #include "goldobot/tasks/odrive_comm.hpp"
 #include "goldobot/tasks/propulsion.hpp"
 #include "goldobot/tasks/uart_comm.hpp"
+#include "goldobot/tasks/dynamixels_comm.hpp"
 
 #include <cstdint>
 
@@ -78,6 +79,7 @@ class Robot {
   FpgaTask m_fpga_task;
   UARTCommTask m_comm_task;
   ODriveCommTask m_odrive_comm_task;
+  DynamixelsCommTask m_dynamixels_comm_task;
 
   OdometryConfig* m_odometry_config;
   RobotConfig* m_robot_config;

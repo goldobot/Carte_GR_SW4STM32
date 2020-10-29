@@ -4,6 +4,18 @@
 
 using namespace goldobot;
 
+namespace {
+	constexpr float accelDistance(float speed_delta, float accel, float deccel)
+	{
+		return (speed_delta * speed_delta) * 0.5f / (speed_delta >= 0 ? accel : deccel);
+	}
+
+	constexpr float accelForDistance(float speed_delta, float distance)
+	{
+		return (speed_delta * speed_delta) * 0.5f / distance;
+	}
+}
+
 TrapezoidalSpeedProfile::TrapezoidalSpeedProfile() {}
 
 void TrapezoidalSpeedProfile::update(float distance, float speed, float accel, float deccel) {
@@ -57,6 +69,27 @@ void TrapezoidalSpeedProfile::update(float distance, float speed, float accel, f
   m_c3[3] = 0;
 
   m_num_points = 4;
+}
+
+void TrapezoidalSpeedProfile::updateEx(float distance, float start_speed, float target_speed, float final_speed, float accel, float deccel)
+{
+	// First, check if we can reach final speed from start speed with given acceleration
+	// If we cannot, compute needed acceleration to reach final speed from start_speed in distance
+	if(distance < accelDistance(final_speed - start_speed, accel, deccel))
+	{
+
+	}
+
+	// If target speed is between start and final speed
+	// ramp to reach target speed, plateau, then ramp to final speed
+
+	// If target speed is above or below both start and final speed
+	// search speed limit
+
+	// trajectory
+
+
+
 }
 
 float TrapezoidalSpeedProfile::begin_time() { return m_t[0]; }

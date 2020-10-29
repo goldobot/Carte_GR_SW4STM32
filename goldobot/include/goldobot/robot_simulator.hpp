@@ -27,6 +27,8 @@ class RobotSimulator {
     uint16_t m_counts{0};
   };
 
+  bool m_motors_enable{false};
+
   double m_x;
   double m_y;
   double m_yaw;

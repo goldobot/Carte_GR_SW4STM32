@@ -23,6 +23,7 @@ enum class CommMessageType : uint16_t {
   FpgaReadRegStatus,
   FpgaWriteReg,
   SensorsState,
+  FpgaGpioState,
 
   ServoMove=40,
   ServoState,
@@ -30,10 +31,10 @@ enum class CommMessageType : uint16_t {
   ODriveRequestPacket=50,
   ODriveResponsePacket,
   ODriveTelemetry,
+  ODriveCommStats,
 
-  DynamixelsRead=60,
-  DynamixelsReadStatus,
-  DynamixelsWrite,
+  DynamixelsRequest=60,
+  DynamixelsResponse,
 
   PropulsionEnableSet=100,
   PropulsionMotorsEnableSet,
@@ -42,11 +43,16 @@ enum class CommMessageType : uint16_t {
   PropulsionSetAccelerationLimits,
   PropulsionSetPose,
   PropulsionSetTargetPose,
+  PropulsionEmergencyStop,
+  PropulsionClearError,
+  PropulsionClearCommandQueue,
+  PropulsionSetSimulationMode,
 
   PropulsionTelemetry=120,
   PropulsionTelemetryEx,
   PropulsionPose,
   PropulsionState,
+  PropulsionCommandAck,
 
   PropulsionExecuteTranslation=140,
   PropulsionExecuteMoveTo,
@@ -60,6 +66,7 @@ enum class CommMessageType : uint16_t {
   PropulsionExecuteReposition,
   PropulsionExitManualControl,
   PropulsionCalibrateODrive,
+  PropulsionODriveClearErrors,
 
   RobotConfigLoadBegin=200,
   RobotConfigLoadChunk,
@@ -72,8 +79,14 @@ enum class CommMessageType : uint16_t {
 
   PropulsionConfigGet=215,
   PropulsionConfigGetStatus,
-  PropulsionConfigSet
+  PropulsionConfigSet,
+
+  WatchdogReset=250,
+  WatchdogStatus
 };
+
+// task ids for watchdog
+// 0: main, 1: propulsion, 2: fpga, 3, odrive_comm, 4: dynamixels_comm, 5: servos
 
 /*
 enum class CommMessageType2 : uint16_t {

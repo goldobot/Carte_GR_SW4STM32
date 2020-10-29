@@ -74,29 +74,8 @@ void init() {
   uart_config.io_flags = IODeviceFlags::RxDma | IODeviceFlags::TxDma;
 
   init_io_device(&uart_config);
-
-  DeviceConfigGpio dbg1;
-  dbg1.device_type = DeviceType::Gpio;
-  dbg1.id = 30;
-  dbg1.dir = 1;
-  dbg1.pin.port = 0;
-  dbg1.pin.pin = 4;
-  hal_gpio_init(&dbg1);
-
-  dbg1.id = 31;
-  dbg1.dir = 1;
-  dbg1.pin.port = 1;
-  dbg1.pin.pin = 0;
-  hal_gpio_init(&dbg1);
 }
 
 TickType_t get_tick_count() { return xTaskGetTickCount(); }
-
-void send_spi_frame(unsigned char* buff_out, unsigned char* buff_in) {
-  // HAL_SPI_TransmitReceive_IT(&hspi1, buff_out, buff_in,SPI_FRAME_SZ);
-  // while(HAL_SPI_GetState(&hspi1) != HAL_SPI_STATE_READY)
-  //{
-  //}
-}
 }  // namespace hal
 }  // namespace goldobot

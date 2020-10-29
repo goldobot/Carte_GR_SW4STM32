@@ -34,42 +34,32 @@ void FpgaTask::taskFunction() {
       process_message();
     }
 
+    if(m_cnt % 5 == 0)
+    {
+
+
     // Read sensors
     unsigned int apb_data = 0;
     uint32_t apb_addr = 0x800084e4;  // gpio register
-    if (goldo_fpga_master_spi_read_word(apb_addr, &apb_data) != 0) {
-      apb_data = 0xdeadbeef;
-      delay(1);
-      continue;
+    if (goldo_fpga_master_spi_read_word(apb_addr, &apb_data) == 0) {
+      if(apb_data != m_sensors_state)
+      {
+    	  m_sensors_state = apb_data;
+          Robot::instance().exchangeInternal().pushMessage(CommMessageType::FpgaGpioState,
+                                                                 (unsigned char *)&m_sensors_state, 4);
+      }
     }
-
-    // Read gpio sensors
-    uint32_t gpio_state{0};
-    for(int i = 0; i < 32; i++)
-    {
-    	if(hal::gpio_get(i))
-    	{
-    		gpio_state |= 1 << i;
-    	}
-    }
-
-
-    if (apb_data != m_sensors_state || gpio_state != m_gpio_sensors_state) {
-      m_sensors_state = apb_data;
-      m_gpio_sensors_state = gpio_state;
-      Robot::instance().setSensorsState(apb_data);
-      Robot::instance().mainExchangeOut().pushMessage(CommMessageType::SensorsState,
-                                                       (unsigned char *)&m_gpio_sensors_state, 8);
-      Robot::instance().exchangeInternal().pushMessage(CommMessageType::SensorsState,
-                                                             (unsigned char *)&m_gpio_sensors_state, 8);
     }
 
     m_cnt++;
-    if(m_cnt == 20)
+    if(m_cnt == 100)
     {
+    	uint8_t watchdog_id = 2;
+    	Robot::instance().exchangeInternal().pushMessage(CommMessageType::WatchdogReset,&watchdog_id, 1);
+
     	m_cnt = 0;
     }
-    delay_periodic(5);
+    delay_periodic(1);
   } /* while(1) */
 }
 
@@ -234,41 +224,12 @@ void FpgaTask::process_message() {
     } break;
 
     case CommMessageType::FpgaWriteReg: {
-      unsigned char buff[12];
+      unsigned char buff[8];
       m_message_queue.pop_message(buff, 8);
       uint32_t apb_addr = *(uint32_t *)(buff);
       uint32_t apb_data = *(uint32_t *)(buff + 4);
       goldo_fpga_master_spi_write_word(apb_addr, apb_data);
     } break;
-    /*case CommMessageType::FpgaCmdDCMotor: {
-      unsigned char buff[3];
-      m_message_queue.pop_message(buff, 3);
-      int motor_id = buff[0];
-      int pwm = *(int16_t *)(buff + 1);
-      goldo_fpga_cmd_motor(motor_id, pwm);
-    } break;
-    case CommMessageType::FpgaCmdServo: {
-      unsigned char buff[4];
-      m_message_queue.pop_message(buff, 4);
-      int motor_id = buff[0];
-      int pwm = *(uint16_t *)(buff + 1);
-      if (m_servos_positions[motor_id] < 0) {
-        m_servos_positions[motor_id] = pwm;
-        goldo_fpga_cmd_servo(m_servos_config->servos[motor_id].id, pwm);
-      }
-      // Send message when servo start moving
-      if (m_servos_target_positions[motor_id] != pwm) {
-        unsigned char buff[2] = {(unsigned char)motor_id, true};
-        Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaServoState,
-                                                       (unsigned char *)buff, 2);
-      } else {
-        unsigned char buff[2] = {(unsigned char)motor_id, false};
-        Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaServoState,
-                                                       (unsigned char *)buff, 2);
-      }
-      m_servos_target_positions[motor_id] = pwm;
-      m_servos_speeds[motor_id] = (m_servos_config->servos[motor_id].max_speed * buff[3]) / 100;
-    } break;*/
     default:
       m_message_queue.pop_message(nullptr, 0);
       break;

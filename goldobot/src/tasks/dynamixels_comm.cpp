@@ -9,7 +9,7 @@
 
 using namespace goldobot;
 
-struct DynamixelPacketHeader {
+struct DynamixelPacketHeaderV1 {
   uint16_t magic;  // 0xFFFF
   uint8_t id;
   uint8_t length;
@@ -23,14 +23,20 @@ const char* DynamixelsCommTask::name() const { return "dynamixels_comm"; }
 
 void DynamixelsCommTask::taskFunction() {
   Robot::instance().mainExchangeIn().subscribe({60,79});
-
+  int cnt = 0;
   while (1) {
     while (m_message_queue.message_ready()) {
       processMessage();
-      // Periodically check servo positions and torques
+    }
+
+    cnt++;
+    if(cnt == 100)
+    {
+    	uint8_t watchdog_id = 4;
+    	    Robot::instance().exchangeInternal().pushMessage(CommMessageType::WatchdogReset,&watchdog_id, 1);
+    	    cnt = 0;
     }
     delay_periodic(1);
-    continue;
   }
 }
 
@@ -69,44 +75,28 @@ void DynamixelsCommTask::action() { transmitPacket(0xFE, DynamixelCommand::Actio
 void DynamixelsCommTask::processMessage() {
   auto message_size = m_message_queue.message_size();
   switch (m_message_queue.message_type()) {
-    case CommMessageType::DynamixelsRead: {
+    case CommMessageType::DynamixelsRequest: {
       unsigned char buff[3];
       unsigned char data_read[64];
+      auto message_size = m_message_queue.message_size();
+      m_message_queue.pop_message(m_scratchpad, 256);
+      // uint16_t sequence_id, uint8_t protocol version, uint8_t flags, payload
+      // flags: 0x01
+      uint16_t sequence_id = *reinterpret_cast<uint16_t*>(m_scratchpad);
+      uint8_t proto_version = m_scratchpad[2];
+      uint8_t flags = m_scratchpad[3];
+      transmitPacket(m_scratchpad[4], (DynamixelCommand)m_scratchpad[5], &m_scratchpad[6], message_size - 6);
+      if(flags & 0x01)
+      {
+    	  receivePacket();
+    	  *reinterpret_cast<uint16_t*>(m_scratchpad) = m_dynamixels_receive_size;
+    	  memcpy(m_scratchpad, m_dynamixels_buffer, m_dynamixels_receive_size);
+    	  Robot::instance().mainExchangeOut().pushMessage(CommMessageType::DynamixelsResponse,
+    	                                                          (unsigned char*)m_scratchpad, m_dynamixels_receive_size + 2);
 
-      m_message_queue.pop_message(buff, 3);
-      memcpy(data_read, buff, 2);
-      if (read(buff[0], buff[1], data_read + 2, buff[2])) {
-        Robot::instance().mainExchangeOut().pushMessage(CommMessageType::DynamixelsReadStatus,
-                                                        (unsigned char*)data_read, buff[2] + 2);
       }
     } break;
-    case CommMessageType::DynamixelsWrite: {
-      unsigned char buff[128];
-      uint16_t size = m_message_queue.message_size();
-      m_message_queue.pop_message(buff, 128);
-      // id, addr, data
-      if (write(buff[0], buff[1], buff + 2, size - 2))
-        ;
-    } break;
 
-    /*
-    case CommMessageType::DynamixelSendPacket: {
-      unsigned char buff[64];
-      unsigned char data_read[64];
-
-      m_message_queue.pop_message(buff, 64);
-      memcpy(data_read, buff, 2);
-
-      dynamixels_transmit_packet(buff[0], buff[1], buff + 2, message_size - 2);
-      auto status = dynamixels_receive_packet();
-
-      buff[0] = (unsigned char)status;
-      memcpy(buff + 1, m_dynamixels_buffer, 20);
-
-      Robot::instance().mainExchangeOut().pushMessage(CommMessageType::DynamixelStatusPacket,
-                                                      (unsigned char*)buff, 21);
-
-    } break;*/
     default:
       m_message_queue.pop_message(nullptr, 0);
       break;
@@ -115,7 +105,8 @@ void DynamixelsCommTask::processMessage() {
 
 void DynamixelsCommTask::transmitPacket(uint8_t id, DynamixelCommand command, uint8_t* parameters,
                                         size_t num_parameters) {
-  DynamixelPacketHeader& header = *reinterpret_cast<DynamixelPacketHeader*>(m_dynamixels_buffer);
+  //protocol v1
+  DynamixelPacketHeaderV1& header = *reinterpret_cast<DynamixelPacketHeaderV1*>(m_dynamixels_buffer);
   header.magic = 0xFFFF;
   header.id = id;
   header.length = num_parameters + 2;
@@ -134,11 +125,8 @@ void DynamixelsCommTask::transmitPacket(uint8_t id, DynamixelCommand command, ui
 DynamixelStatusError DynamixelsCommTask::receivePacket() {
   memset(m_dynamixels_buffer, 0, 255);
   delay(1);
-  auto foo = hal::io_read(2, m_dynamixels_buffer, 256);
-
-  if (foo > 0) {
-    int a = 0;
-  }
+  m_dynamixels_receive_size = hal::io_read(2, m_dynamixels_buffer, 256);
+  return DynamixelStatusError::Ok;
   uint16_t bytes_received = 0;
   for (unsigned i = 0; i < 10; i++) {
     // bytes_received = Hal::uart_bytes_received(1);

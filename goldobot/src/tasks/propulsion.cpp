@@ -103,7 +103,9 @@ void PropulsionTask::doStep() {
   }
 
 	m_odrive_cnt++;
-	if (m_odrive_cnt == 100) {
+	if (m_odrive_cnt == 200) {
+		uint8_t watchdog_id = 1;
+		Robot::instance().exchangeInternal().pushMessage(CommMessageType::WatchdogReset,&watchdog_id, 1);
 	  m_odrive_cnt = 0;
 	}
   if (m_use_simulator) {
@@ -167,32 +169,30 @@ void PropulsionTask::processMessage() {
       onMsgExecuteTrajectory();
       break;
     case CommMessageType::PropulsionExecuteRotation: {
-      float params[4];
-      m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
-      m_controller.executeRotation(params[0], params[1]);
+    	onMsgExecuteRotation();
     } break;
     case CommMessageType::PropulsionExecuteTranslation: {
-      float params[4];
-      m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
-      m_controller.executeTranslation(params[0], params[1]);
+    	onMsgExecuteTranslation();
     } break;
     case CommMessageType::PropulsionExecutePointTo:
       onMsgExecutePointTo();
+      Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionCommandAck, nullptr, 0);
       break;
     case CommMessageType::PropulsionExecuteFaceDirection: {
-      float params[4];
+      float params[2];
       m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
       m_controller.executeFaceDirection(params[0], params[1]);
+      Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionCommandAck, nullptr, 0);
     } break;
     case CommMessageType::PropulsionExecuteMoveTo: {
-      float params[5];
-      m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
-      m_controller.executeMoveTo(*(Vector2D*)(params), params[2]);
+    	onMsgExecuteMoveTo();
+
     } break;
     case CommMessageType::PropulsionExecuteReposition: {
       float params[2];
       m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
       m_controller.executeRepositioning(params[0], params[1]);
+      Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionCommandAck, nullptr, 0);
     } break;
     case CommMessageType::PropulsionEnterManualControl:
       m_controller.enterManualControl();
@@ -216,10 +216,6 @@ void PropulsionTask::processMessage() {
       m_message_queue.pop_message((unsigned char*)&buff, sizeof(buff));
       measureNormal(buff[0], buff[1]);
     } break;
-    case CommMessageType::PropulsionCalibrateODrive: {
-    	m_message_queue.pop_message(nullptr, 0);
-    	ODriveStartMotorsCalibration();
-    } break;
     default:
       m_message_queue.pop_message(nullptr, 0);
       break;
@@ -231,7 +227,6 @@ void PropulsionTask::processUrgentMessage() {
 
   switch (message_type) {
   case CommMessageType::MatchEnd: {
-    uint8_t enabled;
     m_urgent_message_queue.pop_message(nullptr, 0);
     setMotorsEnable(false);
   } break;
@@ -275,18 +270,22 @@ void PropulsionTask::processUrgentMessage() {
 		{
 			m_odrive_axis1_motor_error = *(uint32_t*)(buff+2);
 		}
-		//setMotorsPwm(pwm[0], pwm[1], true);
 	  } break;
+	  case CommMessageType::PropulsionCalibrateODrive: {
+	      	m_urgent_message_queue.pop_message(nullptr, 0);
+	      	ODriveStartMotorsCalibration();
+	      } break;
+	  case CommMessageType::PropulsionODriveClearErrors: {
+	      	m_urgent_message_queue.pop_message(nullptr, 0);
+	      	ODriveClearErrors();
+	      } break;
+
        case CommMessageType::PropulsionSetPose: {
          float pose[3];
          m_urgent_message_queue.pop_message((unsigned char*)&pose, 12);
          m_controller.resetPose(pose[0], pose[1], pose[2]);
        } break;
-    /*case CommMessageType::PropulsionSetAdversaryDetectionEnable: {
-      uint8_t buff;
-      m_urgent_message_queue.pop_message((unsigned char*)&buff, 1);
-      m_adversary_detection_enabled = (bool)buff;
-    } break;*/
+
     case CommMessageType::OdometryConfigGet: {
       auto config = m_odometry.config();
       Robot::instance().mainExchangeOut().pushMessage(CommMessageType::OdometryConfigGetStatus,
@@ -314,7 +313,14 @@ void PropulsionTask::processUrgentMessage() {
       m_urgent_message_queue.pop_message((unsigned char*)&target_speed, sizeof(target_speed));
       m_controller.setTargetSpeed(target_speed);
     } break;
-    /*case CommMessageType::CmdEmergencyStop:
+    case CommMessageType::PropulsionSetAccelerationLimits: {
+      float params[4];
+      m_urgent_message_queue.pop_message((unsigned char*)&params, sizeof(params));
+      m_controller.setAccelerationLimits(params[0], params[1], params[2], params[3]);
+    } break;
+
+
+    case CommMessageType::PropulsionEmergencyStop:
       m_controller.emergencyStop();
       m_urgent_message_queue.pop_message(nullptr, 0);
       break;
@@ -327,7 +333,7 @@ void PropulsionTask::processUrgentMessage() {
       while (m_message_queue.message_ready()) {
         m_message_queue.pop_message(nullptr, 0);
       }
-      break;*/
+      break;
     case CommMessageType::PropulsionEnableSet: {
       uint8_t enabled;
       m_urgent_message_queue.pop_message((unsigned char*)&enabled, 1);
@@ -338,6 +344,12 @@ void PropulsionTask::processUrgentMessage() {
           m_message_queue.pop_message(nullptr, 0);
         }
       }
+    } break;
+    case CommMessageType::PropulsionSetSimulationMode: {
+        uint8_t enable;
+        m_urgent_message_queue.pop_message((unsigned char*)&enable, 1);
+        setSimulationMode(enable);
+
     } break;
     case CommMessageType::PropulsionMotorsEnableSet: {
       uint8_t enabled;
@@ -363,31 +375,68 @@ void PropulsionTask::processUrgentMessage() {
   }
 }
 
-unsigned char exec_traj_buff[256];  // > 12 for traj params + 16*8 for points = 140
+unsigned char exec_traj_buff[256];  // > 12 for traj params + 16*8 for points = 134
+
+void PropulsionTask::onMsgExecuteTranslation()
+{
+  m_message_queue.pop_message(exec_traj_buff, 10);
+  uint16_t sequence_number = *(uint16_t*)exec_traj_buff;
+  float distance = *(float*)(exec_traj_buff + 2);
+  float speed = *(float*)(exec_traj_buff + 6);
+  m_controller.executeTranslation(distance, speed);
+  ackCommand(sequence_number);
+}
+
+void PropulsionTask::onMsgExecuteRotation()
+{
+	m_message_queue.pop_message(exec_traj_buff, 10);
+	uint16_t sequence_number = *(uint16_t*)exec_traj_buff;
+	float angle = *(float*)(exec_traj_buff + 2);
+	float yaw_rate = *(float*)(exec_traj_buff + 6);
+	m_controller.executeRotation(angle, yaw_rate);
+	ackCommand(sequence_number);
+}
+
+void PropulsionTask::onMsgExecuteMoveTo()
+{
+  m_message_queue.pop_message(exec_traj_buff, 14);
+  uint16_t sequence_number = *(uint16_t*)exec_traj_buff;
+  Vector2D point = *(Vector2D*)(exec_traj_buff+2);
+  float speed = *(float*)(exec_traj_buff + 10 );
+  m_controller.executeMoveTo(point, speed);
+  ackCommand(sequence_number);
+}
+
+void PropulsionTask::onMsgExecutePointTo() {
+  m_message_queue.pop_message(exec_traj_buff, 14);
+  uint16_t sequence_number = *(uint16_t*)exec_traj_buff;
+  Vector2D point = *(Vector2D*)(exec_traj_buff+2);
+  float yaw_rate = *(float*)(exec_traj_buff + 10 );
+  m_controller.executePointTo(point, yaw_rate);
+  ackCommand(sequence_number);
+}
 
 void PropulsionTask::onMsgExecuteTrajectory() {
 
   auto msg_size = m_message_queue.message_size();
 
-  if (msg_size < 140) {
-	 m_message_queue.pop_message(exec_traj_buff, 140);
-	 int num_points = (msg_size - 4)/8;
-	 float speed = *(float*)(exec_traj_buff);
-	 Vector2D* points = (Vector2D*)(exec_traj_buff + 4);
-	 m_controller.executeTrajectory(points, num_points, speed);
+  if (msg_size <= 134) {
+	 m_message_queue.pop_message(exec_traj_buff, 134);
 
+	 int num_points = (msg_size - 6)/8;
+	 uint16_t sequence_number = *(uint16_t*)exec_traj_buff;
+	 float speed = *(float*)(exec_traj_buff+2);
+	 Vector2D* points = (Vector2D*)(exec_traj_buff + 6);
+
+	 m_controller.executeTrajectory(points, num_points, speed);
+	 ackCommand(sequence_number);
 
   } else {
     m_message_queue.pop_message(nullptr, 0);
   }
 }
 
-void PropulsionTask::onMsgExecutePointTo() {
-  float params[5];
-  m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
 
-  m_controller.executePointTo(*(Vector2D*)(params), params[2]);
-}
 
 SimpleOdometry& PropulsionTask::odometry() { return m_odometry; }
 
@@ -473,37 +522,62 @@ void PropulsionTask::ODriveStartMotorsCalibration()
 
 void PropulsionTask::ODriveSendPolls()
 {
-	if(m_odrive_cnt % 10 ==  0)
+	if(m_odrive_cnt % 20 ==  0)
 	  {
 		  m_odrive_seq_axis0_vel_estimate = ODriveQueueReadEndpoint<float>(c_odrive_endpoint_vel_estimate[0]);
+	  }
+	if(m_odrive_cnt % 20 ==  10)
+	  {
 		  m_odrive_seq_axis1_vel_estimate = ODriveQueueReadEndpoint<float>(c_odrive_endpoint_vel_estimate[1]);
 	  }
 
-	  if(m_odrive_cnt % 50 ==  0)
+	  if(m_odrive_cnt % 100 ==  0)
 	  {
 		  m_odrive_seq_axis0_error = ODriveQueueReadEndpoint<float>(c_odrive_endpoint_axis_error[0]);
 		  m_odrive_seq_axis1_error = ODriveQueueReadEndpoint<float>(c_odrive_endpoint_axis_error[1]);
 	  };
 
-	  if(m_odrive_cnt % 50 ==  10)
+	  if(m_odrive_cnt % 100 ==  50)
 	  {
 		  m_odrive_seq_axis0_motor_error = ODriveQueueReadEndpoint<float>(c_odrive_endpoint_motor_error[0]);
 		  m_odrive_seq_axis1_motor_error = ODriveQueueReadEndpoint<float>(c_odrive_endpoint_motor_error[1]);
 	  }
-	  if(m_odrive_cnt % 50 ==  20)
+	  if(m_odrive_cnt % 50 ==  0)
 	  {
 		  m_odrive_seq_axis0_current_state = ODriveQueueReadEndpoint<uint32_t>(c_odrive_endpoint_current_state[0]);
 		  m_odrive_seq_axis1_current_state = ODriveQueueReadEndpoint<uint32_t>(c_odrive_endpoint_current_state[1]);
 	  }
 }
 
+void PropulsionTask::ODriveClearErrors()
+{
+  ODriveWriteEndpoint<uint32_t>(c_odrive_endpoint_axis_error[0], 0);
+  ODriveWriteEndpoint<uint32_t>(c_odrive_endpoint_axis_error[1], 0);
+  ODriveWriteEndpoint<uint32_t>(c_odrive_endpoint_motor_error[0], 0);
+  ODriveWriteEndpoint<uint32_t>(c_odrive_endpoint_motor_error[1], 0);
+}
+
 void PropulsionTask::setMotorsEnable(bool enable) {
   if (m_use_simulator) {
-    // m_robot_simulator. = left_pwm;
-    // m_robot_simulator.m_right_pwm = right_pwm;
+	  m_robot_simulator.m_motors_enable = enable;
   } else if (Robot::instance().robotConfig().use_odrive_uart) {
     ODriveSetMotorsEnable(enable);
   }
+}
+
+void PropulsionTask::setSimulationMode(bool enable)
+{
+	// switch to simulation mode
+	if(m_use_simulator == false && enable == true)
+	{
+		setMotorsEnable(false);
+		setMotorsPwm(0, 0, true);
+		m_use_simulator = true;
+		m_robot_simulator.m_left_encoder.m_counts = m_odometry.leftEncoderValue();
+		m_robot_simulator.m_left_encoder.m_delta = 0;
+		m_robot_simulator.m_right_encoder.m_counts = m_odometry.rightEncoderValue();
+		m_robot_simulator.m_right_encoder.m_delta = 0;
+	}
 }
 
 void PropulsionTask::setMotorsPwm(float left_pwm, float right_pwm, bool immediate) {
@@ -516,7 +590,7 @@ void PropulsionTask::setMotorsPwm(float left_pwm, float right_pwm, bool immediat
       ODriveSetVelocitySetPoint(1, right_pwm, 0);
       return;
     }
-    if (m_odrive_cnt % 10) {
+    if (m_odrive_cnt % 10 == 0) {
       ODriveSetVelocitySetPoint(0, -left_pwm, 0);
       ODriveSetVelocitySetPoint(1, right_pwm, 0);
     }
@@ -526,12 +600,18 @@ void PropulsionTask::setMotorsPwm(float left_pwm, float right_pwm, bool immediat
   }
 }
 
+void PropulsionTask::ackCommand(uint16_t sequence_number)
+{
+	 Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionCommandAck, (unsigned char*)&sequence_number, sizeof(sequence_number));
+}
+
 void PropulsionTask::taskFunction() {
   // queued commands
   Robot::instance().mainExchangeIn().subscribe({140, 169, &m_message_queue});
 
   // immediate commands
   Robot::instance().mainExchangeIn().subscribe({100, 119, &m_urgent_message_queue});
+  Robot::instance().mainExchangeIn().subscribe({151, 152, &m_urgent_message_queue});
 
   // immediate commands
   Robot::instance().exchangeInternal().subscribe({12, 12, &m_urgent_message_queue});
@@ -542,10 +622,9 @@ void PropulsionTask::taskFunction() {
   // orive responses
   Robot::instance().exchangeInternal().subscribe({51, 51, &m_urgent_message_queue});
 
-  m_use_simulator = Robot::instance().robotConfig().use_simulator;
   m_robot_simulator.m_config = Robot::instance().robotSimulatorConfig();
   // Set task to high
-  set_priority(6);
+  set_priority(4);
 
   // Setup odometry
   uint16_t left = hal::encoder_get(0);

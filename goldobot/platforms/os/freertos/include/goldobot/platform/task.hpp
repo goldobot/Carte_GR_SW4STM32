@@ -18,7 +18,7 @@ class Task {
 
   State state() const;
 
-  void init();
+  void init(size_t stack_size=0);
   void start();
   void stop();
 

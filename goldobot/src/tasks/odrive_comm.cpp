@@ -16,8 +16,8 @@
 using namespace goldobot;
 
 unsigned char __attribute__((section(".ccmram"))) ODriveCommTask::s_message_queue_buffer[1024];
-unsigned char __attribute__((section(".ccmram"))) ODriveCommTask::s_write_buffer[256];
-unsigned char __attribute__((section(".ccmram"))) ODriveCommTask::s_parse_buffer[256];
+unsigned char __attribute__((section(".ccmram"))) ODriveCommTask::s_write_buffer[512];
+unsigned char __attribute__((section(".ccmram"))) ODriveCommTask::s_parse_buffer[512];
 unsigned char __attribute__((section(".ccmram"))) ODriveCommTask::s_scratchpad[128];
 
 ODriveCommTask::ODriveCommTask()
@@ -45,10 +45,6 @@ void ODriveCommTask::taskFunction() {
       uint8_t* ptr;
       size_t bytes_available = hal::io_map_read(1, &ptr);
       size_t dtlen = m_stream_parser.pushData((unsigned char*)ptr, bytes_available);
-      if(bytes_available)
-      {
-    	  int a =1;
-      }
       hal::io_unmap_read(1, ptr, dtlen);
     }
 
@@ -65,15 +61,25 @@ void ODriveCommTask::taskFunction() {
     	  Robot::instance().exchangeInternal().pushMessage(CommMessageType::ODriveResponsePacket,
     	      	                                                        s_scratchpad, packet_size);
       }
-
     }
 
     // Process messages
     while (processMessage()) {
     }
 
+    m_cnt++;
+    if(m_cnt == 100)
+    {
+    	uint8_t watchdog_id = 3;
+    	Robot::instance().exchangeInternal().pushMessage(CommMessageType::WatchdogReset,&watchdog_id, 1);
+
+    	 m_cnt = 0;
+
+    };
+
+
     // Wait for next tick
-    delay(1);
+    delay_periodic(1);
   }
 }
 
@@ -87,11 +93,15 @@ bool ODriveCommTask::processMessage() {
   switch (message_type) {
     case CommMessageType::ODriveRequestPacket: {
       auto packet_size = m_message_queue.message_size();
-      if(packet_size > m_stream_writer.availableSpace()) {
+      if(packet_size > m_stream_writer.availableSpace() || packet_size > sizeof(s_scratchpad)) {
+    	  m_message_queue.pop_message(nullptr, 0);
     	  return false;
       };
       m_message_queue.pop_message(s_scratchpad, 128);
       m_stream_writer.pushPacket((unsigned char*)s_scratchpad, packet_size);
+      m_requests_sent+=1;
+      m_bytes_sent+=packet_size;
+      m_comm_stats.tx_highwater = std::max<uint16_t>(m_comm_stats.tx_highwater, m_stream_writer.size());
     } break;
     default:
       m_message_queue.pop_message(nullptr, 0);

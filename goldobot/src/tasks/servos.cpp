@@ -14,6 +14,7 @@ ServosTask::ServosTask() : m_message_queue(m_message_queue_buffer, sizeof(m_mess
 const char *ServosTask::name() const { return "servos"; }
 
 void ServosTask::taskFunction() {
+  set_priority(4);
   Robot::instance().mainExchangeIn().subscribe({40, 49, &m_message_queue});
   Robot::instance().exchangeInternal().subscribe({31, 31, &m_message_queue});
 
@@ -64,6 +65,9 @@ void ServosTask::taskFunction() {
       }
     }
 
+    uint8_t watchdog_id = 5;
+    Robot::instance().exchangeInternal().pushMessage(CommMessageType::WatchdogReset,&watchdog_id, 1);
+
     delay_periodic(c_update_period);
   } /* while(1) */
 }
@@ -94,8 +98,8 @@ void ServosTask::processMessage() {
 
   switch (message_type) {
     case CommMessageType::ServoMove: {
-      unsigned char buff[4];
-      m_message_queue.pop_message(buff, 4);
+      unsigned char buff[5];
+      m_message_queue.pop_message(buff, 5);
       int servo_id = buff[0];
       int pwm = *(uint16_t *)(buff + 1);
       int target_speed = *(uint16_t *)(buff + 3);

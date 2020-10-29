@@ -42,6 +42,8 @@ class DynamixelsCommTask : public Task {
   void taskFunction() override;
 
   unsigned char m_dynamixels_buffer[256];
+  unsigned char m_scratchpad[256];
+  size_t m_dynamixels_receive_size{0};
   bool m_dynamixels_receive_ok;
   uint8_t m_dynamixels_receive_id;
   uint8_t m_dynamixels_receive_num_parameters;

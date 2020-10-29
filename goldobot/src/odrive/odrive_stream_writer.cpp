@@ -28,6 +28,8 @@ bool ODriveStreamWriter::pushPacket(const uint8_t* buffer, size_t size) {
 
 size_t ODriveStreamWriter::availableSpace() const { return m_buffer.spaceAvailable() - 5; }
 
+size_t ODriveStreamWriter::size() const { return m_buffer.size(); }
+
 size_t ODriveStreamWriter::popData(uint8_t* buffer, size_t size) {
   return m_buffer.pop(buffer, size);
 }

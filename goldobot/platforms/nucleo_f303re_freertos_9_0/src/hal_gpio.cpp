@@ -17,6 +17,10 @@ using namespace platform;
 
 void gpio_set(int gpio_index, bool value) {
   auto& gpio_device = g_gpio_devices[gpio_index];
+  if(!(gpio_device.flags & 0x02))
+  {
+	  return;
+  }
   auto gpio_port = g_gpio_ports[gpio_device.port];
   uint32_t pin = (uint32_t)(1U << gpio_device.pin);
 
@@ -29,6 +33,10 @@ void gpio_set(int gpio_index, bool value) {
 
 bool gpio_get(int gpio_index) {
   auto& gpio_device = g_gpio_devices[gpio_index];
+  if(!(gpio_device.flags & 0x01))
+  {
+	  return false;
+  }
   auto gpio_port = g_gpio_ports[gpio_device.port];
   uint32_t pin = (uint32_t)(1U << gpio_device.pin);
 
@@ -251,26 +259,32 @@ void hal_gpio_init(const DeviceConfigGpio* config) {
   GpioDevice* gpio_ptr = &g_gpio_devices[config->id];
 
   LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
-  GPIO_InitStruct.Pin = (uint32_t)(1U << config->pin.pin);
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+
+  if(config->dir & 0x04)
+  {
+	  GPIO_InitStruct.Pull = LL_GPIO_PULL_UP;
+  }
 
   switch (config->dir & 0x03) {
     case 0:
       GPIO_InitStruct.Mode = LL_GPIO_MODE_INPUT;
+      gpio_ptr->flags = 0x01;
       break;
     case 1:
       GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
       GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+      gpio_ptr->flags = 0x03;
       break;
     case 2:
       GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
       GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
+      gpio_ptr->flags = 0x03;
       break;
     default:
       break;
   }
-
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 
   hal_gpio_init_pin(config->pin, GPIO_InitStruct);
   gpio_ptr->port = config->pin.port;
@@ -285,6 +299,7 @@ bool hal_gpio_init_pin(PinID pin, const LL_GPIO_InitTypeDef& init) {
   }
 
   LL_GPIO_InitTypeDef init2 = init;
+  init2.Pin =  (uint32_t)(1U << pin.pin);
 
   switch (port_index) {
     case 0:

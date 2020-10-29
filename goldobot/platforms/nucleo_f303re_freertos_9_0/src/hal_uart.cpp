@@ -54,8 +54,6 @@ void goldobot_hal_uart_irq_handler(int uart_index) {
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef* huart) {
-  goldobot::hal::gpio_set(30, false);
-
   uint8_t uart_index = get_uart_index(huart);
   auto io_device = g_uart_io_devices[uart_index];
 
@@ -195,7 +193,6 @@ void uart_start_rx_request_dma(IORequest* req, uint32_t device_index) {
   req->remaining = req->size;
   req->state = IORequestState::Busy;
   auto status = HAL_UART_Receive_DMA(uart_handle, req->rx_ptr, req->size);
-  goldobot::hal::gpio_set(30, true);
   assert(status == HAL_OK);
 }
 
@@ -299,7 +296,7 @@ void hal_usart_init(IODevice* device, const IODeviceConfigUart* config) {
   hal_gpio_init_pin_af(config->device_id, 1, config->tx_pin, GPIO_InitStruct);
 
   g_uart_txen_pins[uart_index] = config->txen_pin;
-  if (config->txen_pin.port != 0x255) {
+  if (config->txen_pin.port != 0xff) {
     LL_GPIO_InitTypeDef GPIO_InitStruct;
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;

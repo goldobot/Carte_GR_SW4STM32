@@ -132,6 +132,7 @@ struct IODeviceConfigSpi : IODeviceConfig {
   uint16_t baudrate_prescaler;
 };
 struct GpioDevice {
+  uint8_t flags;
   uint8_t port;
   uint8_t pin;
 };

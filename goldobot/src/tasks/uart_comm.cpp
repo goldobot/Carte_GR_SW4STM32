@@ -37,6 +37,15 @@ void UARTCommTask::taskFunction() {
 
   m_last_timestamp = hal::get_tick_count();
 
+  // flush uart to ensure first message is well received
+  memset(s_scratch_buffer, 0, sizeof(s_scratch_buffer));
+  for(int i = 0; i < 32; i++)
+  {
+	  hal::io_write(0, s_scratch_buffer, 32);
+	  delay(10);
+  }
+
+
   while (1) {
     {
       uint16_t space_available = hal::io_write_space_available(0);

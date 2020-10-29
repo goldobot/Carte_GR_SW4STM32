@@ -9,6 +9,7 @@ class ODriveStreamWriter {
  public:
   ODriveStreamWriter(uint8_t* buffer, size_t size);
   bool pushPacket(const uint8_t* buffer, size_t size);
+  size_t size() const;
   size_t availableSpace() const;
   size_t popData(uint8_t* buffer, size_t size);
 

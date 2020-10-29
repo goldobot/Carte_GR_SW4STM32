@@ -13,7 +13,6 @@ Robot& Robot::instance() { return s_instance; }
 
 void Robot::init() {
   m_comm_task.init();
-  m_main_exchange_out.pushMessage(CommMessageType::Reset, nullptr, 0);
   m_main_task.init();
   m_debug_task.init();
   m_heartbeat_task.init();
@@ -86,9 +85,9 @@ bool Robot::endLoadConfig(uint16_t crc) {
   m_servos_config = (ServosConfig*)(s_config_area + offsets[i++]);
   //m_arms_task.m_config.positions_ptr = (uint16_t*)(s_config_area + offsets[i++]);
   //m_arms_task.m_config.torques_ptr = (uint16_t*)(s_config_area + offsets[i++]);
-  m_main_task.sequenceEngine().setBuffer(s_config_area + offsets[i++]);
+  //m_main_task.sequenceEngine().setBuffer(s_config_area + offsets[i++]);
 
-  m_main_task.sequenceEngine().endLoad();
+  //m_main_task.sequenceEngine().endLoad();
 
   if (m_robot_config->use_odrive_uart) {
       m_odrive_comm_task.init();
@@ -97,11 +96,9 @@ bool Robot::endLoadConfig(uint16_t crc) {
   odometry().setConfig(*m_odometry_config);
   m_propulsion_task.controller().setConfig(defaultPropulsionControllerConfig());
   m_propulsion_task.init();
-
-
-  m_fpga_task.init();
-  m_servos_task.init();
-
+  m_fpga_task.init(256);
+  m_dynamixels_comm_task.init(256);
+  m_servos_task.init(256);
   start();
   m_match_state = MatchState::Idle;
   return true;
