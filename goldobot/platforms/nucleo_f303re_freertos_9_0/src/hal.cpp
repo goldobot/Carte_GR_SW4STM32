@@ -128,8 +128,13 @@ void Hal::read_encoders(uint16_t& left, uint16_t& right)
 	right = s_robot_simulator.m_right_encoder;
 	return;
 #endif
+#if 0 /* FIXME : TODO : WTF? */
 	left = 8192 - htim4.Instance->CNT;
 	right = 8192 - htim1.Instance->CNT;
+#else
+	left = htim4.Instance->CNT;
+	right = htim1.Instance->CNT;
+#endif
 }
 
 void Hal::set_motors_enable(bool enabled)
