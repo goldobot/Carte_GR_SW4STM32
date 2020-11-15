@@ -1,5 +1,5 @@
 ################################################################################
-# Automatically-generated file. Do not edit!
+# Automatically-generated file. Do not edit! (oue, oue .. & ta soeur!)
 ################################################################################
 
 C_UPPER_SRCS := 
@@ -31,10 +31,10 @@ Middlewares/Third_Party/FreeRTOS/Source \
 Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F \
 Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang \
 Src \
-goldobot/platforms/nucleo_f303re_freertos_9_0/src \
-goldobot/src \
-goldobot/src/core \
-goldobot/src/propulsion \
-goldobot/src/tasks \
+goldobot/src/hal/nucleo_f303re_freertos_9_0 \
+goldobot/src/goldo \
+goldobot/src/goldo/core \
+goldobot/src/goldo/propulsion \
+goldobot/src/goldo/tasks \
 startup \
 

@@ -24,7 +24,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "goldobot/goldobot_main.h"
+#include "goldo/goldobot_main.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/

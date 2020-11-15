@@ -10,11 +10,12 @@ PATH := /opt/stm32/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.lin
 # All of the sources participating in the build are defined here
 -include sources.mk
 -include startup/subdir.mk
--include goldobot/src/tasks/subdir.mk
--include goldobot/src/propulsion/subdir.mk
--include goldobot/src/core/subdir.mk
--include goldobot/src/subdir.mk
--include goldobot/platforms/nucleo_f303re_freertos_9_0/src/subdir.mk
+-include goldobot/src/goldo/tasks/subdir.mk
+-include goldobot/src/goldo/propulsion/subdir.mk
+-include goldobot/src/goldo/core/subdir.mk
+-include goldobot/src/goldo/comm/subdir.mk
+-include goldobot/src/goldo/subdir.mk
+-include goldobot/src/hal/nucleo_f303re_freertos_9_0/subdir.mk
 -include Src/subdir.mk
 -include Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/subdir.mk
 -include Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/subdir.mk
