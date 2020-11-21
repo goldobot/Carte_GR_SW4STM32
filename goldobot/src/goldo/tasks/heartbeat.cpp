@@ -75,7 +75,7 @@ void HeartbeatTask::taskFunction()
     Robot::instance().mainExchangeIn().pushMessage(CommMessageType::MatchStateChange, (unsigned char*)&post_state, sizeof(post_state));
 
 #if 1 /* FIXME : DEBUG */
-    if (sync_counter==1)
+    /*if (sync_counter==1)*/
     {
       g_dbg_goldo_vec[0] = clock;
       RobotPose my_pose = Robot::instance().odometry().pose();
