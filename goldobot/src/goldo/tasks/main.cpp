@@ -89,7 +89,7 @@ void MainTask::taskFunction()
     switch(match_state)
     {
     case MatchState::Idle:
-      if( Hal::get_gpio(4))
+      if(Hal::get_gpio(4))
       {
         Robot::instance().setSide(Side::Purple);
       } 

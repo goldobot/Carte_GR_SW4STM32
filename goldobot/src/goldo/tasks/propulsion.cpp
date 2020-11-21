@@ -39,13 +39,11 @@ void PropulsionTask::doStep()
     processMessage();
   }
 
-#if 0 /* FIXME : DEBUG : GOLDO */
   // adversary detection
-  if(Hal::get_gpio(2) && m_controller.state() == PropulsionController::State::FollowTrajectory&& m_adversary_detection_enabled)
+  if(Hal::get_gpio(2) && (m_controller.state()==PropulsionController::State::FollowTrajectory) && m_adversary_detection_enabled)
   {
     m_controller.emergencyStop();
   }
-#endif
 
   // Goldenium hack
   if(m_recalage_goldenium_armed)

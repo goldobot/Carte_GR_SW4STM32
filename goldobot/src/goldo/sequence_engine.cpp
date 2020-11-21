@@ -14,8 +14,6 @@ uint16_t update_crc16(const unsigned char* data_p, size_t length, uint16_t crc =
 namespace goldobot
 {
 
-  extern unsigned int g_dbg_goldo;
-
   enum Opcode
   {
     Propulsion_MoveTo = 129,
@@ -29,9 +27,11 @@ namespace goldobot
 
   void SequenceEngine::doStep()
   {
+#if 0 /* FIXME : TODO : obstacle avoid sequence */
     bool act_obstacle = (Hal::get_gpio(2)!=0);
-
-    //goldobot::g_dbg_goldo = m_obstacle_count;
+#else
+    bool act_obstacle = false;
+#endif
 
     if (m_adversary_detection_enabled && (m_obstacle_count==0))
     {
@@ -110,7 +110,6 @@ namespace goldobot
           m_propulsion_state_dirty = true;
           Hal::set_motors_enable(true);
           m_irq_pc = 0x0002;
-          goldobot::g_dbg_goldo = m_irq_pc;
         }
         break;
       case 0x0004: // point to final_escape_point
@@ -130,7 +129,6 @@ namespace goldobot
           m_propulsion_state_dirty = true;
           Hal::set_motors_enable(true);
           m_irq_pc = 0x0006;
-          goldobot::g_dbg_goldo = m_irq_pc;
         }
         break;
       case 0x0008: // point to target_point
@@ -150,7 +148,6 @@ namespace goldobot
           m_propulsion_state_dirty = true;
           Hal::set_motors_enable(true);
           m_irq_pc = 0x000a;
-          goldobot::g_dbg_goldo = m_irq_pc;
         }
         break;
       case 0x000c: // end irq
@@ -169,7 +166,6 @@ namespace goldobot
             m_propulsion_state_dirty = true; /* FIXME : TODO : OK? */
             Hal::set_motors_enable(true);
             m_irq_pc = 0x0000;
-            goldobot::g_dbg_goldo = m_irq_pc;
           }
         }
         else
@@ -178,7 +174,6 @@ namespace goldobot
           m_propulsion_state_dirty = true; /* FIXME : TODO : OK? */
           Hal::set_motors_enable(true);
           m_irq_pc = 0x000a;
-          goldobot::g_dbg_goldo = m_irq_pc;
         }
         break;
       }
@@ -806,7 +801,6 @@ namespace goldobot
   {
     m_state = SequenceState::Executing;
     m_pc = m_sequence_offsets[id];
-    goldobot::g_dbg_goldo = m_irq_pc;
   }
 
 
@@ -857,7 +851,6 @@ namespace goldobot
       //m_state = SequenceState::Executing;
 
       m_irq_pc = 0x0000;
-      goldobot::g_dbg_goldo = m_irq_pc;
 
       Hal::set_motors_enable(true);
     }
@@ -869,7 +862,6 @@ namespace goldobot
       //m_state = SequenceState::Executing;
 
       m_irq_pc = 0x000a;
-      goldobot::g_dbg_goldo = m_irq_pc;
 
       Hal::set_motors_enable(true);
     }
@@ -897,13 +889,11 @@ namespace goldobot
         (unsigned char*) params, sizeof(params));
       m_propulsion_state_dirty = true;
       m_irq_pc = 0x0001;
-      goldobot::g_dbg_goldo = m_irq_pc;
       break;
     case 0x0001: // wait point_to finished
       if(!m_propulsion_state_dirty && m_propulsion_state == PropulsionState::Stopped)
       {
         m_irq_pc = 0x0002;
-        goldobot::g_dbg_goldo = m_irq_pc;
       }
       break;
     case 0x0002: // move to escape_point
@@ -918,13 +908,11 @@ namespace goldobot
         (unsigned char*) params, sizeof(params));
       m_propulsion_state_dirty = true;
       m_irq_pc = 0x0003;
-      goldobot::g_dbg_goldo = m_irq_pc;
       break;
     case 0x0003: // wait move_to finished
       if(!m_propulsion_state_dirty && m_propulsion_state == PropulsionState::Stopped)
       {
         m_irq_pc = 0x0004;
-        goldobot::g_dbg_goldo = m_irq_pc;
       }
       break;
     case 0x0004: // point to final_escape_point
@@ -938,13 +926,11 @@ namespace goldobot
         (unsigned char*) params, sizeof(params));
       m_propulsion_state_dirty = true;
       m_irq_pc = 0x0005;
-      goldobot::g_dbg_goldo = m_irq_pc;
       break;
     case 0x0005: // wait point_to finished
       if(!m_propulsion_state_dirty && m_propulsion_state == PropulsionState::Stopped)
       {
         m_irq_pc = 0x0006;
-        goldobot::g_dbg_goldo = m_irq_pc;
       }
       break;
     case 0x0006: // move to final_escape_point
@@ -958,13 +944,11 @@ namespace goldobot
         (unsigned char*) params, sizeof(params));
       m_propulsion_state_dirty = true;
       m_irq_pc = 0x0007;
-      goldobot::g_dbg_goldo = m_irq_pc;
       break;
     case 0x0007: // wait move_to finished
       if(!m_propulsion_state_dirty && m_propulsion_state == PropulsionState::Stopped)
       {
         m_irq_pc = 0x0008;
-        goldobot::g_dbg_goldo = m_irq_pc;
       }
       break;
     case 0x0008: // point to target_point
@@ -978,13 +962,11 @@ namespace goldobot
         (unsigned char*) params, sizeof(params));
       m_propulsion_state_dirty = true;
       m_irq_pc = 0x0009;
-      goldobot::g_dbg_goldo = m_irq_pc;
       break;
     case 0x0009: // wait point_to finished
       if(!m_propulsion_state_dirty && m_propulsion_state == PropulsionState::Stopped)
       {
         m_irq_pc = 0x000a;
-        goldobot::g_dbg_goldo = m_irq_pc;
       }
       break;
     case 0x000a: // move to target_point
@@ -998,24 +980,20 @@ namespace goldobot
         (unsigned char*) params, sizeof(params));
       m_propulsion_state_dirty = true;
       m_irq_pc = 0x000b;
-      goldobot::g_dbg_goldo = m_irq_pc;
       break;
     case 0x000b: // wait move_to finished
       if(!m_propulsion_state_dirty && m_propulsion_state == PropulsionState::Stopped)
       {
         m_irq_pc = 0x000c;
-        goldobot::g_dbg_goldo = m_irq_pc;
       }
       break;
     case 0x000c: // end irq
       m_escape_impossible = false;
       m_adversary_detection_enabled = true;
       m_irq_pc = 0xffff;
-      goldobot::g_dbg_goldo = m_irq_pc;
       break;
     default:
       m_irq_pc = 0xffff;
-      goldobot::g_dbg_goldo = m_irq_pc;
     }
   }
 
