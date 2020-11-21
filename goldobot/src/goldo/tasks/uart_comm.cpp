@@ -31,7 +31,7 @@ const char* UARTCommTask::name() const
 
 void UARTCommTask::init()
 {
-  Robot::instance().mainExchangeOut().subscribe({0,1000, &m_out_queue});
+  Robot::instance().mainExchangeOut().subscribe({0,10000, &m_out_queue});
   Task::init();
 }
 
