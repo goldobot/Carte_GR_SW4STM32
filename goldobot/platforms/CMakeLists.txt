@@ -1,1 +1,2 @@
 add_subdirectory(os)
+add_subdirectory(nucleo_f303re_freertos_9_0)
