@@ -18,6 +18,7 @@ add_library(drivers_STM32F3xx_HAL_Driver STATIC
   ${CMAKE_CURRENT_SOURCE_DIR}/Src/stm32f3xx_hal_tim_ex.c
   ${CMAKE_CURRENT_SOURCE_DIR}/Src/stm32f3xx_hal_uart.c
   ${CMAKE_CURRENT_SOURCE_DIR}/Src/stm32f3xx_hal_uart_ex.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/Src/stm32f3xx_ll_gpio.c
   )
 
 target_include_directories(drivers_STM32F3xx_HAL_Driver PUBLIC
@@ -30,5 +31,6 @@ target_link_libraries(drivers_STM32F3xx_HAL_Driver
   
 target_compile_definitions(drivers_STM32F3xx_HAL_Driver PUBLIC
   USE_HAL_DRIVER
+  USE_FULL_LL_DRIVER
   STM32F303xE
   )
