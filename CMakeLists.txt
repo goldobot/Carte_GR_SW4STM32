@@ -29,7 +29,6 @@ add_subdirectory(goldobot)
 
 add_executable(firmware
   ${CMAKE_CURRENT_SOURCE_DIR}/Src/main.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/Src/stm32f3xx_hal_msp.c
   ${CMAKE_CURRENT_SOURCE_DIR}/Src/stm32f3xx_hal_timebase_TIM.c
   ${CMAKE_CURRENT_SOURCE_DIR}/Src/stm32f3xx_it.c
   ${CMAKE_CURRENT_SOURCE_DIR}/Src/syscalls.c
