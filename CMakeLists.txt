@@ -45,7 +45,7 @@ target_link_libraries(firmware
   goldobot
   )
   
-target_compile_options(firmware PUBLIC
+target_link_options(firmware PUBLIC
   -T ${CMAKE_CURRENT_SOURCE_DIR}/STM32F303RETx_FLASH.ld
   )
   
