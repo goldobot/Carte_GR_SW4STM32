@@ -38,6 +38,20 @@ void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef* hspi) {
   portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
+// void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
+// void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
+
+void HAL_SPI_ErrorCallback(SPI_HandleTypeDef* hspi) {
+  using namespace goldobot::hal::platform;
+  uint8_t spi_index = get_spi_index(hspi);
+  auto io_device = g_spi_io_devices[spi_index];
+
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+  xSemaphoreGiveFromISR(io_device->tx_semaphore, &xHigherPriorityTaskWoken);
+  portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+}
+// void HAL_SPI_AbortCpltCallback(SPI_HandleTypeDef *hspi)
+
 using namespace goldobot::hal::platform;
 
 void goldobot_hal_spi_irq_handler(int index) { HAL_SPI_IRQHandler(&g_spi_handles[index]); }
