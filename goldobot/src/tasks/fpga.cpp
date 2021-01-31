@@ -18,6 +18,10 @@
 
 using namespace goldobot;
 
+#if 1 /* FIXME : DEBUG : GOLDO */
+uint32_t g_dbg_asserv_cnt;
+#endif
+
 FpgaTask::FpgaTask() : m_message_queue(m_message_queue_buffer, sizeof(m_message_queue_buffer)) {
   generate_crc_table();
 }
@@ -26,8 +30,13 @@ const char *FpgaTask::name() const { return "fpga"; }
 
 void FpgaTask::taskFunction() {
   Robot::instance().mainExchangeIn().subscribe({30, 49, &m_message_queue});
+  auto& exchange_out = Robot::instance().mainExchangeOut();
 
   m_last_timestamp = hal::get_tick_count();
+
+#if 1 /* FIXME : DEBUG : GOLDO */
+  g_dbg_asserv_cnt = 0;
+#endif
 
   while (1) {
     while (m_message_queue.message_ready()) {
@@ -36,7 +45,6 @@ void FpgaTask::taskFunction() {
 
     if(m_cnt % 5 == 0)
     {
-
 
     // Read sensors
     unsigned int apb_data = 0;
@@ -59,6 +67,19 @@ void FpgaTask::taskFunction() {
 
     	m_cnt = 0;
     }
+
+#if 1 /* FIXME : DEBUG : GOLDO */
+    if((m_cnt % 10 == 0) && (g_dbg_asserv_cnt != 0))
+    {
+      unsigned int apb_data = 0;
+      uint32_t apb_addr = 0x8000850c;  // asserv debug reg
+      if (goldo_fpga_master_spi_read_word(apb_addr, &apb_data) == 0) {
+        exchange_out.pushMessage(CommMessageType::DbgGoldo, (unsigned char *)&apb_data, 4);
+      }
+      g_dbg_asserv_cnt--;
+    }
+#endif
+
     delay_periodic(1);
   } /* while(1) */
 }
@@ -228,6 +249,12 @@ void FpgaTask::process_message() {
       m_message_queue.pop_message(buff, 8);
       uint32_t apb_addr = *(uint32_t *)(buff);
       uint32_t apb_data = *(uint32_t *)(buff + 4);
+#if 1 /* FIXME : DEBUG : GOLDO */
+      if((apb_addr==0x80008500) && ((apb_data&0xf0000000)==0x60000000))
+      {
+        g_dbg_asserv_cnt = 100;
+      }
+#endif
       goldo_fpga_master_spi_write_word(apb_addr, apb_data);
     } break;
     default:

@@ -19,6 +19,8 @@ enum class CommMessageType : uint16_t {
   DbgGpioSet,
   DbgPwmSet,
 
+  DbgGoldo = 29,
+
   FpgaReadReg=30,
   FpgaReadRegStatus,
   FpgaWriteReg,
