@@ -8,6 +8,14 @@
 
 using namespace goldobot;
 
+#if 1 /* FIXME : DEBUG */
+/* task.h needed for xTaskGetTickCount() */
+#include "task.h"
+#include "goldo/debug_goldo.h"
+extern bool g_goldo_log_flag;
+unsigned int g_dbg_goldo_t0;
+#endif
+
 PropulsionTask::PropulsionTask():
   m_controller(&m_odometry),
   m_message_queue(m_message_queue_buffer, sizeof(m_message_queue_buffer)),
@@ -117,13 +125,43 @@ void PropulsionTask::doStep()
     m_telemetry_counter = 0;
   }
 
-  if(m_telemetry_counter % 5 == 0)
+  //if(m_telemetry_counter % 5 == 0)
+  if(m_telemetry_counter == 19) /* FIXME : DEBUG */
   {
     auto msg = m_controller.getTelemetry();
     Robot::instance().mainExchangeOut().pushMessage(
       CommMessageType::PropulsionTelemetry,
       (unsigned char*)&msg, sizeof(msg));
   }
+
+#if 1 /* FIXME : DEBUG */
+  if (g_goldo_log_flag)
+  {
+    unsigned int curr_t = xTaskGetTickCount();
+
+    if(m_telemetry_counter % 10 == 0)
+    {
+      DbgGoldoVecSimple l_vec_simple;
+      Hal::read_encoders(left, right);
+      l_vec_simple.clock_ms  = xTaskGetTickCount();
+      l_vec_simple.left_odo  = left;
+      l_vec_simple.right_odo = right;
+      Robot::instance().mainExchangeOut().pushMessage(CommMessageType::DebugGoldoVectSimple,
+        (unsigned char*)&l_vec_simple, sizeof(l_vec_simple));
+    }
+
+    if ((curr_t-g_dbg_goldo_t0)>1000.0)
+    {
+      Hal::set_motors_pwm(0.0, 0.0);
+    }
+
+    if ((curr_t-g_dbg_goldo_t0)>2000.0)
+    {
+      g_goldo_log_flag = false;
+    }
+  }
+#endif
+
 
 }
 
@@ -300,7 +338,30 @@ void PropulsionTask::processUrgentMessage()
     {
       float pwm[2];
       m_urgent_message_queue.pop_message((unsigned char*)&pwm, 8);
+      uint32_t my_ts = xTaskGetTickCount();
       Hal::set_motors_pwm(pwm[0], pwm[1]);
+#if 1 /* FIXME : DEBUG */
+      if ((fabs(pwm[0])>0.01) || (fabs(pwm[1])>0.01))
+      {
+        DbgGoldoVecSimple _dbg_goldo_vec;
+        uint16_t left;
+        uint16_t right;
+        Hal::read_encoders(left, right);
+
+        _dbg_goldo_vec.clock_ms = my_ts;
+        _dbg_goldo_vec.left_odo = left;
+        _dbg_goldo_vec.right_odo = right;
+
+        Robot::instance().mainExchangeOut().pushMessage(CommMessageType::DebugGoldoVectSimple,
+          (unsigned char*)&_dbg_goldo_vec, sizeof(_dbg_goldo_vec));
+        g_goldo_log_flag = true;
+        g_dbg_goldo_t0  = xTaskGetTickCount();
+      }
+      else
+      {
+        g_goldo_log_flag = false;
+      }
+#endif
     }
     break;
   case CommMessageType::PropulsionMeasurePoint:
@@ -468,6 +529,7 @@ void PropulsionTask::taskFunction()
     {
       doStep();
     }
+
     // Execute the propulsion control loop every system tick (1ms)
     delay_periodic(1);
   }

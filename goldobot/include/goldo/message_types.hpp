@@ -130,6 +130,7 @@ namespace goldobot
     RplidarRobotDetection=1280,
 
     DebugGoldoVect=4096,
+    DebugGoldoVectSimple=4097,
 
   };
 }

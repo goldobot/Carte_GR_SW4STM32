@@ -19,6 +19,11 @@ const char* RtTelemetryTask::name() const
   return "rttelemetry";
 }
 
+bool g_goldo_log_flag = false;
+bool g_goldo_megakill_switch = false;
+bool g_goldo_debug6 = false;
+bool g_goldo_debug7 = false;
+
 bool debug_traj_flag = false;
 int debug_num_points = 0;
 short debug_traj_x_mm[16];
@@ -47,6 +52,11 @@ void RtTelemetryTask::taskFunction()
   unsigned char odo_send_buf[64];
   debug_traj_flag = false;
   rt_rcv_state = RT_RCV_IDLE;
+
+  g_goldo_log_flag = false;
+  g_goldo_megakill_switch = false;
+  g_goldo_debug6 = true;
+  g_goldo_debug7 = true;
 
   while(1)
   {
@@ -187,6 +197,14 @@ void RtTelemetryTask::taskFunction()
       break;
     default:
       rt_rcv_state = RT_RCV_IDLE;
+    }
+#endif
+
+#if 0
+    /* FIXME : TODO : implement a remote "kill switch"? */
+    g_goldo_megakill_switch = (Hal::get_gpio(2)!=0);
+    if (g_goldo_megakill_switch) {
+      Hal::disable_motors_pwm();
     }
 #endif
 
