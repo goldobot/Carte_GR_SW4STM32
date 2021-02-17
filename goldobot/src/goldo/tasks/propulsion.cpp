@@ -11,7 +11,7 @@ using namespace goldobot;
 #if 1 /* FIXME : DEBUG */
 /* task.h needed for xTaskGetTickCount() */
 #include "task.h"
-#include "goldo/debug_goldo.h"
+#include "goldo/debug_goldo.hpp"
 extern bool g_goldo_log_flag;
 unsigned int g_dbg_goldo_t0;
 #endif
