@@ -12,7 +12,9 @@ using namespace goldobot;
 /* task.h needed for xTaskGetTickCount() */
 #include "task.h"
 #include "goldo/debug_goldo.hpp"
-extern bool g_goldo_log_flag;
+bool g_dbg_goldo_carac_prop_flag = false;
+bool g_dbg_goldo_test_asserv_long_flag = false;
+bool g_dbg_goldo_test_asserv_yaw_flag = false;
 unsigned int g_dbg_goldo_t0;
 #endif
 
@@ -21,6 +23,12 @@ PropulsionTask::PropulsionTask():
   m_message_queue(m_message_queue_buffer, sizeof(m_message_queue_buffer)),
   m_urgent_message_queue(m_urgent_message_queue_buffer, sizeof(m_urgent_message_queue_buffer))
 {
+#if 1 /* FIXME : DEBUG */
+  g_dbg_goldo_carac_prop_flag = false;
+  g_dbg_goldo_test_asserv_long_flag = false;
+  g_dbg_goldo_test_asserv_yaw_flag = false;
+  g_dbg_goldo_t0 = 0;
+#endif
 }
 
 const char* PropulsionTask::name() const
@@ -135,7 +143,7 @@ void PropulsionTask::doStep()
   }
 
 #if 1 /* FIXME : DEBUG */
-  if (g_goldo_log_flag)
+  if (g_dbg_goldo_carac_prop_flag)
   {
     unsigned int curr_t = xTaskGetTickCount();
 
@@ -157,7 +165,7 @@ void PropulsionTask::doStep()
 
     if ((curr_t-g_dbg_goldo_t0)>2000.0)
     {
-      g_goldo_log_flag = false;
+      g_dbg_goldo_carac_prop_flag = false;
     }
   }
 #endif
@@ -171,10 +179,10 @@ void PropulsionTask::processMessage()
 
   switch(message_type)
   {
-  case CommMessageType::DbgPropulsionExecuteTrajectory:
+  case CommMessageType::PropulsionExecuteTrajectory:
     onMsgExecuteTrajectory();
     break;
-  case CommMessageType::DbgPropulsionExecuteRotation:
+  case CommMessageType::PropulsionExecuteRotation:
     {
       float params[4];
       m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
@@ -188,7 +196,7 @@ void PropulsionTask::processMessage()
       m_controller.executeTranslation(params[0], params[1], params[2], params[3]);
     }
     break;
-  case CommMessageType::DbgPropulsionExecutePointTo:
+  case CommMessageType::PropulsionExecutePointTo:
     onMsgExecutePointTo();
     break;
   case CommMessageType::PropulsionExecuteFaceDirection:
@@ -198,14 +206,14 @@ void PropulsionTask::processMessage()
       m_controller.executeFaceDirection(params[0], params[1], params[2], params[3]);
     }
     break;
-  case CommMessageType::DbgPropulsionExecuteMoveTo:
+  case CommMessageType::PropulsionExecuteMoveTo:
     {
       float params[5];
       m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
       m_controller.executeMoveTo(*(Vector2D*)(params), params[2], params[3], params[4]);
     }
     break;
-  case CommMessageType::DbgPropulsionExecuteReposition:
+  case CommMessageType::PropulsionExecuteReposition:
     {
       float params[2];
       m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
@@ -251,7 +259,7 @@ void PropulsionTask::processUrgentMessage()
 
   switch(message_type)
   {
-  case CommMessageType::DbgPropulsionSetPose:
+  case CommMessageType::PropulsionSetPose:
     {
       float pose[3];
       m_urgent_message_queue.pop_message((unsigned char*)&pose, 12);
@@ -312,7 +320,7 @@ void PropulsionTask::processUrgentMessage()
       m_message_queue.pop_message(nullptr, 0);
     }
     break;
-  case CommMessageType::DbgSetPropulsionEnable:
+  case CommMessageType::PropulsionSetEnable:
     {
       uint8_t enabled;
       m_urgent_message_queue.pop_message((unsigned char*)&enabled, 1);
@@ -327,20 +335,37 @@ void PropulsionTask::processUrgentMessage()
       }
     }
     break;
-  case CommMessageType::DbgSetMotorsEnable:
+  case CommMessageType::SetMotorsEnable:
     {
       uint8_t enabled;
       m_urgent_message_queue.pop_message((unsigned char*)&enabled, 1);
       Hal::set_motors_enable(enabled);
     }
     break;
+  case CommMessageType::SetMotorsPwm:
+    {
+      float pwm[2];
+      m_urgent_message_queue.pop_message((unsigned char*)&pwm, 8);
+      Hal::set_motors_pwm(pwm[0], pwm[1]);
+    }
+    break;
+  case CommMessageType::PropulsionMeasurePoint:
+    {
+      float buff[4];
+      m_urgent_message_queue.pop_message((unsigned char*)&buff, sizeof(buff));
+      m_odometry.measurePerpendicularPoint(buff[0], buff[1], *(Vector2D*)(buff+2));
+      auto pose = m_odometry.pose();
+      // Set controller to new pose
+      m_controller.resetPose(pose.position.x, pose.position.y, pose.yaw);
+    }
+    break;
+#if 1 /* FIXME : DEBUG */
   case CommMessageType::DbgSetMotorsPwm:
     {
       float pwm[2];
       m_urgent_message_queue.pop_message((unsigned char*)&pwm, 8);
       uint32_t my_ts = xTaskGetTickCount();
       Hal::set_motors_pwm(pwm[0], pwm[1]);
-#if 1 /* FIXME : DEBUG */
       if ((fabs(pwm[0])>0.01) || (fabs(pwm[1])>0.01))
       {
         DbgGoldoVecSimple _dbg_goldo_vec;
@@ -354,26 +379,16 @@ void PropulsionTask::processUrgentMessage()
 
         Robot::instance().mainExchangeOut().pushMessage(CommMessageType::DebugGoldoVectSimple,
           (unsigned char*)&_dbg_goldo_vec, sizeof(_dbg_goldo_vec));
-        g_goldo_log_flag = true;
+        g_dbg_goldo_carac_prop_flag = true;
         g_dbg_goldo_t0  = xTaskGetTickCount();
       }
       else
       {
-        g_goldo_log_flag = false;
+        g_dbg_goldo_carac_prop_flag = false;
       }
+    }
+    break;
 #endif
-    }
-    break;
-  case CommMessageType::PropulsionMeasurePoint:
-    {
-      float buff[4];
-      m_urgent_message_queue.pop_message((unsigned char*)&buff, sizeof(buff));
-      m_odometry.measurePerpendicularPoint(buff[0], buff[1], *(Vector2D*)(buff+2));
-      auto pose = m_odometry.pose();
-      // Set controller to new pose
-      m_controller.resetPose(pose.position.x, pose.position.y, pose.yaw);
-    }
-    break;
   default:
     m_urgent_message_queue.pop_message(nullptr, 0);
     break;
@@ -511,6 +526,7 @@ void PropulsionTask::taskFunction()
   Robot::instance().mainExchangeIn().subscribe({80,83, &m_urgent_message_queue});
   Robot::instance().mainExchangeIn().subscribe({32,32, &m_urgent_message_queue});
   Robot::instance().mainExchangeIn().subscribe({98,102, &m_urgent_message_queue});
+  Robot::instance().mainExchangeIn().subscribe({120,126, &m_message_queue});
 
   // Set task to high
   set_priority(6);

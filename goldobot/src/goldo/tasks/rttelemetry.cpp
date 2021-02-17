@@ -19,7 +19,6 @@ const char* RtTelemetryTask::name() const
   return "rttelemetry";
 }
 
-bool g_goldo_log_flag = false;
 bool g_goldo_megakill_switch = false;
 bool g_goldo_debug6 = false;
 bool g_goldo_debug7 = false;
@@ -53,7 +52,6 @@ void RtTelemetryTask::taskFunction()
   debug_traj_flag = false;
   rt_rcv_state = RT_RCV_IDLE;
 
-  g_goldo_log_flag = false;
   g_goldo_megakill_switch = false;
   g_goldo_debug6 = true;
   g_goldo_debug7 = true;

@@ -273,7 +273,7 @@ namespace goldobot
     case 65: // propulsion.enable
       {
         uint8_t b = true;
-        Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DbgSetPropulsionEnable, (unsigned char*)&b, 1);
+        Robot::instance().mainExchangeIn().pushMessage(CommMessageType::PropulsionSetEnable, (unsigned char*)&b, 1);
         m_propulsion_state_dirty = true;
         m_pc++;
         return true;
@@ -285,7 +285,7 @@ namespace goldobot
     case 67: // propulsion.disable
       {
         uint8_t b = false;
-        Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DbgSetPropulsionEnable, (unsigned char*)&b, 1);
+        Robot::instance().mainExchangeIn().pushMessage(CommMessageType::PropulsionSetEnable, (unsigned char*)&b, 1);
         m_propulsion_state_dirty = true;
         m_pc++;
         return true;
@@ -323,7 +323,7 @@ namespace goldobot
 
       {
         Robot::instance().mainExchangeIn().pushMessage(
-          CommMessageType::DbgPropulsionSetPose,
+          CommMessageType::PropulsionSetPose,
           m_vars + 4 * op.arg1, 12);
       }
       m_pc++;
@@ -342,7 +342,7 @@ namespace goldobot
         params[3] = *(float*)(m_vars + 4 * (op.arg2+1));
         params[4] = *(float*)(m_vars + 4 * (op.arg2+2));
         Robot::instance().mainExchangeIn().pushMessage(
-          CommMessageType::DbgPropulsionExecutePointTo,
+          CommMessageType::PropulsionExecutePointTo,
           (unsigned char*) params, sizeof(params));
 
         m_propulsion_state_dirty = true;
@@ -368,7 +368,7 @@ namespace goldobot
         m_saved_target_y = params[1];
 
         Robot::instance().mainExchangeIn().pushMessage(
-          CommMessageType::DbgPropulsionExecuteMoveTo,
+          CommMessageType::PropulsionExecuteMoveTo,
           (unsigned char*) params, sizeof(params));
         m_propulsion_state_dirty = true;
         m_pc++;
@@ -390,7 +390,7 @@ namespace goldobot
         memcpy(buff+12, m_vars + 4 * op.arg1, op.arg2 * 8);
 
         Robot::instance().mainExchangeIn().pushMessage(
-          CommMessageType::DbgPropulsionExecuteTrajectory,
+          CommMessageType::PropulsionExecuteTrajectory,
           buff, 12 + op.arg2 * 8);
 
         m_propulsion_state_dirty = true;
@@ -412,7 +412,7 @@ namespace goldobot
         params[3] = *(float*)(m_vars + 4 * (op.arg2+2));
 
         Robot::instance().mainExchangeIn().pushMessage(
-          CommMessageType::DbgPropulsionExecuteRotation,
+          CommMessageType::PropulsionExecuteRotation,
           (unsigned char*) params, sizeof(params));
         m_propulsion_state_dirty = true;
         m_pc++;
@@ -450,7 +450,7 @@ namespace goldobot
         params[0] = *(float*)(m_vars + 4 * op.arg1);
         params[1] = *(float*)(m_vars + 4 * (op.arg2));
         Robot::instance().mainExchangeIn().pushMessage(
-          CommMessageType::DbgPropulsionExecuteReposition,
+          CommMessageType::PropulsionExecuteReposition,
           (unsigned char*) params, sizeof(params));
         m_propulsion_state_dirty = true;
         m_pc++;
@@ -885,7 +885,7 @@ namespace goldobot
       params[3] = 3.1415;
       params[4] = 3.1415;
       Robot::instance().mainExchangeIn().pushMessage(
-        CommMessageType::DbgPropulsionExecutePointTo,
+        CommMessageType::PropulsionExecutePointTo,
         (unsigned char*) params, sizeof(params));
       m_propulsion_state_dirty = true;
       m_irq_pc = 0x0001;
@@ -904,7 +904,7 @@ namespace goldobot
       params[3] = 0.3;
       params[4] = 0.3;
       Robot::instance().mainExchangeIn().pushMessage(
-        CommMessageType::DbgPropulsionExecuteMoveTo,
+        CommMessageType::PropulsionExecuteMoveTo,
         (unsigned char*) params, sizeof(params));
       m_propulsion_state_dirty = true;
       m_irq_pc = 0x0003;
@@ -922,7 +922,7 @@ namespace goldobot
       params[3] = 3.1415;
       params[4] = 3.1415;
       Robot::instance().mainExchangeIn().pushMessage(
-        CommMessageType::DbgPropulsionExecutePointTo,
+        CommMessageType::PropulsionExecutePointTo,
         (unsigned char*) params, sizeof(params));
       m_propulsion_state_dirty = true;
       m_irq_pc = 0x0005;
@@ -940,7 +940,7 @@ namespace goldobot
       params[3] = 0.3;
       params[4] = 0.3;
       Robot::instance().mainExchangeIn().pushMessage(
-        CommMessageType::DbgPropulsionExecuteMoveTo,
+        CommMessageType::PropulsionExecuteMoveTo,
         (unsigned char*) params, sizeof(params));
       m_propulsion_state_dirty = true;
       m_irq_pc = 0x0007;
@@ -958,7 +958,7 @@ namespace goldobot
       params[3] = 3.1415;
       params[4] = 3.1415;
       Robot::instance().mainExchangeIn().pushMessage(
-        CommMessageType::DbgPropulsionExecutePointTo,
+        CommMessageType::PropulsionExecutePointTo,
         (unsigned char*) params, sizeof(params));
       m_propulsion_state_dirty = true;
       m_irq_pc = 0x0009;
@@ -976,7 +976,7 @@ namespace goldobot
       params[3] = 0.3;
       params[4] = 0.3;
       Robot::instance().mainExchangeIn().pushMessage(
-        CommMessageType::DbgPropulsionExecuteMoveTo,
+        CommMessageType::PropulsionExecuteMoveTo,
         (unsigned char*) params, sizeof(params));
       m_propulsion_state_dirty = true;
       m_irq_pc = 0x000b;

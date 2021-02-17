@@ -60,16 +60,16 @@ namespace goldobot
     DynamixelStatusPacket=200,
 
     // Propulsion debug
-    DbgSetMotorsEnable=80,
-    DbgSetMotorsPwm=81,
-    DbgSetPropulsionEnable=82,
-    DbgPropulsionSetPose=83,
-    DbgPropulsionTest=84,
-    DbgPropulsionExecuteTrajectory=85,
-    DbgPropulsionExecuteRotation=86,
-    DbgPropulsionExecuteReposition=87,
-    DbgPropulsionExecutePointTo=88,
-    DbgPropulsionExecuteMoveTo=89,
+    SetMotorsEnable=80,
+    SetMotorsPwm=81,
+    PropulsionSetEnable=82,
+    PropulsionSetPose=83,
+    PropulsionTest=84,
+    PropulsionExecuteTrajectory=85,
+    PropulsionExecuteRotation=86,
+    PropulsionExecuteReposition=87,
+    PropulsionExecutePointTo=88,
+    PropulsionExecuteMoveTo=89,
     PropulsionStateChanged=90,
     PropulsionExecuteTranslation=91,
     PropulsionEnterManualControl=92,
@@ -83,6 +83,9 @@ namespace goldobot
     PropulsionSetAdversaryDetectionEnable=100,
     PropulsionMeasurePoint=101,
 
+    DbgSetMotorsPwm=102,
+    DbgPropulsionExecuteRotation=103,
+    DbgPropulsionExecuteTranslation=104,
 
     DbgReset=127,
 
