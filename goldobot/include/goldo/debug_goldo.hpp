@@ -19,4 +19,15 @@ namespace goldobot {
     unsigned short right_odo;
   };
 
+  struct DbgGoldoVecAsserv
+  {
+    unsigned int clock_ms;
+    short int x_mm;
+    short int y_mm;
+    int theta_deg_1000;
+    short int target_x_mm;
+    short int target_y_mm;
+    int target_theta_deg_1000;
+  };
+
 } /* namespace goldobot */

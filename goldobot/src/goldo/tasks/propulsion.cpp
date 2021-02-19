@@ -13,8 +13,7 @@ using namespace goldobot;
 #include "task.h"
 #include "goldo/debug_goldo.hpp"
 bool g_dbg_goldo_carac_prop_flag = false;
-bool g_dbg_goldo_test_asserv_long_flag = false;
-bool g_dbg_goldo_test_asserv_yaw_flag = false;
+bool g_dbg_goldo_test_asserv_flag = false;
 unsigned int g_dbg_goldo_t0;
 #endif
 
@@ -25,8 +24,7 @@ PropulsionTask::PropulsionTask():
 {
 #if 1 /* FIXME : DEBUG */
   g_dbg_goldo_carac_prop_flag = false;
-  g_dbg_goldo_test_asserv_long_flag = false;
-  g_dbg_goldo_test_asserv_yaw_flag = false;
+  g_dbg_goldo_test_asserv_flag = false;
   g_dbg_goldo_t0 = 0;
 #endif
 }
@@ -61,27 +59,6 @@ void PropulsionTask::doStep()
     m_controller.emergencyStop();
   }
 
-  // Goldenium hack
-  if(m_recalage_goldenium_armed)
-  {
-    if(Robot::instance().side() == Side::Yellow && Robot::instance().sensorsState() & (1 << 42))
-    {
-      auto pose = m_odometry.pose();
-      pose.position.y = 1;
-      m_odometry.setPose(pose);
-      m_recalage_goldenium_armed = false;
-
-    }
-
-    if(Robot::instance().side() == Side::Purple && Robot::instance().sensorsState() & (1 << 42))
-    {
-      auto pose = m_odometry.pose();
-      //pose.position.y = ;
-      m_odometry.setPose(pose);
-      m_recalage_goldenium_armed = false;
-    }
-
-  }
   // Update odometry
   uint16_t left;
   uint16_t right;
@@ -143,15 +120,15 @@ void PropulsionTask::doStep()
   }
 
 #if 1 /* FIXME : DEBUG */
+  unsigned int curr_t = xTaskGetTickCount();
+
   if (g_dbg_goldo_carac_prop_flag)
   {
-    unsigned int curr_t = xTaskGetTickCount();
-
     if(m_telemetry_counter % 10 == 0)
     {
       DbgGoldoVecSimple l_vec_simple;
       Hal::read_encoders(left, right);
-      l_vec_simple.clock_ms  = xTaskGetTickCount();
+      l_vec_simple.clock_ms  = curr_t;
       l_vec_simple.left_odo  = left;
       l_vec_simple.right_odo = right;
       Robot::instance().mainExchangeOut().pushMessage(CommMessageType::DebugGoldoVectSimple,
@@ -168,8 +145,41 @@ void PropulsionTask::doStep()
       g_dbg_goldo_carac_prop_flag = false;
     }
   }
-#endif
 
+  if (g_dbg_goldo_test_asserv_flag)
+  {
+    if(m_telemetry_counter % 10 == 0)
+    {
+      DbgGoldoVecAsserv l_vec_asserv;
+      RobotPose my_pose = m_odometry.pose();
+      RobotPose my_target = m_controller.targetPose();
+      double my_x_mm;
+      double my_y_mm;
+      double my_theta_deg;
+      l_vec_asserv.clock_ms              = curr_t;
+      my_x_mm = 1000.0*my_pose.position.x;
+      my_y_mm = 1000.0*my_pose.position.y;
+      my_theta_deg = my_pose.yaw/M_PI*180.0*1000.0;
+      l_vec_asserv.x_mm                  = my_x_mm;
+      l_vec_asserv.y_mm                  = my_y_mm;
+      l_vec_asserv.theta_deg_1000        = my_theta_deg;
+      my_x_mm = 1000.0*my_target.position.x;
+      my_y_mm = 1000.0*my_target.position.y;
+      my_theta_deg = my_target.yaw/M_PI*180.0*1000.0;
+      l_vec_asserv.target_x_mm           = my_x_mm;
+      l_vec_asserv.target_y_mm           = my_y_mm;
+      l_vec_asserv.target_theta_deg_1000 = my_theta_deg;
+      Robot::instance().mainExchangeOut().pushMessage(CommMessageType::DebugGoldoVectAsserv,
+        (unsigned char*)&l_vec_asserv, sizeof(l_vec_asserv));
+    }
+
+    if ((curr_t-g_dbg_goldo_t0)>8000.0)
+    {
+      g_dbg_goldo_test_asserv_flag = false;
+    }
+  }
+
+#endif
 
 }
 
@@ -177,12 +187,22 @@ void PropulsionTask::processMessage()
 {
   auto message_type = (CommMessageType)m_message_queue.message_type();
 
+#if 1 /* FIXME : DEBUG */
+  if ((message_type==CommMessageType::DbgPropulsionExecuteRotation) ||
+      (message_type==CommMessageType::DbgPropulsionExecuteTranslation))
+  {
+    g_dbg_goldo_test_asserv_flag = true;
+    g_dbg_goldo_t0  = xTaskGetTickCount();
+  }
+#endif
+
   switch(message_type)
   {
   case CommMessageType::PropulsionExecuteTrajectory:
     onMsgExecuteTrajectory();
     break;
   case CommMessageType::PropulsionExecuteRotation:
+  case CommMessageType::DbgPropulsionExecuteRotation:
     {
       float params[4];
       m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
@@ -190,6 +210,7 @@ void PropulsionTask::processMessage()
     }
     break;
   case CommMessageType::PropulsionExecuteTranslation:
+  case CommMessageType::DbgPropulsionExecuteTranslation:
     {
       float params[4];
       m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
