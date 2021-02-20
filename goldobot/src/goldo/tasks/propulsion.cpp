@@ -156,7 +156,7 @@ void PropulsionTask::doStep()
       double my_x_mm;
       double my_y_mm;
       double my_theta_deg;
-      l_vec_asserv.clock_ms              = curr_t;
+      l_vec_asserv.clock_ms              = curr_t - g_dbg_goldo_t0;
       my_x_mm = 1000.0*my_pose.position.x;
       my_y_mm = 1000.0*my_pose.position.y;
       my_theta_deg = my_pose.yaw/M_PI*180.0*1000.0;
@@ -547,7 +547,7 @@ void PropulsionTask::taskFunction()
   Robot::instance().mainExchangeIn().subscribe({80,83, &m_urgent_message_queue});
   Robot::instance().mainExchangeIn().subscribe({32,32, &m_urgent_message_queue});
   Robot::instance().mainExchangeIn().subscribe({98,102, &m_urgent_message_queue});
-  Robot::instance().mainExchangeIn().subscribe({120,126, &m_message_queue});
+  Robot::instance().mainExchangeIn().subscribe({103,126, &m_message_queue});
 
   // Set task to high
   set_priority(6);

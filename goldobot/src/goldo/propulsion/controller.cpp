@@ -1,5 +1,7 @@
+#include "goldo/robot.hpp"
 #include "goldo/propulsion/controller.hpp"
 #include "goldo/propulsion/simple_odometry.hpp"
+#include "goldo/debug_goldo.hpp"
 using namespace goldobot;
 
 #include <algorithm>
@@ -118,7 +120,7 @@ void PropulsionController::update()
     {
       m_left_motor_pwm = 0;
       m_right_motor_pwm = 0;
-#if 1 /* FIXME : DEBUG : GOLDO (why this?!..) */
+#if 0 /* FIXME : DEBUG : GOLDO (why this?!..) */
       if (fabsf(m_current_pose.speed) < 0.01 && fabsf(m_current_pose.yaw_rate) < 0.1)
       {
         m_state = State::Error;
@@ -222,7 +224,20 @@ void PropulsionController::updateTargetYaw()
 {
   float t = (m_time_base_ms - m_command_begin_time) * 1e-3f;
   float parameter, accel;
+#if 0 /* FIXME : DEBUG : EXPERIMENTAL */
   m_speed_profile.compute(t, &parameter, &m_target_pose.yaw_rate, &accel);
+#else
+  float speed_cmd_time_shift = 0.004;
+  m_speed_profile.compute(t, &parameter, nullptr, &accel);
+  if ((t+speed_cmd_time_shift)<m_speed_profile.end_time())
+  {
+    m_speed_profile.compute(t+speed_cmd_time_shift, nullptr, &m_target_pose.yaw_rate, nullptr);
+  }
+  else
+  {
+    m_target_pose.yaw_rate = 0.0;
+  }
+#endif
   m_target_pose.yaw = clampAngle(m_begin_yaw + parameter);
 }
 

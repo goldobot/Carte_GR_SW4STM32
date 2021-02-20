@@ -75,11 +75,12 @@ float PIDController::update(float current_value)
   {
     derivative_term = (m_target_derivative - (current_value - m_previous_value) / m_config.period) * m_config.kd;
     derivative_term = clamp(derivative_term, -m_config.lim_dterm, m_config.lim_dterm);
-    m_integral_term = 0;
+    //m_integral_term = 0; /* FIXME : TODO : WTF!? */
   }
   else
   {
     m_first_run = false;
+    m_integral_term = 0;
   }
   m_previous_value = current_value;
 

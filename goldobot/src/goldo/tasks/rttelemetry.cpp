@@ -4,9 +4,29 @@
 #include "goldo/core/geometry.hpp"
 #include "goldo/tasks/rttelemetry.hpp"
 #include "goldo/robot.hpp"
+#include "goldo/debug_goldo.hpp"
 
 #include "FreeRTOS.h"
 #include "task.h"
+
+#if 1 /* FIXME : DEBUG */
+#include <cstring>
+#include <cstdio>
+#include <cstdarg>
+
+static char dbg_log[64];
+
+void goldo_send_log(const char *msg, ...)
+{
+  va_list argptr;
+  va_start(argptr,msg);
+  std::memset(dbg_log, 0, 64);
+  vsprintf(dbg_log, msg, argptr);
+  goldobot::Robot::instance().mainExchangeOut().pushMessage(goldobot::CommMessageType::NucleoLog, (unsigned char *)dbg_log, std::strlen(dbg_log));
+  va_end(argptr);
+}
+#endif
+
 
 using namespace goldobot;
 

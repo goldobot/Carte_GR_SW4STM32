@@ -31,3 +31,6 @@ namespace goldobot {
   };
 
 } /* namespace goldobot */
+
+void goldo_send_log(const char *msg, ...);
+
