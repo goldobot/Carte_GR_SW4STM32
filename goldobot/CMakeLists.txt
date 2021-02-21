@@ -9,18 +9,8 @@ add_library(goldobot STATIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include/goldobot/hal.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/goldobot/tasks/main.hpp
 
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/core/derivative_filter.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/core/math_utils.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/core/pid_controller.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/core/trapezoidal_speed_profile.cpp
-
   ${CMAKE_CURRENT_SOURCE_DIR}/src/odrive/odrive_stream_parser.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/odrive/odrive_stream_writer.cpp
-
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/propulsion/controller.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/propulsion/low_level_controller.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/propulsion/simple_odometry.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/propulsion/trajectory.cpp
 
   ${CMAKE_CURRENT_SOURCE_DIR}/src/tasks/debug.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/tasks/dynamixels_comm.cpp  
@@ -47,4 +37,6 @@ target_include_directories(goldobot PUBLIC
 
 target_link_libraries(goldobot PUBLIC
   goldobot_platform_board
+  goldo_math
+  goldo_propulsion
 )

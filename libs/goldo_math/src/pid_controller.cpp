@@ -38,9 +38,9 @@ float PIDController::step(float error) {
   if (!m_first_run) {
     derivative_term = m_config.kd * derivative;
     derivative_term = clamp(derivative_term, -m_config.lim_dterm, m_config.lim_dterm);
-    m_integral_term = 0;
   } else {
     m_first_run = false;
+    m_integral_term = 0.0f;
   }
   m_previous_error = error;
 

@@ -25,6 +25,7 @@ add_definitions("-DGOLDO_GIT_VERSION=\"${GIT_BRANCH} ${GIT_REF}\"")
 
 add_subdirectory(Middlewares)
 add_subdirectory(Drivers)
+add_subdirectory(libs)
 add_subdirectory(goldobot)
 
 add_executable(firmware

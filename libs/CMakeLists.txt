@@ -1,0 +1,2 @@
+add_subdirectory(goldo_math)
+add_subdirectory(goldo_propulsion)
