@@ -1,0 +1,22 @@
+name: Run tests
+on:
+  push:
+    branches: [ develop ]
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: install dependencies
+      run: sudo apt-get update && sudo apt-get install cmake build-essential
+    - name: create build directory
+      run: mkdir build
+    - name: run cmake
+      run: cmake -DGOLDO_BUILD_TESTS=ON -DGOLDO_BUILD_NUCLEO_FIRMWARE=OFF ..
+      working-directory: ./build
+    - name: run cmake build
+      run: cmake --build .
+      working-directory: ./build
+    - name: run ctest
+      run: ctest
+      working-directory: ./build
