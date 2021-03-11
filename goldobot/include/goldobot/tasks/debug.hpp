@@ -1,5 +1,5 @@
 #pragma once
-#include "goldobot/platform/message_queue.hpp"
+#include "goldobot/core/message_queue.hpp"
 #include "goldobot/platform/task.hpp"
 
 namespace goldobot {

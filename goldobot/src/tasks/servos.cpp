@@ -1,5 +1,4 @@
 #include "goldobot/tasks/servos.hpp"
-#include "goldobot/platform/message_exchange.hpp"
 #include "goldobot/robot.hpp"
 
 #include <cstring>

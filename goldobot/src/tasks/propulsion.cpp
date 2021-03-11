@@ -15,8 +15,6 @@ unsigned char __attribute__((section(".ccmram"))) PropulsionTask::s_message_queu
 unsigned char __attribute__((section(".ccmram")))
 PropulsionTask::s_urgent_message_queue_buffer[1024];
 
-constexpr uint16_t PropulsionTask::c_odrive_endpoint_input_vel[2];
-
 PropulsionTask::PropulsionTask()
     : m_message_queue(s_message_queue_buffer, sizeof(s_message_queue_buffer)),
       m_urgent_message_queue(s_urgent_message_queue_buffer, sizeof(s_urgent_message_queue_buffer)),
@@ -79,34 +77,10 @@ void PropulsionTask::doStep() {
     setMotorsPwm(m_controller.leftMotorPwm(), m_controller.rightMotorPwm());
   }
 
-  ODriveSendPolls();
 
-  if(m_odrive_calibration_state == 1 && m_odrive_axis0_current_state == 4)
-  {
-	  m_odrive_calibration_state = 2;
-  }
-
-  if(m_odrive_calibration_state == 2 && m_odrive_axis0_current_state == 1)
-  {
-	 ODriveWriteEndpoint(c_odrive_endpoint_requested_state[1], c_odrive_consts_axis_state[2]);
-	 m_odrive_calibration_state = 3;
-  }
-
-  if(m_odrive_calibration_state == 3 && m_odrive_axis1_current_state == 4)
-  {
-	  m_odrive_calibration_state = 4;
-  }
-
-  if(m_odrive_calibration_state == 4 && m_odrive_axis1_current_state == 1)
-  {
-	  m_odrive_calibration_state = 0;
-  }
-
-	m_odrive_cnt++;
-	if (m_odrive_cnt == 200) {
+	if (m_telemetry_counter == 0) {
 		uint8_t watchdog_id = 1;
 		Robot::instance().exchangeInternal().pushMessage(CommMessageType::WatchdogReset,&watchdog_id, 1);
-	  m_odrive_cnt = 0;
 	}
   if (m_use_simulator) {
     m_robot_simulator.doStep();
@@ -116,21 +90,7 @@ void PropulsionTask::doStep() {
 }
 
 void PropulsionTask::sendTelemetryMessages() {
-	if(m_odrive_cnt == 0)
-	{
-		uint8_t buff[26];
-		*reinterpret_cast<float*>(buff + 0) = m_odrive_axis0_vel_estimate;
-		*reinterpret_cast<float*>(buff + 4) = m_odrive_axis1_vel_estimate;
-		*reinterpret_cast<uint32_t*>(buff + 8) = m_odrive_axis0_error;
-		*reinterpret_cast<uint32_t*>(buff + 12) = m_odrive_axis1_error;
-		*reinterpret_cast<uint32_t*>(buff + 16) = m_odrive_axis0_motor_error;
-		*reinterpret_cast<uint32_t*>(buff + 20) = m_odrive_axis1_motor_error;
-		*reinterpret_cast<uint8_t*>(buff + 24) = m_odrive_axis0_current_state;
-		*reinterpret_cast<uint8_t*>(buff + 25) = m_odrive_axis1_current_state;
 
-		Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ODriveTelemetry,
-		                                                    (unsigned char*)buff, 26);
-	}
 
   if (m_telemetry_counter % 20 == 0) {
     auto msg = m_controller.getTelemetryEx();
@@ -224,6 +184,7 @@ void PropulsionTask::processMessage() {
 
 void PropulsionTask::processUrgentMessage() {
   auto message_type = (CommMessageType)m_urgent_message_queue.message_type();
+  auto message_size = m_urgent_message_queue.message_size();
 
   switch (message_type) {
   case CommMessageType::MatchEnd: {
@@ -234,50 +195,16 @@ void PropulsionTask::processUrgentMessage() {
 		uint8_t buff[6];
 		m_urgent_message_queue.pop_message((unsigned char*)&buff, 16);
 		uint16_t seq = *(uint16_t*)buff & 0x1fff;
-		// velocity
-		if(seq == m_odrive_seq_axis0_vel_estimate)
-		{
-			m_odrive_axis0_vel_estimate = *(float*)(buff+2);
-		}
-		if(seq == m_odrive_seq_axis1_vel_estimate)
-		{
-			m_odrive_axis1_vel_estimate = *(float*)(buff+2);
-		}
-		// axis current state
-		if(seq == m_odrive_seq_axis0_current_state)
-		{
-			m_odrive_axis0_current_state = *(uint32_t*)(buff+2);
-		}
-		if(seq == m_odrive_seq_axis1_current_state)
-		{
-			m_odrive_axis1_current_state = *(uint32_t*)(buff+2);
-		}
-		// axis error
-		if(seq == m_odrive_seq_axis0_error)
-		{
-			m_odrive_axis0_error = *(uint32_t*)(buff+2);
-		}
-		if(seq == m_odrive_seq_axis1_error)
-		{
-			m_odrive_axis1_error = *(uint32_t*)(buff+2);
-		}
-		// axis motor error
-		if(seq == m_odrive_seq_axis0_motor_error)
-		{
-			m_odrive_axis0_motor_error = *(uint32_t*)(buff+2);
-		}
-		if(seq == m_odrive_seq_axis1_motor_error)
-		{
-			m_odrive_axis1_motor_error = *(uint32_t*)(buff+2);
-		}
+		m_odrive_client.processResponse(seq, buff+2, message_size - 2);
+
 	  } break;
 	  case CommMessageType::PropulsionCalibrateODrive: {
 	      	m_urgent_message_queue.pop_message(nullptr, 0);
-	      	ODriveStartMotorsCalibration();
+	      	m_odrive_client.startMotorsCalibration();
 	      } break;
 	  case CommMessageType::PropulsionODriveClearErrors: {
 	      	m_urgent_message_queue.pop_message(nullptr, 0);
-	      	ODriveClearErrors();
+	      	m_odrive_client.clearErrors();
 	      } break;
 
        case CommMessageType::PropulsionSetPose: {
@@ -436,8 +363,6 @@ void PropulsionTask::onMsgExecuteTrajectory() {
   }
 }
 
-
-
 SimpleOdometry& PropulsionTask::odometry() { return m_odometry; }
 
 PropulsionController& PropulsionTask::controller() { return m_controller; }
@@ -462,106 +387,11 @@ void PropulsionTask::measureNormal(float angle, float distance) {
   m_controller.resetPose(pose.position.x, pose.position.y, pose.yaw);
 }
 
-template <typename T>
-uint16_t PropulsionTask::ODriveQueueReadEndpoint(uint16_t endpoint) {
-  uint8_t buff[8];
-  auto seq = m_odrive_seq;
-
-  *reinterpret_cast<uint16_t*>(buff + 0) = seq | 0x4000;
-  *reinterpret_cast<uint16_t*>(buff + 2) = endpoint | 0x8000;
-  *reinterpret_cast<uint16_t*>(buff + 4) = sizeof(T);
-  *reinterpret_cast<uint16_t*>(buff + 6) = c_odrive_key;
-  m_odrive_seq = (m_odrive_seq + 1) & 0x1fff;
-  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::ODriveRequestPacket, buff,
-                                                 sizeof(buff));
-  return seq;
-}
-
-template <typename T>
-void PropulsionTask::ODriveWriteEndpoint(uint16_t endpoint, T val) {
-  uint8_t buff[8 + sizeof(T)];
-
-  *reinterpret_cast<uint16_t*>(buff + 0) = m_odrive_seq | 0x4000;
-  *reinterpret_cast<uint16_t*>(buff + 2) = endpoint;
-  *reinterpret_cast<uint16_t*>(buff + 4) = 0;
-  *reinterpret_cast<T*>(buff + 6) = val;
-  *reinterpret_cast<uint16_t*>(buff + 6 + sizeof(T)) = c_odrive_key;
-  m_odrive_seq = (m_odrive_seq + 1) & 0x1fff;
-  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::ODriveRequestPacket, buff,
-                                                 sizeof(buff));
-}
-
-
-
-void PropulsionTask::ODriveSetMotorsEnable(bool enable) {
-  // Set velocity control
-  ODriveWriteEndpoint(c_odrive_endpoint_control_mode[0], c_odrive_consts_control_mode);
-  ODriveWriteEndpoint(c_odrive_endpoint_control_mode[1], c_odrive_consts_control_mode);
-
-  // Enable or disable closed loop control
-  uint32_t axis_state = enable ? c_odrive_consts_axis_state[1] : c_odrive_consts_axis_state[0];
-  ODriveWriteEndpoint(c_odrive_endpoint_requested_state[0], axis_state);
-  ODriveWriteEndpoint(c_odrive_endpoint_requested_state[1], axis_state);
-}
-
-void PropulsionTask::ODriveSetVelocitySetPoint(int axis, float vel_setpoint,
-                                               float current_feedforward) {
-  assert(axis >= 0 && axis < 2);
-
-  ODriveWriteEndpoint(c_odrive_endpoint_input_vel[axis], vel_setpoint);
-  ODriveWriteEndpoint(c_odrive_endpoint_input_vel[axis] + 1, current_feedforward);
-}
-
-void PropulsionTask::ODriveStartMotorsCalibration()
-{
-	ODriveWriteEndpoint(c_odrive_endpoint_requested_state[0], c_odrive_consts_axis_state[2]);
-	m_odrive_calibration_state = 1;
-	m_odrive_axis0_current_state = 0;
-	m_odrive_axis1_current_state = 0;
-}
-
-void PropulsionTask::ODriveSendPolls()
-{
-	if(m_odrive_cnt % 20 ==  0)
-	  {
-		  m_odrive_seq_axis0_vel_estimate = ODriveQueueReadEndpoint<float>(c_odrive_endpoint_vel_estimate[0]);
-	  }
-	if(m_odrive_cnt % 20 ==  10)
-	  {
-		  m_odrive_seq_axis1_vel_estimate = ODriveQueueReadEndpoint<float>(c_odrive_endpoint_vel_estimate[1]);
-	  }
-
-	  if(m_odrive_cnt % 100 ==  0)
-	  {
-		  m_odrive_seq_axis0_error = ODriveQueueReadEndpoint<float>(c_odrive_endpoint_axis_error[0]);
-		  m_odrive_seq_axis1_error = ODriveQueueReadEndpoint<float>(c_odrive_endpoint_axis_error[1]);
-	  };
-
-	  if(m_odrive_cnt % 100 ==  50)
-	  {
-		  m_odrive_seq_axis0_motor_error = ODriveQueueReadEndpoint<float>(c_odrive_endpoint_motor_error[0]);
-		  m_odrive_seq_axis1_motor_error = ODriveQueueReadEndpoint<float>(c_odrive_endpoint_motor_error[1]);
-	  }
-	  if(m_odrive_cnt % 50 ==  0)
-	  {
-		  m_odrive_seq_axis0_current_state = ODriveQueueReadEndpoint<uint32_t>(c_odrive_endpoint_current_state[0]);
-		  m_odrive_seq_axis1_current_state = ODriveQueueReadEndpoint<uint32_t>(c_odrive_endpoint_current_state[1]);
-	  }
-}
-
-void PropulsionTask::ODriveClearErrors()
-{
-  ODriveWriteEndpoint<uint32_t>(c_odrive_endpoint_axis_error[0], 0);
-  ODriveWriteEndpoint<uint32_t>(c_odrive_endpoint_axis_error[1], 0);
-  ODriveWriteEndpoint<uint32_t>(c_odrive_endpoint_motor_error[0], 0);
-  ODriveWriteEndpoint<uint32_t>(c_odrive_endpoint_motor_error[1], 0);
-}
-
 void PropulsionTask::setMotorsEnable(bool enable) {
   if (m_use_simulator) {
 	  m_robot_simulator.m_motors_enable = enable;
   } else if (Robot::instance().robotConfig().use_odrive_uart) {
-    ODriveSetMotorsEnable(enable);
+	  m_odrive_client.setMotorsEnable(enable);
   }
 }
 
@@ -586,13 +416,9 @@ void PropulsionTask::setMotorsPwm(float left_pwm, float right_pwm, bool immediat
     m_robot_simulator.m_right_pwm = right_pwm;
   } else if (Robot::instance().robotConfig().use_odrive_uart) {
     if (immediate) {
-      ODriveSetVelocitySetPoint(0, -left_pwm, 0);
-      ODriveSetVelocitySetPoint(1, right_pwm, 0);
+	  m_odrive_client.setVelocitySetPoint(0, -left_pwm, 0, immediate);
+      m_odrive_client.setVelocitySetPoint(1, right_pwm, 0, immediate);
       return;
-    }
-    if (m_odrive_cnt % 10 == 0) {
-      ODriveSetVelocitySetPoint(0, -left_pwm, 0);
-      ODriveSetVelocitySetPoint(1, right_pwm, 0);
     }
   } else {
     hal::pwm_set(0, left_pwm);

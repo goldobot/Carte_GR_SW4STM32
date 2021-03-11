@@ -1,12 +1,14 @@
 #pragma once
-#include "goldobot/platform/message_queue.hpp"
+#include "goldobot/core/message_queue.hpp"
+#include "goldobot/platform/lockers.hpp"
 
-#include "FreeRTOS.h"
-#include "semphr.h"
-
+#include <array>
 #include <cstdint>
 
 namespace goldobot {
+enum class CommMessageType : uint16_t;
+class MessageQueue;
+
 class MessageExchange {
  public:
   /**
@@ -21,13 +23,14 @@ class MessageExchange {
 
  public:
   MessageExchange();
+  ~MessageExchange();
 
   bool pushMessage(CommMessageType message_type, const unsigned char* buffer, size_t size);
   void subscribe(const Subscription& sub);
 
  private:
-  Subscription m_subscriptions[64];
+  std::array<Subscription, 64> m_subscriptions;
   int m_num_subscriptions{0};
-  SemaphoreHandle_t m_mutex;
+  detail::LockerMutex m_mutex;
 };
 }  // namespace goldobot

@@ -1,4 +1,6 @@
 #pragma once
+#include "goldobot/platform/lockers.hpp"
+
 #include <cstdint>
 #include <cstring>
 namespace goldobot {
@@ -8,7 +10,7 @@ struct LockerNull {
   void unlock(){};
 };
 
-template <typename Locker = LockerNull>
+template <typename Locker = detail::LockerNull>
 class CircularBuffer {
  public:
   void init(uint8_t* buffer, size_t buffer_size) {

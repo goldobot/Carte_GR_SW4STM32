@@ -9,9 +9,6 @@ add_library(goldobot STATIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include/goldobot/hal.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/goldobot/tasks/main.hpp
 
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/odrive/odrive_stream_parser.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/odrive/odrive_stream_writer.cpp
-
   ${CMAKE_CURRENT_SOURCE_DIR}/src/tasks/debug.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/tasks/dynamixels_comm.cpp  
   ${CMAKE_CURRENT_SOURCE_DIR}/src/tasks/fpga.cpp
@@ -37,6 +34,8 @@ target_include_directories(goldobot PUBLIC
 
 target_link_libraries(goldobot PUBLIC
   goldobot_platform_board
+  goldo_core
   goldo_math
   goldo_propulsion
+  goldo_odrive
 )

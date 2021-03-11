@@ -1,6 +1,6 @@
 #pragma once
 #include "goldobot/enums.hpp"
-#include "goldobot/platform/message_exchange.hpp"
+#include "goldobot/core/message_exchange.hpp"
 
 #include <cstdint>
 

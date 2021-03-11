@@ -1,2 +1,4 @@
+add_subdirectory(goldo_core)
 add_subdirectory(goldo_math)
+add_subdirectory(goldo_odrive)
 add_subdirectory(goldo_propulsion)

@@ -1,6 +1,5 @@
 #pragma once
-#include "FreeRTOS.h"
-#include "semphr.h"
+#include "goldobot/platform/lockers.hpp"
 
 #include <cstddef>
 
@@ -15,7 +14,7 @@ class MessageQueue {
   CommMessageType message_type() const;
   size_t message_size() const;
 
-  bool push_message(uint16_t message_type, const unsigned char* buffer, size_t size);
+  bool push_message(CommMessageType message_type, const unsigned char* buffer, size_t size);
   void pop_message(unsigned char* buffer, size_t size);
 
   size_t available_capacity() const;
@@ -31,8 +30,8 @@ class MessageQueue {
   size_t m_end_index;
   bool m_message_ready;
   uint16_t m_message_size;
-  uint16_t m_message_type;
+  CommMessageType m_message_type;
 
-  SemaphoreHandle_t m_mutex;  // Should use generic mutex type instead of freertos one
+  detail::LockerMutex m_mutex;
 };
 }  // namespace goldobot

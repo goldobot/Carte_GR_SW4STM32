@@ -8,7 +8,6 @@
 #include "goldobot/tasks/fpga.hpp"
 
 #include "goldobot/hal.hpp"
-#include "goldobot/platform/message_exchange.hpp"
 #include "goldobot/robot.hpp"
 
 #include <cstring>

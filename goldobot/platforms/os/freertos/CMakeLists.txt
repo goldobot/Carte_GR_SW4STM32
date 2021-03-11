@@ -1,10 +1,6 @@
 add_library(goldobot_platform_os STATIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include/goldobot/platform/config.hpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/goldobot/platform/message_exchange.hpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/goldobot/platform/message_queue.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/goldobot/platform/task.hpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/message_queue.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/message_exchange.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/task.cpp
   )
 

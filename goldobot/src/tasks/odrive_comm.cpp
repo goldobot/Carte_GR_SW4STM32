@@ -1,7 +1,6 @@
 #include "goldobot/tasks/odrive_comm.hpp"
 
 #include "goldobot/hal.hpp"
-#include "goldobot/platform/message_queue.hpp"
 #include "goldobot/propulsion/odometry_config.hpp"
 #include "goldobot/robot.hpp"
 #include "goldobot/tasks/main.hpp"

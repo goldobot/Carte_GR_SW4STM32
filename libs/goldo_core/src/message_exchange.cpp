@@ -1,30 +1,29 @@
-#include "goldobot/platform/message_exchange.hpp"
+#include "goldobot/core/message_exchange.hpp"
 
-using namespace goldobot;
+#include <mutex>
 
-MessageExchange::MessageExchange() { m_mutex = xSemaphoreCreateMutex(); }
+namespace goldobot {
+
+MessageExchange::MessageExchange() {}
+MessageExchange::~MessageExchange(){};
 
 bool MessageExchange::pushMessage(CommMessageType message_type, const unsigned char* buffer,
                                   size_t size) {
-  while (xSemaphoreTake(m_mutex, portMAX_DELAY) != pdTRUE) {
-  };
+  std::unique_lock<detail::LockerMutex>(m_mutex);
 
   for (int i = 0; i < m_num_subscriptions; i++) {
     auto& sub = m_subscriptions[i];
     if ((uint16_t)message_type >= sub.message_type_first &&
         (uint16_t)message_type <= sub.message_type_last) {
-      sub.queue->push_message((uint16_t)message_type, buffer, size);
+      sub.queue->push_message(message_type, buffer, size);
     }
   }
-  xSemaphoreGive(m_mutex);
   return true;
 }
 
 void MessageExchange::subscribe(const Subscription& sub) {
-  while (xSemaphoreTake(m_mutex, portMAX_DELAY) != pdTRUE) {
-  };
-
+  std::unique_lock<detail::LockerMutex>(m_mutex);
   m_subscriptions[m_num_subscriptions] = sub;
   m_num_subscriptions++;
-  xSemaphoreGive(m_mutex);
 }
+}  // namespace goldobot
