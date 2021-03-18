@@ -20,8 +20,8 @@ jobs:
     - uses: actions/upload-artifact@v2
       with:
         name: firmware.elf
-        path: build/firmware.elf
+        path: build/firmware/firmware.elf
     - uses: actions/upload-artifact@v2
       with:
         name: firmware.hex
-        path: build/firmware.hex
+        path: build/firmware/firmware.hex

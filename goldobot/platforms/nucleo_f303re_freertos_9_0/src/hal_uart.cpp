@@ -291,6 +291,7 @@ void hal_usart_init(IODevice* device, const IODeviceConfigUart* config) {
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
 
   hal_gpio_init_pin_af(config->device_id, 0, config->rx_pin, GPIO_InitStruct);
   hal_gpio_init_pin_af(config->device_id, 1, config->tx_pin, GPIO_InitStruct);

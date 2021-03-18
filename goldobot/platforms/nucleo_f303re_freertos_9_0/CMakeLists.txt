@@ -19,4 +19,5 @@ target_include_directories(goldobot_platform_board PUBLIC
  
 target_link_libraries(goldobot_platform_board
   goldobot_platform_os
+  drivers_STM32F3xx_HAL_Driver
   )

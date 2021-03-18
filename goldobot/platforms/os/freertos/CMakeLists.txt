@@ -10,6 +10,5 @@ target_include_directories(goldobot_platform_os PUBLIC
  
 target_link_libraries(goldobot_platform_os
   drivers_CMSIS
-  drivers_STM32F3xx_HAL_Driver
   middlewares_FreeRTOS
   )
