@@ -1,14 +1,28 @@
+#include <goldo/core/low_pass_filter.hpp>
 #include <goldo/core/pid_controller.hpp>
 
 using namespace goldobot;
 
+#if 1 /* FIXME : DEBUG */
+#define TEST_ALPHA 4.0
+extern float g_dbg_deriv_filter_alpha;
+#endif
+
 PIDController::PIDController()
 {
+#if 1 /* FIXME : DEBUG */
+  g_dbg_deriv_filter_alpha = TEST_ALPHA;
+  m_lpf.set_alpha(g_dbg_deriv_filter_alpha);
+#endif
 }
 
 PIDController::PIDController(const PIDConfig& config):
   m_config(config)
 {
+#if 1 /* FIXME : DEBUG */
+  g_dbg_deriv_filter_alpha = TEST_ALPHA;
+  m_lpf.set_alpha(g_dbg_deriv_filter_alpha);
+#endif
 }
 
 const PIDConfig& PIDController::config() const
@@ -55,6 +69,9 @@ void PIDController::set_target(float target, float target_derivative)
 void PIDController::reset()
 {
   m_first_run = true;
+#if 1 /* FIXME : DEBUG */
+  m_lpf.set_alpha(g_dbg_deriv_filter_alpha);
+#endif
 }
 
 float PIDController::update(float current_value)
@@ -73,7 +90,13 @@ float PIDController::update(float current_value)
   float derivative_term = 0;
   if (!m_first_run)
   {
+#if 0 /* FIXME : DEBUG */
     derivative_term = (m_target_derivative - (current_value - m_previous_value) / m_config.period) * m_config.kd;
+#else
+    float current_derivative = (current_value - m_previous_value) / m_config.period;
+    float filtered_derivative = m_lpf.update(current_derivative);
+    derivative_term = (m_target_derivative - filtered_derivative) * m_config.kd;
+#endif
     derivative_term = clamp(derivative_term, -m_config.lim_dterm, m_config.lim_dterm);
     //m_integral_term = 0; /* FIXME : TODO : WTF!? */
   }

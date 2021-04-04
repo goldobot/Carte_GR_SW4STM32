@@ -15,6 +15,18 @@ using namespace goldobot;
 bool g_dbg_goldo_carac_prop_flag = false;
 bool g_dbg_goldo_test_asserv_flag = false;
 unsigned int g_dbg_goldo_t0;
+
+float g_dbg_deriv_filter_alpha;
+float g_dbg_boost_thr_mot;
+float g_dbg_zero_thr_mot;
+int g_dbg_cmd_extra_delay_ms;
+typedef struct _goldo_dbg_message {
+  unsigned int dbg_param_id;
+  union {
+    int i;
+    float f;
+  } dbg_param_val;
+} goldo_dbg_message_t;
 #endif
 
 PropulsionTask::PropulsionTask():
@@ -268,6 +280,73 @@ void PropulsionTask::processMessage()
       measureNormal(buff[0], buff[1]);
     }
     break;
+#if 1 /* FIXME : DEBUG */
+  case CommMessageType::DebugGoldoSetParam:
+    {
+      goldo_dbg_message_t dbg_msg;
+      bool print_only = false;
+      bool is_float = false;
+      char *pname = "UNKNOWN";
+      int old_i = 0;
+      int new_i = 0;
+      float old_f = 0.0f;
+      float new_f = 0.0f;
+
+      m_message_queue.pop_message((unsigned char*)&dbg_msg, sizeof(dbg_msg));
+
+      if ((dbg_msg.dbg_param_id&=0x80000000)!=0) print_only = true;
+      switch (dbg_msg.dbg_param_id)
+      {
+      case 1:
+        pname = "g_dbg_boost_thr_mot";
+        old_f = g_dbg_boost_thr_mot;
+        new_f = dbg_msg.dbg_param_val.f;
+        if (!print_only) g_dbg_boost_thr_mot = new_f;
+        is_float = true;
+        break;
+      case 2:
+        pname = "g_dbg_zero_thr_mot";
+        old_f = g_dbg_zero_thr_mot;
+        new_f = dbg_msg.dbg_param_val.f;
+        if (!print_only) g_dbg_zero_thr_mot = new_f;
+        is_float = true;
+        break;
+      case 3:
+        pname = "g_dbg_cmd_extra_delay_ms";
+        old_i = g_dbg_cmd_extra_delay_ms;
+        new_i = dbg_msg.dbg_param_val.i;
+        if (!print_only) g_dbg_cmd_extra_delay_ms = new_i;
+        is_float = false;
+        break;
+      case 4:
+        pname = "g_dbg_deriv_filter_alpha";
+        old_f = g_dbg_deriv_filter_alpha;
+        new_f = dbg_msg.dbg_param_val.f;
+        if (!print_only) g_dbg_deriv_filter_alpha = new_f;
+        is_float = true;
+        break;
+      default:
+        break;
+      }
+
+      if (print_only)
+      {
+        new_f = old_f;
+        new_i = old_i;
+      }
+
+      if (is_float)
+      {
+        goldo_send_log("DBG PARAM %s: %f -> %f", pname, old_f, new_f);
+      }
+      else
+      {
+        goldo_send_log("DBG PARAM %s: %d -> %d", pname, old_i, new_i);
+      }
+    }
+
+    break;
+#endif
   default:
     m_message_queue.pop_message(nullptr, 0);
     break;

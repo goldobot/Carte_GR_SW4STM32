@@ -8,18 +8,21 @@ CPP_SRCS += \
 ../goldobot/src/goldo/core/message_exchange.cpp \
 ../goldobot/src/goldo/core/message_queue.cpp \
 ../goldobot/src/goldo/core/pid_controller.cpp \
+../goldobot/src/goldo/core/low_pass_filter.cpp \
 ../goldobot/src/goldo/core/trapezoidal_speed_profile.cpp 
 
 OBJS += \
 ./goldobot/src/goldo/core/message_exchange.o \
 ./goldobot/src/goldo/core/message_queue.o \
 ./goldobot/src/goldo/core/pid_controller.o \
+./goldobot/src/goldo/core/low_pass_filter.o \
 ./goldobot/src/goldo/core/trapezoidal_speed_profile.o 
 
 CPP_DEPS += \
 ./goldobot/src/goldo/core/message_exchange.d \
 ./goldobot/src/goldo/core/message_queue.d \
 ./goldobot/src/goldo/core/pid_controller.d \
+./goldobot/src/goldo/core/low_pass_filter.d \
 ./goldobot/src/goldo/core/trapezoidal_speed_profile.d 
 
 

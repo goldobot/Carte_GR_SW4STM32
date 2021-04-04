@@ -1,5 +1,6 @@
 #pragma once
 #include "goldo/core/pid_config.hpp"
+#include "goldo/core/low_pass_filter.hpp"
 
 namespace goldobot
 {
@@ -23,10 +24,14 @@ namespace goldobot
     void reset();
     float update(float current_value);
 
+    LowPassFilter& get_lpf() {return m_lpf;};
+
   private:
     float clamp(float val, float min_val, float max_val) const;
 
     PIDConfig m_config;
+
+    LowPassFilter m_lpf;
 
     float m_target{0};
     float m_target_derivative{0};

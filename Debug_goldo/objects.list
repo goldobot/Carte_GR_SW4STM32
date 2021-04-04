@@ -43,6 +43,7 @@
 "goldobot/src/goldo/core/message_exchange.o"
 "goldobot/src/goldo/core/message_queue.o"
 "goldobot/src/goldo/core/pid_controller.o"
+"goldobot/src/goldo/core/low_pass_filter.o"
 "goldobot/src/goldo/core/trapezoidal_speed_profile.o"
 "goldobot/src/goldo/propulsion/controller.o"
 "goldobot/src/goldo/propulsion/low_level_controller.o"

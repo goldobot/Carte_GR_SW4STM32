@@ -98,6 +98,8 @@ namespace goldobot
     const PropulsionControllerConfig& config() const;
     void setConfig(const PropulsionControllerConfig& config);
 
+    LowLevelController& get_low_level_controller() {return m_low_level_controller;};
+
     messages::PropulsionTelemetry getTelemetry() const;
     /*< */
     messages::PropulsionTelemetryEx getTelemetryEx() const;

@@ -6,9 +6,21 @@ using namespace goldobot;
 
 #include <algorithm>
 
+#if 1 /* FIXME : DEBUG : EXPERIMENTAL */
+extern bool g_dbg_goldo_test_asserv_flag;
+extern float g_dbg_boost_thr_mot;
+extern float g_dbg_zero_thr_mot;
+extern int g_dbg_cmd_extra_delay_ms;
+#endif
+
 PropulsionController::PropulsionController(SimpleOdometry* odometry):
   m_odometry(odometry)
 {
+#if 1 /* FIXME : DEBUG : EXPERIMENTAL */
+  g_dbg_boost_thr_mot = 0.0;
+  g_dbg_zero_thr_mot = 0.005;
+  g_dbg_cmd_extra_delay_ms = 10000;
+#endif
 }
 
 void PropulsionController::setEnable(bool enable)
@@ -97,6 +109,10 @@ void PropulsionController::update()
       updateTargetYaw();
       if (m_time_base_ms >= m_command_end_time)
       {
+#if 1 /* FIXME : DEBUG */
+        if (g_dbg_goldo_test_asserv_flag)
+          goldo_send_log("END ROT %d %.3f", m_time_base_ms - m_command_begin_time, m_target_pose.yaw);
+#endif
         m_target_pose = m_final_pose;
         on_stopped_enter();
       }
@@ -147,12 +163,48 @@ void PropulsionController::update()
 
 float PropulsionController::leftMotorPwm()
 {
+#if 0 /* FIXME : DEBUG : EXPERIMENTAL */
   return m_left_motor_pwm;
+#else
+  float l_pwm;
+
+  if (m_left_motor_pwm < -g_dbg_zero_thr_mot)
+    l_pwm = m_left_motor_pwm - g_dbg_boost_thr_mot;
+  else if (m_left_motor_pwm > g_dbg_zero_thr_mot)
+    l_pwm = m_left_motor_pwm + g_dbg_boost_thr_mot;
+  else
+    l_pwm = m_left_motor_pwm;
+
+  if (l_pwm < -1.0)
+    l_pwm = -1.0;
+  else if (l_pwm > 1.0)
+    l_pwm = 1.0;
+
+  return l_pwm;
+#endif
 }
 
-float PropulsionController::PropulsionController::rightMotorPwm()
+float PropulsionController::rightMotorPwm()
 {
+#if 0 /* FIXME : DEBUG : EXPERIMENTAL */
   return m_right_motor_pwm;
+#else
+  float l_pwm;
+
+  if (m_right_motor_pwm < -g_dbg_zero_thr_mot)
+    l_pwm = m_right_motor_pwm - g_dbg_boost_thr_mot;
+  else if (m_right_motor_pwm > g_dbg_zero_thr_mot)
+    l_pwm = m_right_motor_pwm + g_dbg_boost_thr_mot;
+  else
+    l_pwm = m_right_motor_pwm;
+
+  if (l_pwm < -1.0)
+    l_pwm = -1.0;
+  else if (l_pwm > 1.0)
+    l_pwm = 1.0;
+
+  return l_pwm;
+#endif
 }
 
 RobotPose PropulsionController::targetPose() const
@@ -228,6 +280,10 @@ void PropulsionController::updateTargetYaw()
   m_speed_profile.compute(t, &parameter, &m_target_pose.yaw_rate, &accel);
 #else
   float speed_cmd_time_shift = 0.004;
+  if (t>m_speed_profile.end_time())
+  {
+    t = m_speed_profile.end_time();
+  }
   m_speed_profile.compute(t, &parameter, nullptr, &accel);
   if ((t+speed_cmd_time_shift)<m_speed_profile.end_time())
   {
@@ -384,7 +440,7 @@ bool PropulsionController::executeRotation(float delta_yaw, float yaw_rate, floa
   m_begin_yaw = m_target_pose.yaw;
   m_speed_profile.update(delta_yaw, yaw_rate, accel, deccel);
   m_command_begin_time = m_time_base_ms;
-  m_command_end_time = m_time_base_ms + static_cast<uint32_t>(ceilf(1000 * m_speed_profile.end_time()));
+  m_command_end_time = m_time_base_ms + static_cast<uint32_t>(ceilf(1000 * m_speed_profile.end_time())) + g_dbg_cmd_extra_delay_ms;
 
   // Compute final pose
   m_final_pose.position = m_target_pose.position;
@@ -396,6 +452,11 @@ bool PropulsionController::executeRotation(float delta_yaw, float yaw_rate, floa
   m_low_level_controller.setConfig(m_config.low_level_config_static);
   m_low_level_controller.m_longi_control_level = 2;
   m_low_level_controller.m_yaw_control_level = 2;
+
+#if 1 /* FIXME : DEBUG */
+  if (g_dbg_goldo_test_asserv_flag)
+    goldo_send_log("START ROT %d %.3f", m_time_base_ms - m_command_begin_time, delta_yaw);
+#endif
 
   m_state = State::Rotate;
   return true;

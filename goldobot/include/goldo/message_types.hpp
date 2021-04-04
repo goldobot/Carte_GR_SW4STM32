@@ -136,5 +136,7 @@ namespace goldobot
     DebugGoldoVectSimple=4097,
     DebugGoldoVectAsserv=4098,
 
+    DebugGoldoSetParam=4100,
+
   };
 }
