@@ -3,26 +3,34 @@
 
 using namespace goldobot;
 
-#if 1 /* FIXME : DEBUG */
+#if 1 /* FIXME : DEBUG : EXPERIMENTAL */
 #define TEST_ALPHA 4.0
-extern float g_dbg_deriv_filter_alpha;
+float g_dbg_deriv_filter_alpha;
 #endif
 
 PIDController::PIDController()
 {
-#if 1 /* FIXME : DEBUG */
+#if 1 /* FIXME : DEBUG : EXPERIMENTAL */
   g_dbg_deriv_filter_alpha = TEST_ALPHA;
-  m_lpf.set_alpha(g_dbg_deriv_filter_alpha);
+  m_derivative_filter.set_alpha(g_dbg_deriv_filter_alpha);
 #endif
 }
 
 PIDController::PIDController(const PIDConfig& config):
   m_config(config)
 {
-#if 1 /* FIXME : DEBUG */
+#if 1 /* FIXME : DEBUG : EXPERIMENTAL */
   g_dbg_deriv_filter_alpha = TEST_ALPHA;
-  m_lpf.set_alpha(g_dbg_deriv_filter_alpha);
+  m_derivative_filter.set_alpha(g_dbg_deriv_filter_alpha);
 #endif
+#if 1 /* FIXME : TODO : remove later */
+  m_period = config.period;
+#endif
+}
+
+void PIDController::setPeriod(float period)
+{
+  m_period = period;
 }
 
 const PIDConfig& PIDController::config() const
@@ -33,6 +41,9 @@ const PIDConfig& PIDController::config() const
 void PIDController::set_config(const PIDConfig& config)
 {
   m_config = config;
+#if 1 /* FIXME : TODO : remove later */
+  m_period = config.period;
+#endif
 }
 
 void PIDController::set_kp(float kp)
@@ -50,62 +61,47 @@ void PIDController::set_ki(float ki)
   m_config.ki = ki;
 }
 
-void PIDController::set_feedforward(float feedforward)
-{
-  /* FIXME : TODO */
-}
-
 float PIDController::output() const
 {
   return m_output;
 }
 
-void PIDController::set_target(float target, float target_derivative)
-{
-  m_target = target;
-  m_target_derivative = target_derivative;
-}
-
 void PIDController::reset()
 {
   m_first_run = true;
-#if 1 /* FIXME : DEBUG */
-  m_lpf.set_alpha(g_dbg_deriv_filter_alpha);
+#if 1 /* FIXME : DEBUG : EXPERIMENTAL */
+  m_derivative_filter.set_alpha(g_dbg_deriv_filter_alpha);
 #endif
 }
 
-float PIDController::update(float current_value)
+float PIDController::step(float error)
 {
-  // Compute difference between setpoint and current value
-  float error = m_target - current_value;
-
   // Compute proportional term
-  float prop_term = m_config.feed_forward * m_target + m_config.kp * (m_target - current_value);
+  float prop_term = m_config.kp * error;
 
   // Update integral term and clamp to configured range
-  m_integral_term += error * m_config.ki * m_config.period;
+  m_integral_term += error * m_config.ki * m_period;
   m_integral_term = clamp(m_integral_term, -m_config.lim_iterm, m_config.lim_iterm);
 
   // Compute and clamp derivative term, set integral term to zero
   float derivative_term = 0;
+  float derivative = (error - m_previous_error) / m_period;
   if (!m_first_run)
   {
-#if 0 /* FIXME : DEBUG */
-    derivative_term = (m_target_derivative - (current_value - m_previous_value) / m_config.period) * m_config.kd;
-#else
-    float current_derivative = (current_value - m_previous_value) / m_config.period;
-    float filtered_derivative = m_lpf.update(current_derivative);
-    derivative_term = (m_target_derivative - filtered_derivative) * m_config.kd;
-#endif
+    /* FIXME : DEBUG : EXPERIMENTAL */
+    /*  - filter out high frequency noise produced by derivative operator  */
+    /*  - to restore the previous (non filtered) behaviour set the "alpha" */
+    /*    coefficient of the filter to 1                                   */
+    float filtered_derivative = m_derivative_filter.step(derivative);
+    derivative_term = m_config.kd * filtered_derivative;
     derivative_term = clamp(derivative_term, -m_config.lim_dterm, m_config.lim_dterm);
-    //m_integral_term = 0; /* FIXME : TODO : WTF!? */
   }
   else
   {
     m_first_run = false;
     m_integral_term = 0;
   }
-  m_previous_value = current_value;
+  m_previous_error = error;
 
   if (m_config.max_output != m_config.min_output)
   {

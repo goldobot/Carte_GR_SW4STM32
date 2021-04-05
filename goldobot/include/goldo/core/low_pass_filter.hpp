@@ -11,7 +11,7 @@ namespace goldobot
     void reset();
     void set_alpha (float _new_alpha);
     float get_alpha () {return m_alpha;};
-    float update (float _new_x);
+    float step (float _new_x);
     float out() {return m_out;}
 
   private:

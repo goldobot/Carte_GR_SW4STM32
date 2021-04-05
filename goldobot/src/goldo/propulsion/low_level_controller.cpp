@@ -31,36 +31,38 @@ namespace goldobot {
     float uy = sinf(current_pose.yaw);
 
     // Compute position error in robot frame, and speed, yaw errors
-    float diff_x = (current_pose.position.x - target_pose.position.x);
-    float diff_y = (current_pose.position.y - target_pose.position.y);
+    float diff_x = (target_pose.position.x - current_pose.position.x);
+    float diff_y = (target_pose.position.y - current_pose.position.y);
 
     m_longi_error = diff_x * ux + diff_y * uy;
     m_lateral_error = -diff_x * uy + diff_y * ux;
-    m_yaw_error = angleDiff(current_pose.yaw, target_pose.yaw);
-    m_speed_error = current_pose.speed - target_pose.speed;
+    m_yaw_error = angleDiff(target_pose.yaw, current_pose.yaw);
+    m_speed_error = target_pose.speed - current_pose.speed;
+    m_yaw_rate_error = target_pose.yaw_rate - current_pose.yaw_rate;
 
     // Compute translation and speed command
     // Two nested PID controllers are used
     // First is computing speed correction based on position error
     // Second is computing motors pwm based on speed
 
-    float translation_command = 0;
-    float speed_command = 0;
+    float longi_command = 0;
+    float speed_error = m_speed_error;
 
     if(m_longi_control_level >= 2)
     {
-      m_translation_pid.set_target(0, 0);
-      translation_command = m_translation_pid.update(m_longi_error);
+      // Position PID outer loop
+      longi_command = m_translation_pid.step(m_longi_error);
+#if 0 /* FIXME : TODO : is this necessary? (predictive command?) */
+      speed_error += out;
+#endif
     }
 
     if(m_longi_control_level >= 1)
     {
-      m_speed_pid.set_target(target_pose.speed);
-#if 0 /* FIXME : DEBUG : WTF?!.. */
-      speed_command = m_speed_pid.update(target_pose.speed) + translation_command;
-#else
-      speed_command = m_speed_pid.update(current_pose.speed) + translation_command;
-#endif
+      // Speed PID inner loop, plus feedforward
+      longi_command +=
+        m_speed_pid.step(speed_error) +
+        m_speed_pid.config().feed_forward * target_pose.speed;
     }
 
     // Compute yaw and yaw_rate command
@@ -69,22 +71,31 @@ namespace goldobot {
     // Second is computing motors pwm difference based on yaw rate
 
     float yaw_command = 0;
-    float yaw_rate_command = 0;
+    float yaw_rate_error = m_yaw_rate_error;
 
     if (m_yaw_control_level >= 2)
     {
-      m_yaw_pid.set_target(0);
-      yaw_command = m_yaw_pid.update(m_yaw_error);
+      // Yaw PID outer loop
+      yaw_command = m_yaw_pid.step(m_yaw_error);
+#if 0 /* FIXME : TODO : is this necessary? (predictive command?) */
+      yaw_rate_error += out;
+#endif
     }
 
     if(m_yaw_control_level >=1)
     {
-      m_yaw_rate_pid.set_target(target_pose.yaw_rate);
-      yaw_rate_command = m_yaw_rate_pid.update(current_pose.yaw_rate) + yaw_command;
+      // Yaw rate PID inner loop, plus feedforward
+      yaw_command +=
+        m_yaw_rate_pid.step(yaw_rate_error) +
+        m_yaw_rate_pid.config().feed_forward * target_pose.yaw_rate;
     }
 
-    m_left_motor_pwm = speed_command - yaw_rate_command;
-    m_right_motor_pwm =  speed_command + yaw_rate_command;
+#if 0 /* FIXME : TODO : homogenize longi & yaw PID coefficients */
+    yaw_command *= m_config.wheels_distance *0.5f;
+#endif
+
+    m_left_motor_pwm = longi_command - yaw_command;
+    m_right_motor_pwm =  longi_command + yaw_command;
   }
 
 } /* namespace goldobot */

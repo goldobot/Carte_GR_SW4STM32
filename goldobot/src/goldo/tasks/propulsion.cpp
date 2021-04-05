@@ -16,10 +16,10 @@ bool g_dbg_goldo_carac_prop_flag = false;
 bool g_dbg_goldo_test_asserv_flag = false;
 unsigned int g_dbg_goldo_t0;
 
-float g_dbg_deriv_filter_alpha;
-float g_dbg_boost_thr_mot;
-float g_dbg_zero_thr_mot;
-int g_dbg_cmd_extra_delay_ms;
+extern float g_dbg_deriv_filter_alpha;
+extern float g_dbg_boost_thr_mot;
+extern float g_dbg_zero_thr_mot;
+extern int g_dbg_cmd_extra_delay_ms;
 typedef struct _goldo_dbg_message {
   unsigned int dbg_param_id;
   union {

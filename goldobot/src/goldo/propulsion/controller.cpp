@@ -8,9 +8,9 @@ using namespace goldobot;
 
 #if 1 /* FIXME : DEBUG : EXPERIMENTAL */
 extern bool g_dbg_goldo_test_asserv_flag;
-extern float g_dbg_boost_thr_mot;
-extern float g_dbg_zero_thr_mot;
-extern int g_dbg_cmd_extra_delay_ms;
+float g_dbg_boost_thr_mot;
+float g_dbg_zero_thr_mot;
+int g_dbg_cmd_extra_delay_ms;
 #endif
 
 PropulsionController::PropulsionController(SimpleOdometry* odometry):

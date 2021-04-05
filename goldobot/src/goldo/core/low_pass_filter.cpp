@@ -28,7 +28,7 @@ void LowPassFilter::reset()
   m_y_n_1 = 0.0;
 }
 
-float LowPassFilter::update(float _new_x)
+float LowPassFilter::step(float _new_x)
 {
   m_x_n = _new_x;
   m_out = (2.0*m_x_n - (1.0-m_alpha)*m_y_n_1) / (1.0+m_alpha);

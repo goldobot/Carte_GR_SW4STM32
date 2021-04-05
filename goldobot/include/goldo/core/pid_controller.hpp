@@ -10,6 +10,8 @@ namespace goldobot
     PIDController();
     PIDController(const PIDConfig& config);
 
+    void setPeriod(float period);
+
     const PIDConfig& config() const;
     void set_config(const PIDConfig& config);
 
@@ -17,25 +19,21 @@ namespace goldobot
     void set_ki(float ki);
     void set_kd(float kd);
 
-    void set_feedforward(float feedforward);
-
     float output() const;
-    void set_target(float target, float target_derivative=0.0f);
     void reset();
-    float update(float current_value);
+    float step(float error);
 
-    LowPassFilter& get_lpf() {return m_lpf;};
+    LowPassFilter& derivative_filter() {return m_derivative_filter;};
 
   private:
     float clamp(float val, float min_val, float max_val) const;
 
     PIDConfig m_config;
+    float m_period{0.001f};
 
-    LowPassFilter m_lpf;
+    LowPassFilter m_derivative_filter;
 
-    float m_target{0};
-    float m_target_derivative{0};
-    float m_previous_value{0};
+    float m_previous_error{0};
     float m_integral_term{0};
     float m_output{0};
     bool m_first_run{true};
