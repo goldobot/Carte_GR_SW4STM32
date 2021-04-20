@@ -1,5 +1,6 @@
 #include "goldobot/core/message_exchange.hpp"
 
+#include <cassert>
 #include <mutex>
 
 namespace goldobot {
@@ -22,6 +23,7 @@ bool MessageExchange::pushMessage(CommMessageType message_type, const unsigned c
 }
 
 void MessageExchange::subscribe(const Subscription& sub) {
+  assert(sub.queue != nullptr);
   std::unique_lock<detail::LockerMutex>(m_mutex);
   m_subscriptions[m_num_subscriptions] = sub;
   m_num_subscriptions++;
