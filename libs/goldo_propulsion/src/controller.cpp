@@ -43,30 +43,33 @@ void PropulsionController::clearError() {
   on_stopped_enter();
 }
 
+bool PropulsionController::commandFinished()
+{
+	return m_command_finished;
+}
+
 void PropulsionController::emergencyStop() {
   if (m_state == State::FollowTrajectory || m_state == State::Rotate) {
     m_state = State::EmergencyStop;
   }
 }
 
-void PropulsionController::setAccelerationLimits(float accel, float deccel, float angular_accel, float angular_deccel)
-{
-	m_accel = accel;
-	m_deccel = deccel;
-	m_angular_accel = angular_accel;
-	m_angular_deccel = angular_deccel;
+void PropulsionController::setAccelerationLimits(float accel, float deccel, float angular_accel,
+                                                 float angular_deccel) {
+  m_accel = accel;
+  m_deccel = deccel;
+  m_angular_accel = angular_accel;
+  m_angular_deccel = angular_deccel;
 }
 
-void PropulsionController::setTargetSpeed(float speed)
-{
-	// Todo: recompute parameter ramps with new speed
-	if(m_state == State::FollowTrajectory)
-	{
-
-	}
+void PropulsionController::setTargetSpeed(float speed) {
+  // Todo: recompute parameter ramps with new speed
+  if (m_state == State::FollowTrajectory) {
+  }
 }
 
 void PropulsionController::update() {
+  m_command_finished = false;
   m_current_pose = m_odometry->pose();
   switch (m_state) {
     case State::Inactive:
@@ -228,6 +231,7 @@ void PropulsionController::on_stopped_enter() {
   m_target_pose.yaw_rate = 0;
 
   m_pwm_limit = m_config.static_pwm_limit;
+  m_command_finished = true;
 }
 
 void PropulsionController::on_reposition_exit() {
@@ -341,6 +345,7 @@ bool PropulsionController::executeRotation(float delta_yaw, float yaw_rate) {
   m_low_level_controller.m_yaw_control_level = 2;
 
   m_state = State::Rotate;
+  m_command_finished = false;
   return true;
 }
 

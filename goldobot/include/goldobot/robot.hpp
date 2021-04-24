@@ -19,6 +19,18 @@
 namespace goldobot {
 
 class Robot {
+public:
+	enum class ConfigSection : uint8_t {
+	Hal,
+	RobotGeometry,
+	Sensors,
+	RobotSimulator,
+    Odometry,
+	PropulsionController,
+	Servos,
+	PropulsionTask,
+	TasksEnable
+	};
  public:
   static Robot& instance();
   void init();
@@ -44,16 +56,10 @@ class Robot {
   MessageExchange& mainExchangeOut() { return m_main_exchange_out; };
   MessageExchange& exchangeInternal() { return m_exchange_internal; };
 
-  const RobotConfig& robotConfig() const;
-  const RobotSimulatorConfig& robotSimulatorConfig() const;
+  const RobotGeometryConfig& robotGeometry() const;
 
   //ArmConfig* armConfig(int arm_id);
   ServosConfig* servosConfig();
-
-  OdometryConfig odometryConfig();
-
-  PropulsionControllerConfig defaultPropulsionControllerConfig();
-  void setOdometryConfig(const OdometryConfig& config);
 
   PropulsionController::State propulsionState();
 
@@ -81,14 +87,11 @@ class Robot {
   ODriveCommTask m_odrive_comm_task;
   DynamixelsCommTask m_dynamixels_comm_task;
 
-  OdometryConfig* m_odometry_config;
-  RobotConfig* m_robot_config;
-  RobotSimulatorConfig* m_robot_simulator_config;
-  PropulsionControllerConfig* m_propulsion_controller_config;
+  RobotGeometryConfig* m_robot_geometry_config;
   ServosConfig* m_servos_config;
 
-  unsigned char* m_load_config_ptr{0};
-  uint16_t m_load_config_crc;
+  unsigned char* m_load_config_ptr{nullptr};
+  uint16_t m_load_config_crc{0};
 
   MessageExchange m_main_exchange_in;
   MessageExchange m_main_exchange_out;

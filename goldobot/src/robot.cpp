@@ -2,6 +2,7 @@
 
 #include "goldobot/utils/crc.hpp"
 
+#include <cassert>
 #include <cstring>
 
 using namespace goldobot;
@@ -14,7 +15,6 @@ Robot& Robot::instance() { return s_instance; }
 void Robot::init() {
   m_comm_task.init();
   m_main_task.init();
-  m_debug_task.init();
   m_heartbeat_task.init();
 }
 
@@ -22,23 +22,12 @@ void Robot::start() { m_propulsion_task.start(); }
 
 SimpleOdometry& Robot::odometry() { return m_propulsion_task.odometry(); }
 
-PropulsionControllerConfig Robot::defaultPropulsionControllerConfig() {
-  return *m_propulsion_controller_config;
-}
-OdometryConfig Robot::odometryConfig() { return *m_odometry_config; }
-
-const RobotConfig& Robot::robotConfig() const { return *m_robot_config; }
-
-const RobotSimulatorConfig& Robot::robotSimulatorConfig() const {
-  return *m_robot_simulator_config;
-}
-
-void Robot::setOdometryConfig(const OdometryConfig& config) {
-  *m_odometry_config = config;
-  odometry().setConfig(config);
-}
-
 ServosConfig* Robot::servosConfig() { return m_servos_config; }
+
+const RobotGeometryConfig& Robot::robotGeometry() const
+{
+	return *m_robot_geometry_config;
+}
 
 PropulsionController::State Robot::propulsionState() {
   return m_propulsion_task.controller().state();
@@ -70,36 +59,98 @@ bool Robot::endLoadConfig(uint16_t crc) {
   // Arm positions
   // ServosConfig
 
+  // change to config format:
+
   if (crc != m_load_config_crc) {
     return false;
   }
-  uint16_t* offsets = (uint16_t*)s_config_area;
-  int i = 0;
 
-  hal::configure(s_config_area + offsets[i++]);
-  m_robot_config = (RobotConfig*)(s_config_area + offsets[i++]);
-  m_robot_simulator_config = (RobotSimulatorConfig*)(s_config_area + offsets[i++]);
-  m_odometry_config = (OdometryConfig*)(s_config_area + offsets[i++]);
-  m_propulsion_controller_config = (PropulsionControllerConfig*)(s_config_area + offsets[i++]);
-  //m_arms_task.m_config = *(ArmConfig*)(s_config_area + offsets[i++]);
-  m_servos_config = (ServosConfig*)(s_config_area + offsets[i++]);
-  //m_arms_task.m_config.positions_ptr = (uint16_t*)(s_config_area + offsets[i++]);
-  //m_arms_task.m_config.torques_ptr = (uint16_t*)(s_config_area + offsets[i++]);
-  //m_main_task.sequenceEngine().setBuffer(s_config_area + offsets[i++]);
+  // Bifield representing the tasks to start
+  uint32_t tasks_enable{0};
 
-  //m_main_task.sequenceEngine().endLoad();
+  uint16_t num_sections = *(uint16_t*)s_config_area;
+  uint16_t config_size = static_cast<uint16_t>(m_load_config_ptr - s_config_area);
 
-  if (m_robot_config->use_odrive_uart) {
-      m_odrive_comm_task.init();
+  for (int section_index = 0; section_index < num_sections; section_index++) {
+    ConfigSection section_type = *(ConfigSection*)(s_config_area + 2 + section_index * 4);
+    uint16_t section_offset = *(uint16_t*)(s_config_area + 4 + section_index * 4);
+    uint16_t section_end = (section_index + 1 == num_sections)
+                               ? config_size
+                               : *(uint16_t*)(s_config_area + 4 + (section_index + 1) * 4);
+
+    assert(section_end >= section_offset);
+    uint16_t section_size = section_end - section_offset;
+
+    switch (section_type) {
+      case ConfigSection::Hal:
+        hal::configure(s_config_area + section_offset);
+        break;
+      case ConfigSection::PropulsionTask:
+		m_propulsion_task.setTaskConfig(*reinterpret_cast<PropulsionTask::Config*>(s_config_area + section_offset));
+		break;
+      case ConfigSection::Odometry:
+        odometry().setConfig(*reinterpret_cast<OdometryConfig*>(s_config_area + section_offset));
+        break;
+      case ConfigSection::PropulsionController:
+    	m_propulsion_task.setControllerConfig(*reinterpret_cast<PropulsionControllerConfig*>(s_config_area + section_offset));
+        break;
+      case ConfigSection::RobotSimulator:
+      	m_propulsion_task.setRobotSimulatorConfig(*reinterpret_cast<RobotSimulatorConfig*>(s_config_area + section_offset));
+      	break;
+      case ConfigSection::Servos:
+    	  m_servos_config = reinterpret_cast<ServosConfig*>(s_config_area + section_offset);
+      	break;
+      case ConfigSection::TasksEnable:
+         tasks_enable = *reinterpret_cast<uint32_t*>(s_config_area + section_offset);
+         break;
+      default:
+        break;
+    }
+  }
+
+  // m_robot_config = (RobotConfig*)(s_config_area + offsets[i++]);
+  // m_servos_config = (ServosConfig*)(s_config_area + offsets[i++]);
+  // m_main_task.sequenceEngine().endLoad();
+
+  // if (m_robot_config->use_odrive_uart) {
+  //    m_odrive_comm_task.init();
+  //  }
+
+  // m_propulsion_task.init();
+  // m_fpga_task.init(256);
+
+  // todo: cleanup
+  // task ids:
+  // propulsion: 0
+  // odrive_comm: 1
+  // servos: 2
+  // dynamixels_comm: 3
+  // fpga: 4
+
+  if((tasks_enable & (1 << 0)) != 0)
+  {
+	  m_propulsion_task.init();
+  }
+
+  if((tasks_enable & (1 << 1)) != 0)
+    {
+	  m_odrive_comm_task.init();
     }
 
-  odometry().setConfig(*m_odometry_config);
-  m_propulsion_task.controller().setConfig(defaultPropulsionControllerConfig());
-  m_propulsion_task.init();
-  m_fpga_task.init(256);
-  m_dynamixels_comm_task.init(256);
-  m_servos_task.init(256);
+  if((tasks_enable & (1 << 2)) != 0)
+    {
+	  m_servos_task.init(256);
+    }
+
+  if((tasks_enable & (1 << 3)) != 0)
+    {
+	  m_dynamixels_comm_task.init(256);
+    }
+  if((tasks_enable & (1 << 4)) != 0)
+     {
+ 	  m_fpga_task.init(256);
+     }
+
   start();
-  m_match_state = MatchState::Idle;
   return true;
 }

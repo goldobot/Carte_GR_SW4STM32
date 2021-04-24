@@ -29,6 +29,14 @@ struct SensorsConfig
 	SensorConfig ensors[32];
 };
 
+struct RobotGeometryConfig {
+  //! \brief distance from wheels axis to front of the robot
+  float front_length;
+
+  //! \brief distance from wheels axis to back of the robot
+  float back_length;
+};
+
 struct RobotConfig {
   //! \brief distance from wheels axis to front of the robot
   float front_length;

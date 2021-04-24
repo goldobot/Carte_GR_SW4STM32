@@ -88,6 +88,9 @@ class PropulsionController {
   //! \brief Clear error and return to Stopped state
   void clearError();
 
+  //! \brief Return true if a command was completed during last update
+  bool commandFinished();
+
   // \brief Return target robot pose
   RobotPose targetPose() const;
 
@@ -138,6 +141,7 @@ class PropulsionController {
 
   State m_state{State::Inactive};
   Error m_error{Error::None};
+  bool m_command_finished{false};
 
   float m_left_motor_pwm{0};
   float m_right_motor_pwm{0};
