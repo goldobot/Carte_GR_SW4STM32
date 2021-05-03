@@ -14,6 +14,7 @@ using namespace goldobot;
 #include "goldo/debug_goldo.hpp"
 bool g_dbg_goldo_carac_prop_flag = false;
 bool g_dbg_goldo_test_asserv_flag = false;
+bool g_dbg_goldo_test_traj_flag = false;
 unsigned int g_dbg_goldo_t0;
 
 extern float g_dbg_deriv_filter_alpha;
@@ -37,6 +38,7 @@ PropulsionTask::PropulsionTask():
 #if 1 /* FIXME : DEBUG */
   g_dbg_goldo_carac_prop_flag = false;
   g_dbg_goldo_test_asserv_flag = false;
+  g_dbg_goldo_test_traj_flag = false;
   g_dbg_goldo_t0 = 0;
 #endif
 }
@@ -100,30 +102,21 @@ void PropulsionTask::doStep()
 
   // Send periodic telemetry messages
   m_telemetry_counter++;
-  if(m_telemetry_counter == 20)
+  if(m_telemetry_counter == 99)
+  {
+    m_telemetry_counter = 0;
+  }
+
+  if((m_telemetry_counter % 20) == 19)
   {
     auto msg = m_controller.getTelemetryEx();
     Robot::instance().mainExchangeOut().pushMessage(
       CommMessageType::PropulsionTelemetryEx,
       (unsigned char*)&msg, sizeof(msg));
-    m_telemetry_counter = 0;
   }
 
-  if(m_telemetry_counter == 40)
-  {
-    float msg[3];
-    msg[0] = m_odometry.pose().position.x;
-    msg[1] = m_odometry.pose().position.y;
-    msg[2] = m_odometry.pose().yaw;
-
-    Robot::instance().mainExchangeOut().pushMessage(
-      CommMessageType::PropulsionPose,
-      (unsigned char*)&msg, sizeof(msg));
-    m_telemetry_counter = 0;
-  }
-
-  //if(m_telemetry_counter % 5 == 0)
-  if(m_telemetry_counter == 19) /* FIXME : DEBUG */
+  //if((m_telemetry_counter % 5) == 0)
+  if((m_telemetry_counter % 20) == 18)
   {
     auto msg = m_controller.getTelemetry();
     Robot::instance().mainExchangeOut().pushMessage(
@@ -147,12 +140,12 @@ void PropulsionTask::doStep()
         (unsigned char*)&l_vec_simple, sizeof(l_vec_simple));
     }
 
-    if ((curr_t-g_dbg_goldo_t0)>1000.0)
+    if ((curr_t-g_dbg_goldo_t0)>1000)
     {
       Hal::set_motors_pwm(0.0, 0.0);
     }
 
-    if ((curr_t-g_dbg_goldo_t0)>2000.0)
+    if ((curr_t-g_dbg_goldo_t0)>2000)
     {
       g_dbg_goldo_carac_prop_flag = false;
     }
@@ -185,9 +178,35 @@ void PropulsionTask::doStep()
         (unsigned char*)&l_vec_asserv, sizeof(l_vec_asserv));
     }
 
-    if ((curr_t-g_dbg_goldo_t0)>8000.0)
+    if ((curr_t-g_dbg_goldo_t0)>8000)
     {
       g_dbg_goldo_test_asserv_flag = false;
+    }
+  }
+
+  if (g_dbg_goldo_test_traj_flag)
+  {
+    if(m_telemetry_counter % 100 == 0)
+    {
+      DbgGoldoVec l_vec;
+      double my_x_mm;
+      double my_y_mm;
+      Vector2D my_target_lookahed = m_controller.targetLookahead();
+      my_x_mm = 1000.0*my_target_lookahed.x;
+      my_y_mm = 1000.0*my_target_lookahed.y;
+      l_vec.clock_ms              = curr_t - g_dbg_goldo_t0;
+      l_vec.x_mm                  = my_x_mm;
+      l_vec.y_mm                  = my_y_mm;
+      l_vec.theta_deg_1000        = 0;
+      l_vec.left_odo              = 0;
+      l_vec.right_odo             = 0;
+      Robot::instance().mainExchangeOut().pushMessage(CommMessageType::DebugGoldoVectTraj,
+        (unsigned char*)&l_vec, sizeof(l_vec));
+    }
+
+    if ((curr_t-g_dbg_goldo_t0)>30000)
+    {
+      g_dbg_goldo_test_traj_flag = false;
     }
   }
 
@@ -206,11 +225,17 @@ void PropulsionTask::processMessage()
     g_dbg_goldo_test_asserv_flag = true;
     g_dbg_goldo_t0  = xTaskGetTickCount();
   }
+  if ((message_type==CommMessageType::DbgPropulsionExecuteTrajectory))
+  {
+    g_dbg_goldo_test_traj_flag = true;
+    g_dbg_goldo_t0  = xTaskGetTickCount();
+  }
 #endif
 
   switch(message_type)
   {
   case CommMessageType::PropulsionExecuteTrajectory:
+  case CommMessageType::DbgPropulsionExecuteTrajectory:
     onMsgExecuteTrajectory();
     break;
   case CommMessageType::PropulsionExecuteRotation:

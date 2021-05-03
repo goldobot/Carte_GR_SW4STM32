@@ -11,6 +11,7 @@ extern bool g_dbg_goldo_test_asserv_flag;
 float g_dbg_boost_thr_mot;
 float g_dbg_zero_thr_mot;
 int g_dbg_cmd_extra_delay_ms;
+float g_debug_delta_d;
 #endif
 
 PropulsionController::PropulsionController(SimpleOdometry* odometry):
@@ -19,7 +20,8 @@ PropulsionController::PropulsionController(SimpleOdometry* odometry):
 #if 1 /* FIXME : DEBUG : EXPERIMENTAL */
   g_dbg_boost_thr_mot = 0.0;
   g_dbg_zero_thr_mot = 0.005;
-  g_dbg_cmd_extra_delay_ms = 10000;
+  g_dbg_cmd_extra_delay_ms = 100;
+  g_debug_delta_d=0.0;
 #endif
 }
 
@@ -99,6 +101,10 @@ void PropulsionController::update()
       updateTargetPositions();
       if(m_time_base_ms >= m_command_end_time)
       {
+#if 1 /* FIXME : DEBUG */
+        if (g_dbg_goldo_test_asserv_flag)
+          goldo_send_log("END TRAJ %d", m_time_base_ms - m_command_begin_time);
+#endif
         m_target_pose = m_final_pose;
         on_stopped_enter();
       }
@@ -111,7 +117,7 @@ void PropulsionController::update()
       {
 #if 1 /* FIXME : DEBUG */
         if (g_dbg_goldo_test_asserv_flag)
-          goldo_send_log("END ROT %d %.3f", m_time_base_ms - m_command_begin_time, m_target_pose.yaw);
+          goldo_send_log("END ROT %d", m_time_base_ms - m_command_begin_time);
 #endif
         m_target_pose = m_final_pose;
         on_stopped_enter();
@@ -210,6 +216,11 @@ float PropulsionController::rightMotorPwm()
 RobotPose PropulsionController::targetPose() const
 {
   return m_target_pose;
+}
+
+Vector2D PropulsionController::targetLookahead() const
+{
+  return m_lookahead_position;
 }
 
 void PropulsionController::setTargetPose(const RobotPose& target_pose)
@@ -402,8 +413,16 @@ bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, f
   }
   m_trajectory_buffer.push_segment(points, num_points);
   initMoveCommand(speed, acceleration, decceleration);
+
+#if 1 /* FIXME : DEBUG */
+  if (g_dbg_goldo_test_asserv_flag)
+  {
+    goldo_send_log("START TRAJ %d %.3f", m_time_base_ms - m_command_begin_time, g_debug_delta_d);
+  }
+#endif
+
   m_state = State::FollowTrajectory;
-  m_low_level_controller.setConfig(m_config.low_level_config_static);
+  m_low_level_controller.setConfig(m_config.low_level_config_cruise);
   m_low_level_controller.m_longi_control_level = 2;
   m_low_level_controller.m_yaw_control_level = 1;
   return true;
@@ -449,7 +468,7 @@ bool PropulsionController::executeRotation(float delta_yaw, float yaw_rate, floa
   m_final_pose.yaw_rate = 0;
 
   // Configure low level controller
-  m_low_level_controller.setConfig(m_config.low_level_config_static);
+  m_low_level_controller.setConfig(m_config.low_level_config_rotate);
   m_low_level_controller.m_longi_control_level = 2;
   m_low_level_controller.m_yaw_control_level = 2;
 
@@ -486,6 +505,9 @@ bool PropulsionController::executeTranslation(float distance, float speed, float
   float uy = sin(m_target_pose.yaw);
   target.x = m_target_pose.position.x + ux * distance;
   target.y = m_target_pose.position.y + uy * distance;
+#if 1 /* FIXME : DEBUG */
+  g_debug_delta_d = distance;
+#endif
   return executeMoveTo(target, speed, accel, deccel);
 }
 

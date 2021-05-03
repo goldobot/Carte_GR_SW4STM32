@@ -86,6 +86,7 @@ namespace goldobot
     DbgSetMotorsPwm=102,
     DbgPropulsionExecuteRotation=103,
     DbgPropulsionExecuteTranslation=104,
+    DbgPropulsionExecuteTrajectory=105,
 
     DbgReset=127,
 
@@ -135,8 +136,9 @@ namespace goldobot
     DebugGoldoVect=4096,
     DebugGoldoVectSimple=4097,
     DebugGoldoVectAsserv=4098,
+    DebugGoldoVectTraj=4099,
 
-    DebugGoldoSetParam=4100,
+    DebugGoldoSetParam=4200,
 
   };
 }

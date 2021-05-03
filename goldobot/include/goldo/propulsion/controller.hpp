@@ -70,6 +70,9 @@ namespace goldobot
     // \brief Return target robot pose
     RobotPose targetPose() const;
 
+    // \brief Return target lookahed position (for debug)
+    Vector2D targetLookahead() const;
+
     void update();
 
     float leftMotorPwm();
