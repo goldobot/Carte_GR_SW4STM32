@@ -46,7 +46,7 @@ void TrajectoryBuffer::pop_segment()
 TrajectoryPoint TrajectoryBuffer::compute_point(float parameter) const
 {
   unsigned i = 0;
-  while(i < m_current_last_index && m_knot_parameters[i+1] < parameter)
+  while((i < (m_current_last_index-1)) && (m_knot_parameters[i+1] < parameter))
   {
     i++;
   }
