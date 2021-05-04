@@ -11,6 +11,7 @@ namespace goldobot
     PIDController(const PIDConfig& config);
 
     void setPeriod(float period);
+    void tweakFeedForward(float new_feed_forward);
 
     const PIDConfig& config() const;
     void set_config(const PIDConfig& config);
@@ -30,6 +31,7 @@ namespace goldobot
 
     PIDConfig m_config;
     float m_period{0.001f};
+    float m_backup_feed_forward{0.0f};
 
     LowPassFilter m_derivative_filter;
 

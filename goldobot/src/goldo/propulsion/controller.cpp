@@ -12,6 +12,8 @@ float g_dbg_boost_thr_mot;
 float g_dbg_zero_thr_mot;
 int g_dbg_cmd_extra_delay_ms;
 float g_debug_delta_d;
+float g_debug_tweak_threshold;
+float g_debug_tweak_factor;
 #endif
 
 PropulsionController::PropulsionController(SimpleOdometry* odometry):
@@ -21,7 +23,12 @@ PropulsionController::PropulsionController(SimpleOdometry* odometry):
   g_dbg_boost_thr_mot = 0.0;
   g_dbg_zero_thr_mot = 0.005;
   g_dbg_cmd_extra_delay_ms = 100;
-  g_debug_delta_d=0.0;
+  g_debug_delta_d = 0.0;
+  g_debug_tweak_threshold = 0.9;
+  g_debug_tweak_factor = 2.0;
+#endif
+#if 1 /* FIXME : DEBUG : EXPERIMENTAL */
+  m_feed_forward_tweaked_once_flag = false;
 #endif
 }
 
@@ -267,6 +274,16 @@ void PropulsionController::updateTargetPositions()
 
   m_lookahead_position = m_trajectory_buffer.compute_point(lookahead_parameter).position;
 
+#if 1 /* FIXME : DEBUG : EXPERIMENTAL */
+  // "Tweak" the feed forward of the yaw_rate towards the end of the trajectory 
+  // to (try to) minimise the final lateral error
+  if((!m_feed_forward_tweaked_once_flag) && (parameter > g_debug_tweak_threshold*m_trajectory_buffer.max_parameter()))
+  {
+    m_low_level_controller.m_yaw_rate_pid.tweakFeedForward(g_debug_tweak_factor*m_low_level_controller.m_yaw_rate_pid.config().feed_forward);
+    m_feed_forward_tweaked_once_flag = true;
+  }
+#endif
+
   // Compute speed. project trajectory speed on robot axis, to get correct value during curves
   // This also has the consequence of slowing in curves
   // Current robot frame direction
@@ -429,6 +446,11 @@ bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, f
   m_low_level_controller.setConfig(m_config.low_level_config_cruise);
   m_low_level_controller.m_longi_control_level = 2;
   m_low_level_controller.m_yaw_control_level = 1;
+
+#if 1 /* FIXME : DEBUG : EXPERIMENTAL */
+  m_feed_forward_tweaked_once_flag = false;
+#endif
+
   return true;
 }
 

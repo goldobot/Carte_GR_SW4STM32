@@ -22,6 +22,7 @@ PIDController::PIDController(const PIDConfig& config):
 #if 1 /* FIXME : DEBUG : EXPERIMENTAL */
   g_dbg_deriv_filter_alpha = TEST_ALPHA;
   m_derivative_filter.set_alpha(g_dbg_deriv_filter_alpha);
+  m_backup_feed_forward = config.feed_forward;
 #endif
 #if 1 /* FIXME : TODO : remove later */
   m_period = config.period;
@@ -38,9 +39,19 @@ const PIDConfig& PIDController::config() const
   return m_config;
 }
 
+#if 1 /* FIXME : DEBUG : EXPERIMENTAL */
+void PIDController::tweakFeedForward(float new_feed_forward)
+{
+  m_config.feed_forward = new_feed_forward;
+}
+#endif
+
 void PIDController::set_config(const PIDConfig& config)
 {
   m_config = config;
+#if 1 /* FIXME : DEBUG : EXPERIMENTAL */
+  m_backup_feed_forward = config.feed_forward;
+#endif
 #if 1 /* FIXME : TODO : remove later */
   m_period = config.period;
 #endif
@@ -71,6 +82,7 @@ void PIDController::reset()
   m_first_run = true;
 #if 1 /* FIXME : DEBUG : EXPERIMENTAL */
   m_derivative_filter.set_alpha(g_dbg_deriv_filter_alpha);
+  m_config.feed_forward = m_backup_feed_forward;
 #endif
 }
 

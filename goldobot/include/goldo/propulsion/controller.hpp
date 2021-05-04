@@ -139,6 +139,8 @@ namespace goldobot
 
     bool m_reposition_hit;
 
+    bool m_feed_forward_tweaked_once_flag;
+
     //! \brief compute motors pwm values when the robot is static. Use PID controllers on yaw and longitudinal position
     void updateMotorsPwm();
 
