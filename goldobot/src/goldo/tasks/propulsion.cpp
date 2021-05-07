@@ -306,6 +306,14 @@ void PropulsionTask::processMessage()
     }
     break;
 #if 1 /* FIXME : DEBUG */
+  case CommMessageType::CmdEmergencyStop:
+    m_controller.emergencyStop();
+    m_message_queue.pop_message(nullptr, 0);
+    break;
+  case CommMessageType::PropulsionClearError:
+    m_controller.clearError();
+    m_message_queue.pop_message(nullptr, 0);
+    break;
   case CommMessageType::DebugGoldoSetParam:
     {
       goldo_dbg_message_t dbg_msg;
