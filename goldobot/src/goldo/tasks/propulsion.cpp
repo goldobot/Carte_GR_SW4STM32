@@ -660,6 +660,10 @@ void PropulsionTask::taskFunction()
   Robot::instance().mainExchangeIn().subscribe({32,32, &m_urgent_message_queue});
   Robot::instance().mainExchangeIn().subscribe({98,102, &m_urgent_message_queue});
   Robot::instance().mainExchangeIn().subscribe({103,126, &m_message_queue});
+#if 1 /* FIXME : DEBUG */
+  Robot::instance().mainExchangeIn().subscribe({32,32, &m_message_queue});
+  Robot::instance().mainExchangeIn().subscribe({99,100, &m_message_queue});
+#endif
 
   // Set task to high
   set_priority(6);
