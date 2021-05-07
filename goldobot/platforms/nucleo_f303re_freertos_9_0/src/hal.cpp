@@ -59,6 +59,13 @@ void configure(uint8_t* config) {
   }
 }
 void init() {
+  // Initialize debug cycle counter.
+  CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+  ITM->LAR = 0xC5ACCE55;
+  DWT->CYCCNT = 0;
+  DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+  DWT->CTRL |= DWT_EXCCNT_EXCCNT_Msk;
+
   hal_callback_handler_task_start();
 
   // init uart

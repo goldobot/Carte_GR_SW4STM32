@@ -152,5 +152,6 @@ bool Robot::endLoadConfig(uint16_t crc) {
      }
 
   start();
+  m_match_state = MatchState::Idle;
   return true;
 }
