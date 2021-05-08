@@ -306,14 +306,6 @@ void PropulsionTask::processMessage()
     }
     break;
 #if 1 /* FIXME : DEBUG */
-  case CommMessageType::CmdEmergencyStop:
-    m_controller.emergencyStop();
-    m_message_queue.pop_message(nullptr, 0);
-    break;
-  case CommMessageType::PropulsionClearError:
-    m_controller.clearError();
-    m_message_queue.pop_message(nullptr, 0);
-    break;
   case CommMessageType::DebugGoldoSetParam:
     {
       goldo_dbg_message_t dbg_msg;
@@ -660,10 +652,6 @@ void PropulsionTask::taskFunction()
   Robot::instance().mainExchangeIn().subscribe({32,32, &m_urgent_message_queue});
   Robot::instance().mainExchangeIn().subscribe({98,102, &m_urgent_message_queue});
   Robot::instance().mainExchangeIn().subscribe({103,126, &m_message_queue});
-#if 1 /* FIXME : DEBUG */
-  Robot::instance().mainExchangeIn().subscribe({32,32, &m_message_queue});
-  Robot::instance().mainExchangeIn().subscribe({99,100, &m_message_queue});
-#endif
 
   // Set task to high
   set_priority(6);

@@ -204,11 +204,21 @@ void RtTelemetryTask::taskFunction()
       if ((rt_rcv_buff[0]==0x55) && 
           (rt_rcv_buff[1]==0x24) &&
           (rt_rcv_buff[2]==0x00) &&
-          (rt_rcv_buff[3]> 0x0a)) {
+          (rt_rcv_buff[3]>= 0x0a)) {
         int frame_len = rt_rcv_buff[3];
         uint16_t msg_type = *((uint16_t *)((uint8_t *)(&rt_rcv_buff[8])));
         size_t msg_size = frame_len - 8 - 2;
         uint8_t *msg_payload = &rt_rcv_buff[10];
+#if 1 /* FIXME : DEBUG */
+        if ((CommMessageType)msg_type==goldobot::CommMessageType::PropulsionExecuteTrajectory)
+        {
+          goldo_send_log("DEBUG RtTelemetry : PropulsionExecuteTrajectory");
+        }
+        if ((CommMessageType)msg_type==goldobot::CommMessageType::PropulsionClearError)
+        {
+          goldo_send_log("DEBUG RtTelemetry : PropulsionClearError");
+        }
+#endif
         Robot::instance().mainExchangeIn().pushMessage((CommMessageType)msg_type, msg_payload, msg_size);
       }
       rt_rcv_state = RT_RCV_IDLE;
