@@ -201,6 +201,15 @@ void RtTelemetryTask::taskFunction()
       /*  - <frame_len> : 1 byte , includes header */
       /*  - <seq_cnt>   : 4 bytes, little endian   */
       /*  - <msg_type>  : 2 bytes, little endian   */
+#if 1 /* FIXME : DEBUG : contournement TRES CRADE! (pour bug apparent de desynchronisation du RX..) */
+      if ((rt_rcv_buff[1]==0x55) && (rt_rcv_buff[2]==0x24))
+      {
+        for (int j=0; j<(RT_RCV_BUFF_SZ-1); j++)
+        {
+          rt_rcv_buff[j] = rt_rcv_buff[j+1];
+        }
+      }
+#endif
       if ((rt_rcv_buff[0]==0x55) && 
           (rt_rcv_buff[1]==0x24) &&
           (rt_rcv_buff[2]==0x00) &&
@@ -209,6 +218,12 @@ void RtTelemetryTask::taskFunction()
         uint16_t msg_type = *((uint16_t *)((uint8_t *)(&rt_rcv_buff[8])));
         size_t msg_size = frame_len - 8 - 2;
         uint8_t *msg_payload = &rt_rcv_buff[10];
+#if 0 /* FIXME : DEBUG */
+        //if ((CommMessageType)msg_type==goldobot::CommMessageType::PropulsionExecuteTrajectory)
+        {
+          goldo_send_log("DRT : %d %d", msg_type, msg_size);
+        }
+#endif
         Robot::instance().mainExchangeIn().pushMessage((CommMessageType)msg_type, msg_payload, msg_size);
       }
       rt_rcv_state = RT_RCV_IDLE;
