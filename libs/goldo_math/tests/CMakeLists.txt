@@ -1,6 +1,5 @@
 add_executable(sample_pid_controller 
   samples/sample_pid_controller.cpp
-  samples/yaml/Yaml.cpp
   )
 
 target_link_libraries(sample_pid_controller goldo_math)

@@ -23,3 +23,7 @@ target_include_directories(goldo_propulsion PUBLIC
 target_link_libraries(goldo_propulsion
   goldo_math
   )
+
+if (GOLDO_BUILD_TESTS)
+  add_subdirectory(tests)
+endif ()
