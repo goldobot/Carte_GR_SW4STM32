@@ -13,18 +13,22 @@ void PropulsionController::setEnable(bool enable) {
     m_target_pose = m_current_pose;
     m_low_level_controller.reset();
     on_stopped_enter();
+    m_state_changed = true;
   }
   if (!enable && m_state != State::Inactive) {
     m_error = Error::None;
     m_state = State::Inactive;
     m_left_motor_pwm = 0;
     m_right_motor_pwm = 0;
+    m_state_changed = true;
   }
 }
 
 PropulsionController::State PropulsionController::state() const { return m_state; }
 
 PropulsionController::Error PropulsionController::error() const { return m_error; }
+
+bool PropulsionController::stateChanged() { auto state_changed = m_state_changed; m_state_changed = false; return state_changed; }
 
 const PropulsionControllerConfig& PropulsionController::config() const { return m_config; }
 
@@ -41,6 +45,7 @@ void PropulsionController::clearError() {
   m_target_pose = m_current_pose;
   m_low_level_controller.reset();
   on_stopped_enter();
+
 }
 
 bool PropulsionController::commandFinished()
@@ -232,6 +237,7 @@ void PropulsionController::on_stopped_enter() {
 
   m_pwm_limit = m_config.static_pwm_limit;
   m_command_finished = true;
+  m_state_changed = true;
 }
 
 void PropulsionController::on_reposition_exit() {
@@ -298,6 +304,7 @@ bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, f
   m_trajectory_buffer.push_segment(points, num_points);
   initMoveCommand(speed, m_accel, m_deccel);
   m_state = State::FollowTrajectory;
+  m_state_changed = true;
   m_low_level_controller.setPidConfig(m_config.pid_configs[0]);
   m_low_level_controller.m_longi_control_level = 2;
   m_low_level_controller.m_yaw_control_level = 1;
@@ -345,6 +352,7 @@ bool PropulsionController::executeRotation(float delta_yaw, float yaw_rate) {
   m_low_level_controller.m_yaw_control_level = 2;
 
   m_state = State::Rotate;
+  m_state_changed = true;
   m_command_finished = false;
   return true;
 }
@@ -361,6 +369,7 @@ bool PropulsionController::executeRepositioning(float speed, float accel) {
   m_command_begin_time = m_time_base_ms;
   m_command_end_time = m_command_begin_time + 1500;
   m_state = State::Reposition;
+  m_state_changed = true;
   return true;
 }
 
@@ -373,7 +382,7 @@ bool PropulsionController::executeTranslation(float distance, float speed) {
   return executeMoveTo(target, speed);
 }
 
-void PropulsionController::enterManualControl() { m_state = State::ManualControl; }
+void PropulsionController::enterManualControl() { m_state = State::ManualControl; m_state_changed = true; }
 
 void PropulsionController::exitManualControl() {
   m_current_pose = m_odometry->pose();

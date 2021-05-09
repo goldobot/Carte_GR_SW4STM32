@@ -82,6 +82,9 @@ class PropulsionController {
   //! \brief Get current controller state
   State state() const;
 
+  //! \brief Returns true if controller state since last call
+  bool stateChanged();
+
   //! \brief Get current controller error code
   Error error() const;
 
@@ -142,6 +145,7 @@ class PropulsionController {
   State m_state{State::Inactive};
   Error m_error{Error::None};
   bool m_command_finished{false};
+  bool m_state_changed{false};
 
   float m_left_motor_pwm{0};
   float m_right_motor_pwm{0};

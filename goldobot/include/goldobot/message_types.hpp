@@ -54,7 +54,7 @@ enum class CommMessageType : uint16_t {
   PropulsionTelemetryEx,
   PropulsionPose,
   PropulsionState,
-  PropulsionCommandAck,
+  PropulsionCommandEvent=130,
 
   PropulsionExecuteTranslation=140,
   PropulsionExecuteMoveTo,
@@ -69,6 +69,8 @@ enum class CommMessageType : uint16_t {
   PropulsionExitManualControl,
   PropulsionCalibrateODrive,
   PropulsionODriveClearErrors,
+
+  PropulsionTaskStatistics=170,
 
   RobotConfigLoadBegin=200,
   RobotConfigLoadChunk,

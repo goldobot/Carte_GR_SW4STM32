@@ -57,17 +57,28 @@ class PropulsionTask : public Task {
   uint32_t m_next_pose_ts{0};
   uint32_t m_next_watchdog_ts{0};
   uint16_t m_current_command_sequence_number{0};
+  bool m_is_executing_command{false};
+
+  uint32_t m_cycles_max{0};
 
   void doStep();
   void processMessage();
   void processUrgentMessage();
   void taskFunction() override;
 
-  void onMsgExecuteTranslation();
-  void onMsgExecuteRotation();
-  void onMsgExecuteMoveTo();
-  void onMsgExecutePointTo();
-  void onMsgExecuteTrajectory();
+  void onMsgExecuteTranslation(size_t msg_size);
+  void onMsgExecuteRotation(size_t msg_size);
+  void onMsgExecuteFaceDirection(size_t msg_size);
+  void onMsgExecutePointTo(size_t msg_size);
+  void onMsgExecuteMoveTo(size_t msg_size);
+  void onMsgExecuteTrajectory(size_t msg_size);
+  void onMsgExecuteReposition(size_t msg_size);
+
+  void onMsgExecuteSetTargetPose(size_t msg_size);
+  void onMsgExecuteMeasureNormal(size_t msg_size);
+
+
+  void clearCommandQueue();
 
   void measureNormal(float angle, float distance);
   void measurePointLongi(Vector2D point, float sensor_offset);
@@ -78,11 +89,14 @@ class PropulsionTask : public Task {
 
   void sendTelemetryMessages();
 
-  void ackCommand(uint16_t sequence_number);
+  void onCommandBegin(uint16_t sequence_number);
+  void onCommandEnd();
+  void onCommandCancel(uint16_t sequence_number);
 
   ODriveClient m_odrive_client;
 
   static unsigned char s_message_queue_buffer[1024];
   static unsigned char s_urgent_message_queue_buffer[1024];
+  static unsigned char exec_traj_buff[256];  // > 12 for traj params + 16*8 for points = 134
 };
 }  // namespace goldobot
