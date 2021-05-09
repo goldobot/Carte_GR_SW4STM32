@@ -3,7 +3,7 @@
 #include "goldobot/hal.hpp"
 #include "goldobot/platform/config.hpp"
 #include "goldobot/core/message_exchange.hpp"
-#include "goldobot/robot_simulator.hpp"
+#include "goldobot/propulsion/robot_simulator.hpp"
 #include "goldobot/tasks/servos.hpp"
 #include "goldobot/tasks/debug.hpp"
 #include "goldobot/tasks/fpga.hpp"

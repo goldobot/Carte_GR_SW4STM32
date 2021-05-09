@@ -20,7 +20,6 @@ add_library(goldobot STATIC
   ${CMAKE_CURRENT_SOURCE_DIR}/src/tasks/uart_comm.cpp
 
   ${CMAKE_CURRENT_SOURCE_DIR}/src/robot.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/robot_simulator.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/sequence_engine.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/comm_serializer.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/comm_deserializer.cpp

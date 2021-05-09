@@ -11,6 +11,7 @@ add_library(goldo_propulsion STATIC
 
   ${CMAKE_CURRENT_SOURCE_DIR}/src/controller.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/low_level_controller.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/robot_simulator.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/simple_odometry.cpp
   )
 

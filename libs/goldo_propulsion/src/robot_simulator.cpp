@@ -1,4 +1,4 @@
-#include "goldobot/robot_simulator.hpp"
+#include "goldobot/propulsion/robot_simulator.hpp"
 
 #include <cmath>
 
@@ -20,10 +20,9 @@ void RobotSimulator::doStep() {
   float target_yaw_rate =
       (m_right_pwm - m_left_pwm) * m_config.speed_coeff / m_config.wheels_spacing;
 
-  if(!m_motors_enable)
-  {
-	  target_speed = 0;
-	  target_yaw_rate = 0;
+  if (!m_motors_enable) {
+    target_speed = 0;
+    target_yaw_rate = 0;
   }
   // Low pass filter
   target_speed = target_speed * 0.5 + 0.5 * m_speed;

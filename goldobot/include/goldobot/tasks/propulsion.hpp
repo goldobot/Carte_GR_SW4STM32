@@ -4,7 +4,7 @@
 #include "goldobot/platform/task.hpp"
 #include "goldobot/propulsion/controller.hpp"
 #include "goldobot/propulsion/simple_odometry.hpp"
-#include "goldobot/robot_simulator.hpp"
+#include "goldobot/propulsion/robot_simulator.hpp"
 
 #include <cstdint>
 
