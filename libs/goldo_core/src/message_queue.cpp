@@ -17,7 +17,7 @@ bool MessageQueue::push_message(CommMessageType message_type, const unsigned cha
   std::unique_lock<detail::LockerMutex>(m_mutex);
   // Reject message if buffer is full
   if (msg_size > available_capacity()) {
-	  	  assert(false);
+    assert(false);
     return false;
   }
 
@@ -78,12 +78,11 @@ size_t MessageQueue::pop_message(unsigned char* buffer, size_t size) {
   std::unique_lock<detail::LockerMutex>(m_mutex);
 
   if (!m_message_ready) {
-    return 0 ;
+    return 0;
   }
 
-  if(size > m_message_size)
-  {
-	  size = m_message_size;
+  if (size > m_message_size) {
+    size = m_message_size;
   }
 
   if (buffer) {

@@ -3,17 +3,17 @@
 
 namespace goldobot {
 
-struct PropulsionLowLevelPIDConfig
-{
-	PIDConfig speed_pid_config;
-	PIDConfig longi_pid_config;
-	PIDConfig yaw_rate_pid_config;
-	PIDConfig yaw_pid_config;
+struct PropulsionLowLevelPIDConfig {
+  PIDConfig speed_pid_config;
+  PIDConfig longi_pid_config;
+  PIDConfig yaw_rate_pid_config;
+  PIDConfig yaw_pid_config;
 };
 
 struct PropulsionLowLevelControllerConfig {
-  float wheels_distance; // distance between wheels
-  float motors_speed_factor; // conversion factor between speed in m/s at the wheels and motor velocity setpoint or pwm
+  float wheels_distance;      // distance between wheels
+  float motors_speed_factor;  // conversion factor between speed in m/s at the wheels and motor
+                              // velocity setpoint or pwm
 };
 
 struct PropulsionControllerConfig {

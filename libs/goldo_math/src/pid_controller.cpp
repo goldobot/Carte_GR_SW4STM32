@@ -6,27 +6,19 @@ PIDController::PIDController() {}
 
 PIDController::PIDController(const PIDConfig& config) : m_config(config) {}
 
-void PIDController::setPeriod(float period)
-{
-	m_period = period;
-}
+void PIDController::setPeriod(float period) { m_period = period; }
 
 const PIDConfig& PIDController::config() const { return m_config; }
 
-void PIDController::setConfig(const PIDConfig& config) {
-	m_config = config;
-
-}
-
+void PIDController::setConfig(const PIDConfig& config) { m_config = config; }
 
 float PIDController::output() const { return m_output; }
-
 
 void PIDController::reset() { m_first_run = true; }
 
 float PIDController::step(float error) {
   // Compute proportional term
-  float prop_term =  m_config.kp * error;
+  float prop_term = m_config.kp * error;
 
   // Update integral term and clamp to configured range
   m_integral_term += error * m_config.ki * m_period;

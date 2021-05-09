@@ -11,14 +11,13 @@ class ODriveClient {
   using endpoint_id_t = uint16_t;
   using sequence_number_t = uint16_t;
 
-  struct Config
-  {
-	  uint16_t req_vel_estimates_period;
-	  uint16_t req_axis_errors_period;
-	  uint16_t req_motor_errors_period;
-	  uint16_t req_axis_states_period;
-	  uint16_t req_set_vel_setpoints_period;
-	  uint16_t timeout;
+  struct Config {
+    uint16_t req_vel_estimates_period;
+    uint16_t req_axis_errors_period;
+    uint16_t req_motor_errors_period;
+    uint16_t req_axis_states_period;
+    uint16_t req_set_vel_setpoints_period;
+    uint16_t timeout;
   };
 
  public:
@@ -56,9 +55,9 @@ class ODriveClient {
   uint16_t m_seq_motor_error[2] = {0, 0};
 
   float m_axis_vel_estimate[2] = {0, 0};
-  uint32_t m_axis_current_state[2] = {0,0};
-  uint32_t m_axis_error[2] = {0,0};
-  uint32_t m_motor_error[2] = {0,0};
+  uint32_t m_axis_current_state[2] = {0, 0};
+  uint32_t m_axis_error[2] = {0, 0};
+  uint32_t m_motor_error[2] = {0, 0};
 
   static constexpr uint16_t c_odrive_key{0x9b40};  // firmware 5.1
   static constexpr uint16_t c_endpoint_vel_estimate[2] = {249, 478};
@@ -78,8 +77,6 @@ class ODriveClient {
   uint16_t m_cnt_next_request_motor_errors{10};
   uint16_t m_cnt_next_request_axis_states{15};
   uint16_t m_cnt_next_set_velocity_setpoints{20};
-
-
 };
 
 }  // namespace goldobot

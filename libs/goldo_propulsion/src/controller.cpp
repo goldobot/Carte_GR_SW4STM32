@@ -28,7 +28,11 @@ PropulsionController::State PropulsionController::state() const { return m_state
 
 PropulsionController::Error PropulsionController::error() const { return m_error; }
 
-bool PropulsionController::stateChanged() { auto state_changed = m_state_changed; m_state_changed = false; return state_changed; }
+bool PropulsionController::stateChanged() {
+  auto state_changed = m_state_changed;
+  m_state_changed = false;
+  return state_changed;
+}
 
 const PropulsionControllerConfig& PropulsionController::config() const { return m_config; }
 
@@ -45,13 +49,9 @@ void PropulsionController::clearError() {
   m_target_pose = m_current_pose;
   m_low_level_controller.reset();
   on_stopped_enter();
-
 }
 
-bool PropulsionController::commandFinished()
-{
-	return m_command_finished;
-}
+bool PropulsionController::commandFinished() { return m_command_finished; }
 
 void PropulsionController::emergencyStop() {
   if (m_state == State::FollowTrajectory || m_state == State::Rotate) {
@@ -382,7 +382,10 @@ bool PropulsionController::executeTranslation(float distance, float speed) {
   return executeMoveTo(target, speed);
 }
 
-void PropulsionController::enterManualControl() { m_state = State::ManualControl; m_state_changed = true; }
+void PropulsionController::enterManualControl() {
+  m_state = State::ManualControl;
+  m_state_changed = true;
+}
 
 void PropulsionController::exitManualControl() {
   m_current_pose = m_odometry->pose();

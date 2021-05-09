@@ -14,7 +14,6 @@ int main(int argc, char* argv[]) {
   config.min_output = -100.0f;
   config.max_output = 100.0f;
 
-
   pid_controller.setPeriod(1e-3f);
   pid_controller.setConfig(config);
 
@@ -30,13 +29,13 @@ int main(int argc, char* argv[]) {
   std::ofstream out_file("sample_pid_controller.csv");
   out_file << "t,x,v,target,command\n";
 
-  for (int i=0; i < num_steps; i++) {
+  for (int i = 0; i < num_steps; i++) {
     target = t < 1.0 ? 0 : 1;
     float error = target - x;
     float command = pid_controller.step(error);
-    v += (command - v * 1.0 - x * 1.0)* dt;
-    x += v * dt;  
+    v += (command - v * 1.0 - x * 1.0) * dt;
+    x += v * dt;
     t += dt;
     out_file << t << "," << x << "," << v << "," << target << "," << command << "\n";
-  } 
+  }
 }

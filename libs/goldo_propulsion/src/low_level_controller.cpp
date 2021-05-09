@@ -21,10 +21,10 @@ void LowLevelController::setConfig(const PropulsionLowLevelControllerConfig& con
 }
 
 void LowLevelController::setPidConfig(const PropulsionLowLevelPIDConfig& config) {
-	m_speed_pid.setConfig(config.speed_pid_config);
-	  m_yaw_rate_pid.setConfig(config.yaw_rate_pid_config);
-	  m_translation_pid.setConfig(config.longi_pid_config);
-	  m_yaw_pid.setConfig(config.yaw_pid_config);
+  m_speed_pid.setConfig(config.speed_pid_config);
+  m_yaw_rate_pid.setConfig(config.yaw_rate_pid_config);
+  m_translation_pid.setConfig(config.longi_pid_config);
+  m_yaw_pid.setConfig(config.yaw_pid_config);
 }
 
 void LowLevelController::update(const RobotPose& current_pose, const RobotPose& target_pose) {
@@ -51,14 +51,14 @@ void LowLevelController::update(const RobotPose& current_pose, const RobotPose& 
   float speed_command = 0;
 
   if (m_longi_control_level >= 2) {
-	// Position PID outer loop
-	float out = m_translation_pid.step(m_longi_error);
-	speed_target+= out;
+    // Position PID outer loop
+    float out = m_translation_pid.step(m_longi_error);
+    speed_target += out;
     speed_error += out;
   };
 
   if (m_longi_control_level >= 1) {
-	// Speed PID inner loop, plus feedforward
+    // Speed PID inner loop, plus feedforward
     speed_command += m_speed_pid.step(speed_error) + speed_target;
   }
 
@@ -72,16 +72,16 @@ void LowLevelController::update(const RobotPose& current_pose, const RobotPose& 
   float yaw_rate_command = 0;
 
   if (m_yaw_control_level >= 2) {
-	  float out = m_yaw_pid.step(m_yaw_error);
-	  yaw_rate_target += out;
-	  yaw_rate_error += out;
+    float out = m_yaw_pid.step(m_yaw_error);
+    yaw_rate_target += out;
+    yaw_rate_error += out;
   }
 
   if (m_yaw_control_level >= 1) {
     yaw_rate_command = m_yaw_rate_pid.step(yaw_rate_error) + yaw_rate_target;
   }
 
-  yaw_rate_command = yaw_rate_command * m_config.wheels_distance *0.5f;
+  yaw_rate_command = yaw_rate_command * m_config.wheels_distance * 0.5f;
 
   m_left_motor_pwm = (speed_command - yaw_rate_command) * m_config.motors_speed_factor;
   m_right_motor_pwm = (speed_command + yaw_rate_command) * m_config.motors_speed_factor;

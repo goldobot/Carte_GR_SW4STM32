@@ -6,7 +6,8 @@ class TrapezoidalSpeedProfile {
  public:
   TrapezoidalSpeedProfile();
   void update(float distance, float speed, float accel, float deccel);
-  void updateEx(float distance, float start_speed, float speed, float final_speed, float accel, float deccel);
+  void updateEx(float distance, float start_speed, float speed, float final_speed, float accel,
+                float deccel);
   float begin_time();
   float end_time();
   void compute(float t, float* val, float* deriv, float* accel);

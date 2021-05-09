@@ -69,7 +69,7 @@ int main(int argc, char* argv[]) {
 
   odometry.setPeriod(1e-3f);
   odometry.setConfig(odometry_config);
-  
+
   robot_simulator.m_config = robot_simulator_config;
 
   double target{0};
