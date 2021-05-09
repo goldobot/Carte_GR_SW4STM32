@@ -99,8 +99,10 @@ class PropulsionController {
 
   void update();
 
-  float leftMotorPwm();
-  float rightMotorPwm();
+ float leftMotorVelocityInput()const noexcept;
+ float rightMotorVelocityInput()const noexcept;
+ float leftMotorTorqueInput()const noexcept;
+ float rightMotorTorqueInput()const noexcept;
 
   void setAccelerationLimits(float accel, float deccel, float angular_accel, float angular_deccel);
   void setTargetSpeed(float speed);
@@ -146,10 +148,6 @@ class PropulsionController {
   Error m_error{Error::None};
   bool m_command_finished{false};
   bool m_state_changed{false};
-
-  float m_left_motor_pwm{0};
-  float m_right_motor_pwm{0};
-  float m_pwm_limit{100.0f};
 
   float m_accel{1};
   float m_deccel{1};

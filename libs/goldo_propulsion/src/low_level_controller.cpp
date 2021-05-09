@@ -1,4 +1,5 @@
 #include "goldobot/propulsion/low_level_controller.hpp"
+#include "goldobot/core/math_utils.hpp"
 
 #include <cmath>
 
@@ -14,6 +15,10 @@ void LowLevelController::reset() {
   m_lateral_error = 0;
   m_speed_error = 0;
   m_yaw_rate_error = 0;
+  m_left_motor_velocity_input = 0;
+  m_right_motor_velocity_input = 0;
+  m_left_motor_torque_input = 0;
+  m_right_motor_torque_input = 0;
 }
 
 void LowLevelController::setConfig(const PropulsionLowLevelControllerConfig& config) {
@@ -83,7 +88,12 @@ void LowLevelController::update(const RobotPose& current_pose, const RobotPose& 
 
   yaw_rate_command = yaw_rate_command * m_config.wheels_distance * 0.5f;
 
-  m_left_motor_pwm = (speed_command - yaw_rate_command) * m_config.motors_speed_factor;
-  m_right_motor_pwm = (speed_command + yaw_rate_command) * m_config.motors_speed_factor;
+  m_left_motor_velocity_input = (speed_command - yaw_rate_command) * m_config.motors_speed_factor;
+  m_right_motor_velocity_input = (speed_command + yaw_rate_command) * m_config.motors_speed_factor;
+
+  m_left_motor_velocity_input =
+      clamp(m_left_motor_velocity_input, -m_motor_velocity_limit, m_motor_velocity_limit);
+  m_right_motor_velocity_input =
+      clamp(m_right_motor_velocity_input, -m_motor_velocity_limit, m_motor_velocity_limit);
 }
 }  // namespace goldobot

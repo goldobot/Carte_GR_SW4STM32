@@ -1,6 +1,7 @@
 #include "goldobot/propulsion/controller.hpp"
-
 #include "goldobot/propulsion/simple_odometry.hpp"
+#include "goldobot/core/math_utils.hpp"
+
 using namespace goldobot;
 
 #include <algorithm>
@@ -18,8 +19,7 @@ void PropulsionController::setEnable(bool enable) {
   if (!enable && m_state != State::Inactive) {
     m_error = Error::None;
     m_state = State::Inactive;
-    m_left_motor_pwm = 0;
-    m_right_motor_pwm = 0;
+    m_low_level_controller.reset();
     m_state_changed = true;
   }
 }
@@ -100,7 +100,7 @@ void PropulsionController::update() {
       }
     } break;
     case State::Reposition: {
-      m_pwm_limit = m_config.reposition_pwm_limit;
+      m_low_level_controller.m_motor_velocity_limit = m_config.reposition_pwm_limit;
       updateReposition();
       // Check position error
       if (m_time_base_ms >= m_command_end_time) {
@@ -111,8 +111,7 @@ void PropulsionController::update() {
     case State::ManualControl:
       break;
     case State::EmergencyStop: {
-      m_left_motor_pwm = 0;
-      m_right_motor_pwm = 0;
+      m_low_level_controller.reset();
 #if 1 /* FIXME : DEBUG : GOLDO (why this?!..) */
       if (fabsf(m_current_pose.speed) < 0.01 && fabsf(m_current_pose.yaw_rate) < 0.1) {
         m_state = State::Error;
@@ -121,8 +120,7 @@ void PropulsionController::update() {
 #endif
     } break;
     case State::Error:
-      m_left_motor_pwm = 0;
-      m_right_motor_pwm = 0;
+      m_low_level_controller.reset();
       break;
     default:
       break;
@@ -135,9 +133,21 @@ void PropulsionController::update() {
   m_time_base_ms++;
 }
 
-float PropulsionController::leftMotorPwm() { return m_left_motor_pwm; }
+float PropulsionController::leftMotorVelocityInput() const noexcept {
+  return m_low_level_controller.m_left_motor_velocity_input;
+}
 
-float PropulsionController::PropulsionController::rightMotorPwm() { return m_right_motor_pwm; }
+float PropulsionController::PropulsionController::rightMotorVelocityInput() const noexcept {
+  return m_low_level_controller.m_right_motor_velocity_input;
+}
+
+float PropulsionController::leftMotorTorqueInput() const noexcept {
+  return m_low_level_controller.m_left_motor_torque_input;
+}
+
+float PropulsionController::rightMotorTorqueInput() const noexcept {
+  return m_low_level_controller.m_left_motor_torque_input;
+}
 
 RobotPose PropulsionController::targetPose() const { return m_target_pose; }
 
@@ -205,12 +215,6 @@ void PropulsionController::updateTargetYaw() {
 void PropulsionController::updateMotorsPwm() {
   // Execute low level control
   m_low_level_controller.update(m_current_pose, m_target_pose);
-  m_left_motor_pwm = m_low_level_controller.m_left_motor_pwm;
-  m_right_motor_pwm = m_low_level_controller.m_right_motor_pwm;
-
-  // Clamp outputs
-  m_left_motor_pwm = clamp(m_left_motor_pwm, -m_pwm_limit, m_pwm_limit);
-  m_right_motor_pwm = clamp(m_right_motor_pwm, -m_pwm_limit, m_pwm_limit);
 }
 
 void PropulsionController::updateReposition() {
@@ -235,7 +239,7 @@ void PropulsionController::on_stopped_enter() {
   m_target_pose.speed = 0;
   m_target_pose.yaw_rate = 0;
 
-  m_pwm_limit = m_config.static_pwm_limit;
+  m_low_level_controller.m_motor_velocity_limit = m_config.static_pwm_limit;
   m_command_finished = true;
   m_state_changed = true;
 }
@@ -270,7 +274,7 @@ void PropulsionController::initMoveCommand(float speed, float accel, float decce
     m_final_pose.position = target_point.position;
     m_final_pose.yaw = atan2f(target_point.tangent.y, target_point.tangent.x);
     if (m_direction == Direction::Backward) {
-      m_final_pose.yaw = clampAngle(m_final_pose.yaw + M_PI);
+      m_final_pose.yaw = clampAngle(m_final_pose.yaw + c_pi);
     }
     m_final_pose.speed = 0;
     m_final_pose.yaw_rate = 0;
@@ -281,7 +285,7 @@ void PropulsionController::initMoveCommand(float speed, float accel, float decce
   m_command_end_time =
       m_time_base_ms + static_cast<uint32_t>(ceilf(1000 * m_speed_profile.end_time()));
 
-  m_pwm_limit = m_config.cruise_pwm_limit;
+  m_low_level_controller.m_motor_velocity_limit = m_config.cruise_pwm_limit;
 }
 
 bool PropulsionController::resetPose(float x, float y, float yaw) {
@@ -397,15 +401,15 @@ messages::PropulsionTelemetry PropulsionController::getTelemetry() const {
   messages::PropulsionTelemetry msg;
   msg.x = (int16_t)(m_current_pose.position.x * 4e3f);
   msg.y = (int16_t)(m_current_pose.position.y * 4e3f);
-  msg.yaw = (int16_t)(m_current_pose.yaw * 32767 / M_PI);
+  msg.yaw = (int16_t)(m_current_pose.yaw * 32767 / c_pi);
   msg.speed = (int16_t)(m_current_pose.speed * 1000);
   msg.yaw_rate = (int16_t)(m_current_pose.yaw_rate * 1000);
   msg.acceleration = (int16_t)(m_current_pose.acceleration * 1000);
   msg.angular_acceleration = (int16_t)(m_current_pose.angular_acceleration * 1000);
   msg.left_encoder = m_odometry->leftEncoderValue();
   msg.right_encoder = m_odometry->rightEncoderValue();
-  msg.left_pwm = (int16_t)(m_left_motor_pwm * 100);
-  msg.right_pwm = (int16_t)(m_right_motor_pwm * 100);
+  msg.left_pwm = (int16_t)(leftMotorVelocityInput() * 100);
+  msg.right_pwm = (int16_t)(rightMotorVelocityInput() * 100);
   msg.state = (uint8_t)(state());
   msg.error = (uint8_t)(error());
   return msg;
@@ -415,13 +419,13 @@ messages::PropulsionTelemetryEx PropulsionController::getTelemetryEx() const {
   messages::PropulsionTelemetryEx msg;
   msg.target_x = (int16_t)(m_target_pose.position.x * 4e3f);
   msg.target_y = (int16_t)(m_target_pose.position.y * 4e3f);
-  msg.target_yaw = (int16_t)(m_target_pose.yaw * 32767 / M_PI);
+  msg.target_yaw = (int16_t)(m_target_pose.yaw * 32767 / c_pi);
   msg.target_speed = (int16_t)(m_target_pose.speed * 1000);
   msg.target_yaw_rate = (int16_t)(m_target_pose.yaw_rate * 1000);
   msg.longitudinal_error = (int16_t)(m_low_level_controller.m_longi_error * 4e3f);
   msg.lateral_error = (int16_t)(m_low_level_controller.m_lateral_error * 4e3f);
   msg.speed_error = (int16_t)(m_low_level_controller.m_lateral_error * 1e3f);
-  msg.yaw_error = (int16_t)(m_low_level_controller.m_yaw_error * 32767 / M_PI);
+  msg.yaw_error = (int16_t)(m_low_level_controller.m_yaw_error * 32767 / c_pi);
 
   return msg;
 }

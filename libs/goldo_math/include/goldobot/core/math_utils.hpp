@@ -13,11 +13,17 @@ constexpr T clamp(T val, T min, T max) {
 template <typename T>
 constexpr T clampAngle(T angle) {
   while (angle > c_pi) {
-    angle -= 2 * c_pi;
+    angle -= static_cast<T>(2 * c_pi);
   };
   while (angle < -c_pi) {
-    angle += 2 * c_pi;
+    angle += static_cast<T>(2 * c_pi);
   }
   return angle;
+}
+
+template <typename T>
+inline float angleDiff(T a, T b) {
+  T diff = a - b;
+  return clampAngle(diff);
 }
 }  // namespace goldobot

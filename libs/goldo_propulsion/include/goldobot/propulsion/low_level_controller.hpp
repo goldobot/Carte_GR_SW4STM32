@@ -37,8 +37,14 @@ class LowLevelController {
   uint8_t m_yaw_control_level{0};    // 0: no control, 1: rate control, 2: abs control
   uint8_t m_longi_control_level{0};  // 0: no control, 1: rate control, 2: abs control
 
-  // Control output
-  float m_left_motor_pwm{0};
-  float m_right_motor_pwm{0};
+  // Control outputs
+  float m_left_motor_velocity_input{0};
+  float m_right_motor_velocity_input{0};
+
+  float m_left_motor_torque_input{0};
+  float m_right_motor_torque_input{0};
+
+  float m_motor_velocity_limit{100.0f};
+  float m_motor_torque_limit{1.0f};
 };
 }  // namespace goldobot

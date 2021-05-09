@@ -91,7 +91,7 @@ void PropulsionTask::doStep() {
   }
 
   if (m_controller.state() != PropulsionController::State::Inactive) {
-    setMotorsPwm(m_controller.leftMotorPwm(), m_controller.rightMotorPwm());
+    setMotorsPwm(m_controller.leftMotorVelocityInput(), m_controller.rightMotorVelocityInput());
   }
 
   if (m_use_simulator) {
