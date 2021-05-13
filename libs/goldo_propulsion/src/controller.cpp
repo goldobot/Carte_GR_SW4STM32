@@ -86,15 +86,17 @@ void PropulsionController::update() {
       }
       break;
     case State::FollowTrajectory: {
+      m_speed_controller.update();
       updateTargetPositions();
-      if (m_time_base_ms >= m_command_end_time) {
+      if (m_speed_controller.finished()) {
         m_target_pose = m_final_pose;
         on_stopped_enter();
       }
     } break;
     case State::Rotate: {
+      m_speed_controller.update();
       updateTargetYaw();
-      if (m_time_base_ms >= m_command_end_time) {
+      if (m_speed_controller.finished()) {
         m_target_pose = m_final_pose;
         on_stopped_enter();
       }
@@ -103,10 +105,10 @@ void PropulsionController::update() {
       m_low_level_controller.m_motor_velocity_limit = m_config.reposition_pwm_limit;
       updateReposition();
       // Check position error
-      if (m_time_base_ms >= m_command_end_time) {
-        on_reposition_exit();
-        on_stopped_enter();
-      }
+      // if (m_time_base_ms >= m_command_end_time) {
+      //  on_reposition_exit();
+      //  on_stopped_enter();
+      // }
     } break;
     case State::ManualControl:
       break;
@@ -130,7 +132,7 @@ void PropulsionController::update() {
     updateMotorsPwm();
   }
   // Update time base
-  m_time_base_ms++;
+  // m_time_base_ms++;
 }
 
 float PropulsionController::leftMotorVelocityInput() const noexcept {
@@ -162,9 +164,10 @@ void PropulsionController::setControlLevels(uint8_t longi, uint8_t yaw) {
 
 void PropulsionController::updateTargetPositions() {
   // Compute current distance on trajectory target
-  float t = (m_time_base_ms - m_command_begin_time) * 1e-3f;
-  float parameter, speed, accel;
-  m_speed_profile.compute(t, &parameter, &speed, &accel);
+  // float t = (m_time_base_ms - m_command_begin_time) * 1e-3f;
+
+  float parameter = m_speed_controller.parameter();
+  float speed = m_speed_controller.speed();
   parameter = std::min(parameter, m_trajectory_buffer.max_parameter());
 
   // Compute position of lookahead point in front of current position
@@ -206,10 +209,9 @@ void PropulsionController::updateTargetPositions() {
 }
 
 void PropulsionController::updateTargetYaw() {
-  float t = (m_time_base_ms - m_command_begin_time) * 1e-3f;
-  float parameter, accel;
-  m_speed_profile.compute(t, &parameter, &m_target_pose.yaw_rate, &accel);
-  m_target_pose.yaw = clampAngle(m_begin_yaw + parameter);
+  float parameter = m_speed_controller.parameter();
+  float speed = m_speed_controller.speed();
+  m_target_pose.yaw = clampAngle(m_begin_yaw + parameter * m_rotation_direction);
 }
 
 void PropulsionController::updateMotorsPwm() {
@@ -226,7 +228,7 @@ void PropulsionController::updateReposition() {
 
   if (fabs(m_low_level_controller.m_longi_error) > 0.05 && !m_reposition_hit) {
     m_reposition_hit = true;
-    m_command_end_time = m_time_base_ms + 500;
+    // m_command_end_time = m_time_base_ms + 500;
   }
 };
 
@@ -256,8 +258,10 @@ void PropulsionController::on_reposition_exit() {
 }
 
 void PropulsionController::initMoveCommand(float speed, float accel, float deccel) {
-  // Compute speed profile
-  m_speed_profile.update(m_trajectory_buffer.max_parameter(), speed, accel, deccel);
+  m_speed_controller.setAccelerationLimits(m_accel, m_deccel);
+  m_speed_controller.setParameterRange(0, m_trajectory_buffer.max_parameter());
+  m_speed_controller.setRequestedSpeed(speed);
+  m_speed_controller.reset(0, 0, 0);
 
   // Compute direction by taking scalar product of current robot orientation vector with tangent of
   // trajectory at origin
@@ -279,11 +283,6 @@ void PropulsionController::initMoveCommand(float speed, float accel, float decce
     m_final_pose.speed = 0;
     m_final_pose.yaw_rate = 0;
   }
-
-  // Set command end time
-  m_command_begin_time = m_time_base_ms;
-  m_command_end_time =
-      m_time_base_ms + static_cast<uint32_t>(ceilf(1000 * m_speed_profile.end_time()));
 
   m_low_level_controller.m_motor_velocity_limit = m_config.cruise_pwm_limit;
 }
@@ -339,10 +338,13 @@ bool PropulsionController::executeRotation(float delta_yaw, float yaw_rate) {
   }
   // Compute yaw ramp to go to target_angle from current target angle
   m_begin_yaw = m_target_pose.yaw;
-  m_speed_profile.update(delta_yaw, yaw_rate, m_accel, m_deccel);
-  m_command_begin_time = m_time_base_ms;
-  m_command_end_time =
-      m_time_base_ms + static_cast<uint32_t>(ceilf(1000 * m_speed_profile.end_time()));
+
+  // The speed controller output an increasing parameter.
+  m_rotation_direction = delta_yaw >= 0 ? 1 : -1;
+  m_speed_controller.setAccelerationLimits(m_angular_accel, m_angular_deccel);
+  m_speed_controller.setParameterRange(0, fabs(delta_yaw));
+  m_speed_controller.setRequestedSpeed(yaw_rate);
+  m_speed_controller.reset(0, 0, 0);
 
   // Compute final pose
   m_final_pose.position = m_target_pose.position;
@@ -370,8 +372,6 @@ bool PropulsionController::executeRepositioning(float speed, float accel) {
 
   m_reposition_hit = false;
 
-  m_command_begin_time = m_time_base_ms;
-  m_command_end_time = m_command_begin_time + 1500;
   m_state = State::Reposition;
   m_state_changed = true;
   return true;

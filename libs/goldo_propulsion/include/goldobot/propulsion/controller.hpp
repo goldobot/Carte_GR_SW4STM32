@@ -5,6 +5,7 @@
 #include "goldobot/core/trapezoidal_speed_profile.hpp"
 #include "goldobot/propulsion/controller_config.hpp"
 #include "goldobot/propulsion/low_level_controller.hpp"
+#include "goldobot/propulsion/speed_controller.hpp"
 
 #include <cstdint>
 
@@ -99,10 +100,10 @@ class PropulsionController {
 
   void update();
 
- float leftMotorVelocityInput()const noexcept;
- float rightMotorVelocityInput()const noexcept;
- float leftMotorTorqueInput()const noexcept;
- float rightMotorTorqueInput()const noexcept;
+  float leftMotorVelocityInput() const noexcept;
+  float rightMotorVelocityInput() const noexcept;
+  float leftMotorTorqueInput() const noexcept;
+  float rightMotorTorqueInput() const noexcept;
 
   void setAccelerationLimits(float accel, float deccel, float angular_accel, float angular_deccel);
   void setTargetSpeed(float speed);
@@ -156,13 +157,10 @@ class PropulsionController {
 
   // \todo should split management of parametrized trajectory in separate class
   TrajectoryBuffer m_trajectory_buffer;
-  float m_begin_yaw;  // yaw at beginning of current PointTo command
-  TrapezoidalSpeedProfile m_speed_profile;
+  float m_begin_yaw;              // yaw at beginning of current PointTo command
+  float m_rotation_direction{1};  // sign of delta yaw
+  SpeedController m_speed_controller;
 
-  // Parameters on current segment
-  float m_current_parameter;
-  uint32_t m_command_begin_time;
-  uint32_t m_command_end_time;
   Direction m_direction;
 
   uint32_t m_time_base_ms{0};
