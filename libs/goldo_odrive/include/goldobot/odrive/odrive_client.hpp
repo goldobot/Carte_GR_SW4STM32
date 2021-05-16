@@ -59,6 +59,38 @@ class ODriveClient {
   uint32_t m_axis_error[2] = {0, 0};
   uint32_t m_motor_error[2] = {0, 0};
 
+  static constexpr uint16_t c_axis0_base{71};
+  static constexpr uint16_t c_axis1_base{300};
+
+  //relative to axis
+  static constexpr uint16_t c_endpoint_vel_gain{140}; // odrive velocity controller P coefficient
+  static constexpr uint16_t c_endpoint_vel_integrator_gain{141}; // odrive velocity controller I coefficient
+  static constexpr uint16_t c_endpoint_current_setpoint{78}; // axis.motor.current_control.Iq_setpoint, proportional to motor torque
+
+
+ /* // Axis commands
+  input_vel{124}
+  input_torque{125};
+  torque_lim{111};
+
+  // Axis status
+  axis_state{2};
+  exis_error{0};
+  motor_error{61};
+  controller_error{122}
+  encoder_error{165};
+
+  //control
+  requested_state{3};
+  clear_errors{299};
+*/
+
+
+
+
+  // torque_constant in NM/A to convert between torque and motor current
+
+
   static constexpr uint16_t c_odrive_key{0x9b40};  // firmware 5.1
   static constexpr uint16_t c_endpoint_vel_estimate[2] = {249, 478};
   static constexpr uint16_t c_endpoint_axis_error[2] = {71, 300};
