@@ -25,7 +25,7 @@ void HeartbeatTask::taskFunction() {
   {
 	  uint32_t clock{0};
 	  Robot::instance().mainExchangeOut().pushMessage(CommMessageType::Heartbeat, (unsigned char*)&clock, sizeof(clock));
-	  delay_periodic(10);
+	  delay_periodic(100);
   }
 
   Robot::instance().mainExchangeOut().pushMessage(CommMessageType::Reset, nullptr, 0);
@@ -70,18 +70,18 @@ void HeartbeatTask::taskFunction() {
       for(int k = 0; k < 8; k++)
       {
     	  watchdogs[k] = (watchdog_timestamps[k] + 1000 < clock);
-    	  Robot::instance().mainExchangeOut().pushMessage(CommMessageType::WatchdogStatus, watchdogs, 8);
       }
+      Robot::instance().mainExchangeOut().pushMessage(CommMessageType::WatchdogStatus, watchdogs, 8);
     }
 
    	checkGpioState();
 
     i++;
-    if(i == 100)
+    if(i == 10)
     {
     	i = 0;
     }
-    delay_periodic(10);
+    delay_periodic(100);
   }
 }
 
