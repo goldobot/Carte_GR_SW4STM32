@@ -2,6 +2,19 @@ cmake_minimum_required(VERSION 3.10)
 
 project(Carte_GR VERSION 0.0 LANGUAGES C CXX ASM)
 
+# get git commit id
+find_package(Git)
+
+if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git")
+    execute_process(COMMAND ${GIT_EXECUTABLE}  show -s --format=%H OUTPUT_VARIABLE GOLDO_GIT_COMMIT_ID OUTPUT_STRIP_TRAILING_WHITESPACE)
+    execute_process(COMMAND ${GIT_EXECUTABLE}  show -s --format=%h OUTPUT_VARIABLE GOLDO_GIT_COMMIT_SHORT_ID OUTPUT_STRIP_TRAILING_WHITESPACE)
+    execute_process(COMMAND ${GIT_EXECUTABLE}  show -s --format=%ci OUTPUT_VARIABLE GOLDO_GIT_COMMIT_DATE OUTPUT_STRIP_TRAILING_WHITESPACE)
+    execute_process(COMMAND ${GIT_EXECUTABLE}  show -s --format=%D OUTPUT_VARIABLE GOLDO_GIT_COMMIT_REF_NAMES OUTPUT_STRIP_TRAILING_WHITESPACE)
+else()
+    message(WARNING "Git not found, cannot set version info")
+    SET(REVISION "GOLDO_GIT_COMMIT_ID")
+endif()
+
 option(GOLDO_BUILD_TESTS "Build the unit tests" OFF)
 option(GOLDO_BUILD_NUCLEO_FIRMWARE "Build the Nucleo firmware" ON)
 

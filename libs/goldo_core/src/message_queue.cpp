@@ -17,7 +17,7 @@ bool MessageQueue::push_message(CommMessageType message_type, const unsigned cha
   std::unique_lock<detail::LockerMutex>(m_mutex);
   // Reject message if buffer is full
   if (msg_size > available_capacity()) {
-    assert(false);
+    //assert(false);
     return false;
   }
 
@@ -109,7 +109,6 @@ size_t MessageQueue::available_capacity() const {
   size_t size = m_end_index >= m_begin_index ? m_end_index - m_begin_index
                                              : m_end_index - m_begin_index + m_buffer_size;
   size_t retval = m_buffer_size > size + 5 ? m_buffer_size - size - 5 : 0;
-  assert(retval <= m_buffer_size - 4);
-  return m_buffer_size - size - 5;
+  return retval;
 }
 }  // namespace goldobot
