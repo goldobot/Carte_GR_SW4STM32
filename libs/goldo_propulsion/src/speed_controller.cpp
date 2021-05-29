@@ -1,4 +1,3 @@
-#pragma once
 #include "goldobot/propulsion/speed_controller.hpp"
 #include "goldobot/core/math_utils.hpp"
 

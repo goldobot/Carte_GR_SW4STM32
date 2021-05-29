@@ -90,8 +90,8 @@ int main(int argc, char* argv[]) {
     robot_simulator.doStep();
     odometry.update(robot_simulator.encoderLeft(), robot_simulator.encoderRight());
     propulsion_controller.update();
-    robot_simulator.m_left_pwm = propulsion_controller.leftMotorPwm();
-    robot_simulator.m_right_pwm = propulsion_controller.rightMotorPwm();
+    robot_simulator.m_left_pwm = propulsion_controller.leftMotorVelocityInput();
+    robot_simulator.m_right_pwm = propulsion_controller.rightMotorVelocityInput();
     auto pose = odometry.pose();
     t += dt;
     out_file << t << "," << pose.position.x << "," << pose.position.y << "," << pose.yaw << ",";
