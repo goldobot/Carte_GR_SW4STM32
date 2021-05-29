@@ -10,14 +10,16 @@ MessageQueue::MessageQueue(unsigned char* buffer, size_t size)
       m_buffer_size(size),
       m_begin_index(0),
       m_end_index(0),
-      m_message_ready(false) {}
+      m_message_ready(false) {
+  m_statistics.min_available_capacity = available_capacity();
+}
 
 bool MessageQueue::push_message(CommMessageType message_type, const unsigned char* buffer,
                                 size_t msg_size) {
   std::unique_lock<detail::LockerMutex>(m_mutex);
   // Reject message if buffer is full
   if (msg_size > available_capacity()) {
-    //assert(false);
+    // assert(false);
     return false;
   }
 
@@ -32,6 +34,8 @@ bool MessageQueue::push_message(CommMessageType message_type, const unsigned cha
   }
 
   push_data(buffer, msg_size);
+  m_statistics.min_available_capacity = std::min(m_statistics.min_available_capacity, available_capacity());
+  m_statistics.messages_pushed++;  
   return true;
 }
 
@@ -43,6 +47,7 @@ void MessageQueue::push_data(const unsigned char* buffer, size_t size) {
       m_end_index = 0;
     }
     assert(m_end_index < m_buffer_size);
+    m_statistics.bytes_pushed += size;
   }
 }
 
@@ -52,6 +57,11 @@ CommMessageType MessageQueue::message_type() const { return m_message_type; }
 
 size_t MessageQueue::message_size() const { return m_message_size; }
 
+MessageQueue::Statistics MessageQueue::statistics() {
+  auto retval = m_statistics;
+  m_statistics.min_available_capacity = available_capacity();
+  return retval;
+}
 void MessageQueue::read_data(size_t start_index, unsigned char* buffer, size_t size) {
   size_t i = 0;
   size_t idx = start_index;
@@ -105,10 +115,15 @@ size_t MessageQueue::pop_message(unsigned char* buffer, size_t size) {
   return size;
 }
 
-size_t MessageQueue::available_capacity() const {
+size_t MessageQueue::buffer_capacity() const noexcept {
   size_t size = m_end_index >= m_begin_index ? m_end_index - m_begin_index
-                                             : m_end_index - m_begin_index + m_buffer_size;
-  size_t retval = m_buffer_size > size + 5 ? m_buffer_size - size - 5 : 0;
+                                             : m_end_index - m_begin_index + m_buffer_size;  
+  return m_buffer_size - size - 1;
+}
+
+size_t MessageQueue::available_capacity() const {
+  auto buff_capacity = buffer_capacity();
+  size_t retval = m_buffer_size > buff_capacity + 5 ? m_buffer_size - size - 5 : 0;
   return retval;
 }
 }  // namespace goldobot

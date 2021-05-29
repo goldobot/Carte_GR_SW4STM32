@@ -1,0 +1,4 @@
+add_executable(goldo_core_fuzz_message_queue fuzz_message_queue.cpp)
+target_link_libraries(goldo_core_fuzz_message_queue PRIVATE goldo_core)
+target_compile_options(goldo_core_fuzz_message_queue PRIVATE "-fsanitize=fuzzer")
+target_link_options(goldo_core_fuzz_message_queue PRIVATE "-fsanitize=fuzzer")

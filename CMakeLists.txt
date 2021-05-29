@@ -16,6 +16,7 @@ else()
 endif()
 
 option(GOLDO_BUILD_TESTS "Build the unit tests" OFF)
+option(GOLDO_BUILD_FUZZERS "Build the fuzzers" OFF)
 option(GOLDO_BUILD_NUCLEO_FIRMWARE "Build the Nucleo firmware" ON)
 
 include("cmake/goldo_git_version.cmake")

@@ -8,6 +8,13 @@ enum class CommMessageType : uint16_t;
 
 class MessageQueue {
  public:
+  struct Statistics {
+    size_t min_available_capacity{0};
+    size_t bytes_pushed{0};
+    size_t messages_pushed{0};
+  };
+
+ public:
   MessageQueue(unsigned char* buffer, size_t size);
 
   bool message_ready() const;
@@ -19,10 +26,13 @@ class MessageQueue {
 
   size_t available_capacity() const;
 
+  Statistics statistics();
+
  private:
   void push_data(const unsigned char* buffer, size_t size);
   void read_data(size_t start_index, unsigned char* buffer, size_t size);
   void pop_data(size_t size);
+  size_t buffer_capacity() const noexcept
 
   unsigned char* m_buffer;
   size_t m_buffer_size;
@@ -31,6 +41,7 @@ class MessageQueue {
   bool m_message_ready;
   uint16_t m_message_size;
   CommMessageType m_message_type;
+  Statistics m_statistics;
 
   detail::LockerMutex m_mutex;
 };
