@@ -5,16 +5,20 @@
 #include <cassert>
 
 namespace goldobot {
-
-constexpr uint16_t ODriveClient::c_endpoint_vel_estimate[2];
-constexpr uint16_t ODriveClient::c_endpoint_axis_error[2];
-constexpr uint16_t ODriveClient::c_endpoint_motor_error[2];
-constexpr uint16_t ODriveClient::c_endpoint_input_vel[2];
-constexpr uint16_t ODriveClient::c_endpoint_current_state[2];
-constexpr uint16_t ODriveClient::c_endpoint_requested_state[2];
-constexpr uint16_t ODriveClient::c_endpoint_control_mode[2];
+constexpr uint16_t ODriveClient::c_axis_base[2];
+constexpr uint16_t ODriveClient::c_endpoint_vel_estimate;
+constexpr uint16_t ODriveClient::c_endpoint_axis_error;
+constexpr uint16_t ODriveClient::c_endpoint_motor_error;
+constexpr uint16_t ODriveClient::c_endpoint_input_vel;
+constexpr uint16_t ODriveClient::c_endpoint_current_state;
+constexpr uint16_t ODriveClient::c_endpoint_requested_state;
+constexpr uint16_t ODriveClient::c_endpoint_control_mode;
 constexpr uint32_t ODriveClient::c_odrive_consts_axis_state[3];
 constexpr uint32_t ODriveClient::c_odrive_consts_control_mode;
+
+const ODriveClient::Errors& ODriveClient::errors() const noexcept { return m_errors; }
+const ODriveClient::Telemetry& ODriveClient::telemetry() const noexcept { return m_telemetry; }
+const ODriveClient::AxisStates ODriveClient::axisStates() const noexcept { return m_axis_states; }
 
 template <typename T>
 ODriveClient::sequence_number_t ODriveClient::queueReadEndpoint(endpoint_id_t endpoint) {
@@ -33,12 +37,13 @@ ODriveClient::sequence_number_t ODriveClient::queueReadEndpoint(endpoint_id_t en
 }
 
 template <typename T>
-ODriveClient::sequence_number_t ODriveClient::writeEndpoint(endpoint_id_t endpoint, const T& val) {
+ODriveClient::sequence_number_t ODriveClient::writeEndpoint(endpoint_id_t endpoint, const T& val,
+                                                            bool ack_requested) {
   auto seq = m_seq;
   uint8_t buff[8 + sizeof(T)];
 
   *reinterpret_cast<uint16_t*>(buff + 0) = m_seq | 0x4000;
-  *reinterpret_cast<uint16_t*>(buff + 2) = endpoint;
+  *reinterpret_cast<uint16_t*>(buff + 2) = endpoint | (ack_requested ? 0x8000 : 0);
   *reinterpret_cast<uint16_t*>(buff + 4) = 0;
   *reinterpret_cast<T*>(buff + 6) = val;
   *reinterpret_cast<uint16_t*>(buff + 6 + sizeof(T)) = c_odrive_key;
@@ -50,107 +55,155 @@ ODriveClient::sequence_number_t ODriveClient::writeEndpoint(endpoint_id_t endpoi
   return seq;
 }
 
-float ODriveClient::axisVelEstimate(int axis) const noexcept { return m_axis_vel_estimate[axis]; }
-uint32_t ODriveClient::axisCurrentState(int axis) const noexcept {
-  return m_axis_current_state[axis];
-}
-uint32_t ODriveClient::axisError(int axis) const noexcept { return m_axis_error[axis]; }
-uint32_t ODriveClient::motorError(int axis) const noexcept { return m_motor_error[axis]; }
-
 void ODriveClient::setOutputExchange(MessageExchange* exchange, CommMessageType message_type) {
   m_exchange = exchange;
   m_request_packet_message_type = message_type;
 }
 
 void ODriveClient::setMotorsEnable(bool enable) {
-  // Set velocity control
-  writeEndpoint(c_endpoint_control_mode[0], c_odrive_consts_control_mode);
-  writeEndpoint(c_endpoint_control_mode[1], c_odrive_consts_control_mode);
-
-  // Enable or disable closed loop control
   uint32_t axis_state = enable ? c_odrive_consts_axis_state[1] : c_odrive_consts_axis_state[0];
-  writeEndpoint(c_endpoint_requested_state[0], axis_state);
-  writeEndpoint(c_endpoint_requested_state[1], axis_state);
+
+  // todo: manage timeouts and retransmissions
+
+  // Set velocity control and enable or disable closed loop control
+  for (int i = 0; i < 2; i++) {
+    m_reqs[i].requested_state = axis_state;
+    m_reqs[i].control_mode = c_odrive_consts_control_mode;
+
+    writeEndpoint(c_endpoint_control_mode + c_axis_base[i], c_odrive_consts_control_mode);
+    writeEndpoint(c_endpoint_requested_state + c_axis_base[i], axis_state);
+  }
 }
 
-void ODriveClient::setVelocitySetPoint(int axis, float vel_setpoint, float current_feedforward,
-                                       bool immediate) {
+void ODriveClient::setVelocitySetPoint(int axis, float vel_setpoint, float current_feedforward) {
   assert(axis >= 0 && axis < 2);
-  if (immediate || m_cnt_next_set_velocity_setpoints == m_cnt) {
-    writeEndpoint(c_endpoint_input_vel[axis], vel_setpoint);
-    writeEndpoint(c_endpoint_input_vel[axis] + 1, current_feedforward);
-    m_cnt_next_set_velocity_setpoints = m_cnt + 10;
-  }
+  m_reqs[axis].input_vel = vel_setpoint;
+  m_reqs[axis].input_torque = current_feedforward;
 }
 
 void ODriveClient::clearErrors() {
-  writeEndpoint<uint32_t>(c_endpoint_axis_error[0], 0);
-  writeEndpoint<uint32_t>(c_endpoint_axis_error[1], 0);
-  writeEndpoint<uint32_t>(c_endpoint_motor_error[0], 0);
-  writeEndpoint<uint32_t>(c_endpoint_motor_error[1], 0);
+  for (int i = 0; i < 2; i++) {
+    m_reqs[0].seq_clear_errors =
+        writeEndpoint<uint32_t>(c_endpoint_clear_errors + c_axis_base[0], 0);
+    m_flags_clear_errors = 0x80;
+    // todo: manage timeouts and retransmissions
+  }
 }
 
 bool ODriveClient::startMotorsCalibration() {
-  if (m_odrive_calibration_state != 0) {
-    return false;
-  }
-  writeEndpoint(c_endpoint_requested_state[0], c_odrive_consts_axis_state[2]);
-  m_odrive_calibration_state = 1;
-  m_axis_current_state[0] = 0;
+  // if (m_odrive_calibration_state != 0) {
+  //  return false;
+  //}
+  writeEndpoint(c_endpoint_requested_state + c_axis_base[0], 2);
+  writeEndpoint(c_endpoint_requested_state + c_axis_base[1], 2);
+
+  // m_odrive_calibration_state = 1;
+  // m_axis_current_state[0] = 0;
   return true;
 }
 
-void ODriveClient::doStep() {
-  if (m_cnt == m_cnt_next_request_vel_estimates) {
-    m_seq_vel_estimate[0] = queueReadEndpoint<float>(c_endpoint_vel_estimate[0]);
-    m_seq_vel_estimate[1] = queueReadEndpoint<float>(c_endpoint_vel_estimate[1]);
-    m_cnt_next_request_vel_estimates += 10;
+void ODriveClient::doStep(uint32_t timestamp) {
+  // send motor inputs
+  if (m_cnt == m_cnt_next_set_velocity_setpoints) {
+    for (int i = 0; i < 2; i++) {
+      writeEndpoint<float>(c_endpoint_input_vel + c_axis_base[i], m_reqs[i].input_vel);
+      writeEndpoint<float>(c_endpoint_input_torque + c_axis_base[i], m_reqs[i].input_torque);
+    }
+    m_cnt_next_set_velocity_setpoints += m_config.req_set_vel_setpoints_period;
+  };
+
+  // reqeust telemetry data
+  if (m_cnt == m_cnt_next_request_telemetry) {
+    for (int i = 0; i < 2; i++) {
+      m_reqs[i].seq_pos_estimate =
+          queueReadEndpoint<float>(c_endpoint_pos_estimate + c_axis_base[i]);
+      m_reqs[i].seq_vel_estimate =
+          queueReadEndpoint<float>(c_endpoint_vel_estimate + c_axis_base[i]);
+      m_reqs[i].seq_current_iq_setpoint =
+          queueReadEndpoint<float>(c_endpoint_current_iq_setpoint + c_axis_base[i]);
+    }
+    m_telemetry.timestamp = timestamp;
+    m_cnt_next_request_telemetry += m_config.req_telemetry_period;
   }
 
-  if (m_cnt == m_cnt_next_request_axis_errors) {
-    m_seq_axis_error[0] = queueReadEndpoint<float>(c_endpoint_axis_error[0]);
-    m_seq_axis_error[1] = queueReadEndpoint<float>(c_endpoint_axis_error[1]);
-    m_cnt_next_request_axis_errors += 20;
+  // request error flags
+  if (m_cnt == m_cnt_next_request_errors) {
+    for (int i = 0; i < 2; i++) {
+      m_reqs[i].seq_axis_error = queueReadEndpoint<float>(c_endpoint_axis_error + c_axis_base[0]);
+    }
+    m_cnt_next_request_errors += m_config.req_errors_period;
   };
 
-  if (m_cnt == m_cnt_next_request_motor_errors) {
-    m_seq_motor_error[0] = queueReadEndpoint<float>(c_endpoint_motor_error[0]);
-    m_seq_motor_error[1] = queueReadEndpoint<float>(c_endpoint_motor_error[1]);
-    m_cnt_next_request_motor_errors += 20;
-  };
-
+  // request axis states
   if (m_cnt == m_cnt_next_request_axis_states) {
-    m_seq_axis_current_state[0] = queueReadEndpoint<float>(c_endpoint_current_state[0]);
-    m_seq_axis_current_state[1] = queueReadEndpoint<float>(c_endpoint_current_state[1]);
-    m_cnt_next_request_axis_states += 20;
+    for (int i = 0; i < 2; i++) {
+      m_reqs[i].seq_current_state =
+          queueReadEndpoint<float>(c_endpoint_current_state + c_axis_base[i]);
+    }
+    m_cnt_next_request_axis_states += m_config.req_axis_states_period;
   };
   m_cnt++;
 }
 
-/*
-  if (m_odrive_cnt == 0) {
-    uint8_t buff[26];
-    *reinterpret_cast<float*>(buff + 0) = m_odrive_axis0_vel_estimate;
-    *reinterpret_cast<float*>(buff + 4) = m_odrive_axis1_vel_estimate;
-    *reinterpret_cast<uint32_t*>(buff + 8) = m_odrive_axis0_error;
-    *reinterpret_cast<uint32_t*>(buff + 12) = m_odrive_axis1_error;
-    *reinterpret_cast<uint32_t*>(buff + 16) = m_odrive_axis0_motor_error;
-    *reinterpret_cast<uint32_t*>(buff + 20) = m_odrive_axis1_motor_error;
-    *reinterpret_cast<uint8_t*>(buff + 24) = m_odrive_axis0_current_state;
-    *reinterpret_cast<uint8_t*>(buff + 25) = m_odrive_axis1_current_state;
-
-    Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ODriveTelemetry,
-                                                    (unsigned char*)buff, 26);*/
-
 bool ODriveClient::processResponse(sequence_number_t seq, uint8_t* payload, size_t payload_size) {
-  // velocity
-  if (seq == m_seq_vel_estimate[0]) {
-    m_axis_vel_estimate[0] = *(float*)(payload);
+  for (int i = 0; i < 2; i++) {
+    // state
+    if (seq == m_reqs[i].seq_current_state) {
+      m_axis_states.axis[i] = *(uint32_t*)(payload);
+      m_reqs[i].seq_current_state = 0;
+    }
+
+    if (seq == m_reqs[i].seq_requested_state) {
+      m_reqs[i].seq_requested_state = 0;
+    }
+
+    // telemetry
+    if (seq == m_reqs[i].seq_pos_estimate) {
+      m_telemetry.axis[i].pos_estimate = *(float*)(payload);
+      m_reqs[i].seq_pos_estimate = 0;
+    }
+    if (seq == m_reqs[i].seq_vel_estimate) {
+      m_telemetry.axis[i].vel_estimate = *(float*)(payload);
+      m_reqs[i].seq_vel_estimate = 0;
+    }
+    if (seq == m_reqs[i].seq_current_iq_setpoint) {
+      m_telemetry.axis[i].current_iq_setpoint = *(float*)(payload);
+      m_reqs[i].seq_current_iq_setpoint = 0;
+    }
+
+    // errors
+    if (seq == m_reqs[i].seq_axis_error) {
+      m_errors.axis[i].axis = *(uint32_t*)(payload);
+      m_reqs[i].seq_axis_error = 0;
+    }
+
+    if (seq == m_reqs[i].seq_motor_error) {
+      m_errors.axis[i].motor = *(uint32_t*)(payload);
+      m_reqs[i].seq_motor_error = 0;
+    }
+
+    if (seq == m_reqs[i].seq_controller_error) {
+      m_errors.axis[i].controller = *(uint32_t*)(payload);
+      m_reqs[i].seq_controller_error = 0;
+    }
+
+    // clear errors
+    if (seq == m_reqs[i].seq_clear_errors) {
+      m_flags_clear_errors |= (1 << i);
+      m_reqs[i].seq_clear_errors = 0;
+      // all acks have been received for the clear errors command, reset flags to 0
+      if (m_flags_clear_errors & 0x83) {
+        m_flags_clear_errors = 0;
+      }
+    }
   }
-  if (seq == m_seq_vel_estimate[1]) {
-    m_axis_vel_estimate[0] = *(float*)(payload);
-  }
+
   // axis current state
+  // if (m_odrive_calibration_state == 1 && m_axis_current_state[0] == 4) {
+  // axis0 calibration started
+  //  m_odrive_calibration_state = 2;
+  //  }
+  /*
   if (seq == m_seq_axis_current_state[0]) {
     m_axis_current_state[0] = *(uint32_t*)(payload);
     if (m_odrive_calibration_state == 1 && m_axis_current_state[0] == 4) {
@@ -164,8 +217,9 @@ bool ODriveClient::processResponse(sequence_number_t seq, uint8_t* payload, size
       writeEndpoint(c_endpoint_requested_state[1], c_odrive_consts_axis_state[2]);
       m_axis_current_state[1] = 0;
     }
-  }
+  }*/
 
+  /*
   if (seq == m_seq_axis_current_state[1]) {
     m_axis_current_state[1] = *(uint32_t*)(payload);
     if (m_odrive_calibration_state == 3 && m_axis_current_state[1] == 4) {
@@ -177,21 +231,8 @@ bool ODriveClient::processResponse(sequence_number_t seq, uint8_t* payload, size
       m_odrive_calibration_state = 0;
     }
   }
+  */
 
-  // axis error
-  if (seq == m_seq_axis_error[0]) {
-    m_axis_error[0] = *(uint32_t*)(payload);
-  }
-  if (seq == m_seq_axis_error[1]) {
-    m_axis_error[1] = *(uint32_t*)(payload);
-  }
-  // axis motor error
-  if (seq == m_seq_motor_error[0]) {
-    m_motor_error[0] = *(uint32_t*)(payload);
-  }
-  if (seq == m_seq_motor_error[1]) {
-    m_motor_error[1] = *(uint32_t*)(payload);
-  }
   return true;
 }
 

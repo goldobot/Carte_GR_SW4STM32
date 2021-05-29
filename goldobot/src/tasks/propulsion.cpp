@@ -94,6 +94,11 @@ void PropulsionTask::doStep() {
     setMotorsPwm(m_controller.leftMotorVelocityInput(), m_controller.rightMotorVelocityInput());
   }
 
+  if(m_config.motor_controller_type == MotorControllerType::ODriveUART)
+  {
+	  m_odrive_client.doStep(hal::get_tick_count());
+  }
+
   if (m_use_simulator) {
     m_robot_simulator.doStep();
   }
@@ -109,6 +114,7 @@ void PropulsionTask::doStep() {
     m_next_watchdog_ts = hal::get_tick_count() + 100;
     Robot::instance().exchangeInternal().pushMessage(CommMessageType::WatchdogReset, &watchdog_id,
                                                      1);
+
     Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionTaskStatistics,
                                                     (const unsigned char*)&m_cycles_max, 4);
     m_cycles_max = 0;
@@ -122,14 +128,24 @@ void PropulsionTask::sendTelemetryMessages() {
     auto msg = m_controller.getTelemetry();
     Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionTelemetry,
                                                     (unsigned char*)&msg, sizeof(msg));
-    m_next_telemetry_ts += m_config.telemetry_period_ms;
+    m_next_telemetry_ts = std::max(m_next_telemetry_ts + m_config.telemetry_period_ms, current_time);
   }
 
   if (current_time >= m_next_telemetry_ex_ts) {
     auto msg = m_controller.getTelemetryEx();
     Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionTelemetryEx,
                                                     (unsigned char*)&msg, sizeof(msg));
-    m_next_telemetry_ex_ts += m_config.telemetry_ex_period_ms;
+    m_next_telemetry_ex_ts = std::max(m_next_telemetry_ex_ts + m_config.telemetry_ex_period_ms, current_time);
+  }
+
+  if (current_time >= m_next_odrive_telemetry_ts && m_config.motor_controller_type == MotorControllerType::ODriveUART ) {
+    auto msg = m_odrive_client.telemetry();
+    Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionODriveTelemetry,
+                                                   (unsigned char*)&msg, sizeof(msg));
+
+
+
+    m_next_odrive_telemetry_ts = std::max(m_next_odrive_telemetry_ts + m_config.telemetry_odrive_period_ms, current_time);
   }
 
   if (current_time >= m_next_pose_ts) {
@@ -140,7 +156,8 @@ void PropulsionTask::sendTelemetryMessages() {
 
     Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionPose,
                                                     (unsigned char*)&msg, sizeof(msg));
-    m_next_pose_ts += m_config.pose_period_ms;
+
+    m_next_pose_ts = std::max(m_next_pose_ts + m_config.pose_period_ms, current_time);
   }
 }
 
@@ -295,7 +312,7 @@ void PropulsionTask::processUrgentMessage() {
     case CommMessageType::PropulsionMotorsVelocitySetpointsSet: {
       float pwm[4];
       m_urgent_message_queue.pop_message((unsigned char*)&pwm, 16);
-      setMotorsPwm(pwm[0], pwm[1], true);
+      setMotorsPwm(pwm[0], pwm[1]);
     } break;
       /* case CommMessageType::PropulsionMeasurePoint: {
          float buff[4];
@@ -414,7 +431,7 @@ void PropulsionTask::setSimulationMode(bool enable) {
   // switch to simulation mode
   if (m_use_simulator == false && enable == true) {
     setMotorsEnable(false);
-    setMotorsPwm(0, 0, true);
+    setMotorsPwm(0, 0);
     m_use_simulator = true;
     m_robot_simulator.m_left_encoder.m_counts = m_odometry.leftEncoderValue();
     m_robot_simulator.m_left_encoder.m_delta = 0;
@@ -423,15 +440,15 @@ void PropulsionTask::setSimulationMode(bool enable) {
   }
 }
 
-void PropulsionTask::setMotorsPwm(float left_pwm, float right_pwm, bool immediate) {
+void PropulsionTask::setMotorsPwm(float left_pwm, float right_pwm) {
   if (m_use_simulator) {
     m_robot_simulator.m_left_pwm = left_pwm;
     m_robot_simulator.m_right_pwm = right_pwm;
   } else {
     switch (m_config.motor_controller_type) {
       case MotorControllerType::ODriveUART:
-        m_odrive_client.setVelocitySetPoint(0, -left_pwm, 0, immediate);
-        m_odrive_client.setVelocitySetPoint(1, right_pwm, 0, immediate);
+        m_odrive_client.setVelocitySetPoint(0, -left_pwm, 0);
+        m_odrive_client.setVelocitySetPoint(1, right_pwm, 0);
         break;
       case MotorControllerType::Pwm:
         hal::pwm_set(0, left_pwm);
@@ -452,7 +469,7 @@ void PropulsionTask::onCommandBegin(uint16_t sequence_number) {
   buff[2] = static_cast<uint8_t>(CommandEvent::Begin);
   buff[3] = static_cast<uint8_t>(m_controller.error());
   *(uint16_t*)(buff) = m_current_command_sequence_number;
-  Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionCommandEvent, buff, 4);
+  Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::PropulsionCommandEvent, buff, 4);
   m_is_executing_command = true;
 }
 
@@ -463,7 +480,7 @@ void PropulsionTask::onCommandEnd() {
                                      : CommandEvent::Error);
   buff[3] = static_cast<uint8_t>(m_controller.error());
   *(uint16_t*)(buff) = m_current_command_sequence_number;
-  Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionCommandEvent, buff, 4);
+  Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::PropulsionCommandEvent, buff, 4);
   m_is_executing_command = false;
   if(m_controller.state() == PropulsionController::State::Error)
   {
@@ -478,7 +495,7 @@ void PropulsionTask::onCommandCancel(uint16_t sequence_number) {
   buff[2] = static_cast<uint8_t>(CommandEvent::Cancel);
   buff[3] = static_cast<uint8_t>(m_controller.error());
   *(uint16_t*)(buff) = m_current_command_sequence_number;
-  Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionCommandEvent, buff, 4);
+  Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::PropulsionCommandEvent, buff, 4);
   m_is_executing_command = false;
 }
 
@@ -521,6 +538,8 @@ void PropulsionTask::taskFunction() {
   m_odometry.setPeriod(m_config.update_period_ms * 1e-3f);
   m_odometry.setConfig(m_odometry.config());
   m_odometry.reset(left, right);
+
+  m_odrive_client.setOutputExchange(&Robot::instance().mainExchangeIn(), CommMessageType::ODriveRequestPacket);
 
   while (1) {
     checkStateUpdate();

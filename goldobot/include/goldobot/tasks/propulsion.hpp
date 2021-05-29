@@ -24,6 +24,7 @@ class PropulsionTask : public Task {
 		uint8_t telemetry_period_ms{10};
 		uint8_t telemetry_ex_period_ms{20};
 		uint8_t pose_period_ms{50};
+		uint8_t telemetry_odrive_period_ms{100};
 	};
  public:
   PropulsionTask();
@@ -55,6 +56,7 @@ class PropulsionTask : public Task {
   uint32_t m_next_telemetry_ts{0};
   uint32_t m_next_telemetry_ex_ts{0};
   uint32_t m_next_pose_ts{0};
+  uint32_t m_next_odrive_telemetry_ts{0};
   uint32_t m_next_watchdog_ts{0};
   uint16_t m_current_command_sequence_number{0};
   bool m_is_executing_command{false};
@@ -84,7 +86,7 @@ class PropulsionTask : public Task {
   void measurePointLongi(Vector2D point, float sensor_offset);
 
   void setMotorsEnable(bool enable);
-  void setMotorsPwm(float left_pwm, float right_pwm, bool immediate = false);
+  void setMotorsPwm(float left_pwm, float right_pwm);
   void setSimulationMode(bool enable);
 
   void sendTelemetryMessages();
