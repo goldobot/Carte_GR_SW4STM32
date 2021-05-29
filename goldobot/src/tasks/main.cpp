@@ -1,5 +1,6 @@
 #include "goldobot/tasks/main.hpp"
 
+#include "goldobot/version.hpp"
 #include "goldobot/hal.hpp"
 #include "goldobot/messages.hpp"
 #include "goldobot/robot.hpp"
@@ -44,6 +45,7 @@ int MainTask::remainingMatchTime() {
 }
 
 void MainTask::taskFunction() {
+  Robot::instance().mainExchangeIn().subscribe({5, 5, &m_message_queue});
   Robot::instance().mainExchangeIn().subscribe({10, 12, &m_message_queue});
   Robot::instance().mainExchangeIn().subscribe({200, 205, &m_message_queue});
 
@@ -55,13 +57,14 @@ void MainTask::taskFunction() {
     delay(1);
   }
 
+  // Main loop
   while (1) {
     while (m_message_queue.message_ready()) {
       process_message();
     }
 
+    // Check match timer
     auto remaining_time = remainingMatchTime();
-
     if (m_match_timer_running && remaining_time == 0) {
       Robot::instance().mainExchangeOut().pushMessage(CommMessageType::MatchEnd,
                                                       (unsigned char*)nullptr, 0);
@@ -87,6 +90,12 @@ void MainTask::taskFunction() {
 void MainTask::process_message_config() {
   int msg_size = m_message_queue.message_size();
   switch (m_message_queue.message_type()) {
+    case CommMessageType::GetNucleoFirmwareVersion: {
+      m_message_queue.pop_message(nullptr, 0);
+      Robot::instance().mainExchangeOut().pushMessage(CommMessageType::GetNucleoFirmwareVersion,
+                                                      (unsigned char*)goldobot::c_git_commit_id,
+                                                      strlen(goldobot::c_git_commit_id));
+    } break;
     case CommMessageType::RobotConfigLoadBegin: {
       m_message_queue.pop_message(nullptr, 0);
       Robot::instance().beginLoadConfig();
@@ -112,14 +121,12 @@ void MainTask::process_message_config() {
 void MainTask::process_message() {
   int msg_size = m_message_queue.message_size();
   switch (m_message_queue.message_type()) {
-      /*case CommMessageType::GetNucleoFirmwareVersion: {
-        // std::memset(my_firmware_ver,0,MY_FIRMWARE_VER_SZ);
-        // std::strncpy(my_firmware_ver, GOLDO_GIT_VERSION, MY_FIRMWARE_VER_SZ);
+      case CommMessageType::GetNucleoFirmwareVersion: {
         m_message_queue.pop_message(nullptr, 0);
         Robot::instance().mainExchangeOut().pushMessage(CommMessageType::GetNucleoFirmwareVersion,
-                                                        (unsigned char*)my_firmware_ver,
-                                                        MY_FIRMWARE_VER_SZ);
-      } break;*/
+                                                        (unsigned char*)goldobot::c_git_commit_id,
+                                                        strlen(goldobot::c_git_commit_id));
+      } break;
 
     case CommMessageType::MatchTimerStart: {
       m_start_of_match_time = hal::get_tick_count();

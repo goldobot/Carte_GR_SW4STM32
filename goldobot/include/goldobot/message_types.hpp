@@ -9,6 +9,7 @@ enum class CommMessageType : uint16_t {
   Heartbeat,
   HeapStats,
   Reset,
+  GetNucleoFirmwareVersion,
 
 
   MatchTimer=10,
