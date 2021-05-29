@@ -2,6 +2,7 @@
 
 #include <mutex>
 #include <cassert>
+#include <cstring>
 
 namespace goldobot {
 
@@ -19,7 +20,7 @@ bool MessageQueue::push_message(CommMessageType message_type, const unsigned cha
   std::unique_lock<detail::LockerMutex>(m_mutex);
   // Reject message if buffer is full
   if (msg_size > available_capacity()) {
-    // assert(false);
+    assert(false);
     return false;
   }
 
@@ -46,9 +47,8 @@ void MessageQueue::push_data(const unsigned char* buffer, size_t size) {
     if (m_end_index == m_buffer_size) {
       m_end_index = 0;
     }
-    assert(m_end_index < m_buffer_size);
-    m_statistics.bytes_pushed += size;
   }
+  m_statistics.bytes_pushed += size;
 }
 
 bool MessageQueue::message_ready() const { return m_message_ready; }
@@ -60,11 +60,22 @@ size_t MessageQueue::message_size() const { return m_message_size; }
 MessageQueue::Statistics MessageQueue::statistics() {
   auto retval = m_statistics;
   m_statistics.min_available_capacity = available_capacity();
+  m_statistics.bytes_pushed = 0;
+  m_statistics.messages_pushed = 0;
   return retval;
 }
+
 void MessageQueue::read_data(size_t start_index, unsigned char* buffer, size_t size) {
   size_t i = 0;
   size_t idx = start_index;
+  size_t idx_end =  start_index + size;
+
+
+  if(idx_end < m_buffer_size)
+  {
+	  std::memcpy(buffer, &m_buffer[idx], size);
+	  return;
+  }
 
   while (i < size) {
     buffer[i] = m_buffer[idx];
@@ -103,6 +114,7 @@ size_t MessageQueue::pop_message(unsigned char* buffer, size_t size) {
 
   if (m_begin_index != m_end_index) {
     uint16_t buff[2];
+    assert(buff[2] < m_buffer_size);
     read_data(m_begin_index, (unsigned char*)buff, 4);
     pop_data(4);
     m_message_type = static_cast<CommMessageType>(buff[0]);

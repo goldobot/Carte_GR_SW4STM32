@@ -112,6 +112,8 @@ void UARTCommTask::taskFunction() {
 
     uint32_t cyccnt_end = DWT->CYCCNT;
     uint32_t cycles_count = cyccnt_end - cyccnt_begin;
+    m_statistics.max_cycles = std::max(m_statistics.max_cycles, cycles_count);
+    m_statistics.max_cycles = cycles_count;
 
     // Wait for next tick
     delay(1);
@@ -143,13 +145,16 @@ void UARTCommTask::sendStatistics()
   memcpy(msg, &deserializer_statistics, sizeof(CommDeserializer::Statistics));
   memcpy(msg + sizeof(CommDeserializer::Statistics), &serializer_statistics,
 		 sizeof(CommSerializer::Statistics));
-  send_message(CommMessageType::CommUartStats, (char*)msg, sizeof(msg));
+  m_out_prio_queue.push_message(CommMessageType::CommUartStats, (unsigned char*)msg, sizeof(msg));
 
   m_statistics.out_queue = m_out_queue.statistics();
   m_statistics.out_prio_queue = m_out_prio_queue.statistics();
 
-  send_message(CommMessageType::UartCommTaskStatistics, (char*)&m_statistics, sizeof(m_statistics));
+  auto statistics = m_statistics;
   m_statistics = Statistics();
+
+  m_out_prio_queue.push_message(CommMessageType::UartCommTaskStatistics, (unsigned char*)&statistics, sizeof(statistics));
+
 
 
 }

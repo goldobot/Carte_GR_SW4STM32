@@ -11,6 +11,7 @@ class UARTCommTask : public Task {
  public:
   struct Statistics
   {
+	  uint32_t max_cycles{0};
 	  MessageQueue::Statistics out_queue;
 	  MessageQueue::Statistics out_prio_queue;
   };

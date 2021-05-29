@@ -65,6 +65,7 @@ class ODriveClient {
 
   void setMotorsEnable(bool motors_enable);
   void setVelocitySetPoint(int axis, float input_vel, float input_torque);
+  void setPIDConfig(const PIDConfig& config);
   bool startMotorsCalibration();  // run motors startup procedure
   void clearErrors();
 

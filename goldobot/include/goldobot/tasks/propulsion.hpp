@@ -24,6 +24,7 @@ class PropulsionTask : public Task {
 		uint8_t telemetry_period_ms{10};
 		uint8_t telemetry_ex_period_ms{20};
 		uint8_t pose_period_ms{50};
+		uint8_t telemetry_odrive_period_ms{100};
 	};
  public:
   PropulsionTask();

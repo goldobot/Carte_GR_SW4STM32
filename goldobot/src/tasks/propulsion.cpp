@@ -128,21 +128,24 @@ void PropulsionTask::sendTelemetryMessages() {
     auto msg = m_controller.getTelemetry();
     Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionTelemetry,
                                                     (unsigned char*)&msg, sizeof(msg));
-    m_next_telemetry_ts += m_config.telemetry_period_ms;
+    m_next_telemetry_ts = std::max(m_next_telemetry_ts + m_config.telemetry_period_ms, current_time);
   }
 
   if (current_time >= m_next_telemetry_ex_ts) {
     auto msg = m_controller.getTelemetryEx();
     Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionTelemetryEx,
                                                     (unsigned char*)&msg, sizeof(msg));
-    m_next_telemetry_ex_ts += m_config.telemetry_ex_period_ms;
+    m_next_telemetry_ex_ts = std::max(m_next_telemetry_ex_ts + m_config.telemetry_ex_period_ms, current_time);
   }
 
-  if (current_time >= m_next_odrive_telemetry_ts) {
+  if (current_time >= m_next_odrive_telemetry_ts && m_config.motor_controller_type == MotorControllerType::ODriveUART ) {
     auto msg = m_odrive_client.telemetry();
     Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionODriveTelemetry,
                                                    (unsigned char*)&msg, sizeof(msg));
-    m_next_odrive_telemetry_ts += 500;
+
+
+
+    m_next_odrive_telemetry_ts = std::max(m_next_odrive_telemetry_ts + m_config.telemetry_odrive_period_ms, current_time);
   }
 
   if (current_time >= m_next_pose_ts) {
@@ -153,7 +156,8 @@ void PropulsionTask::sendTelemetryMessages() {
 
     Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionPose,
                                                     (unsigned char*)&msg, sizeof(msg));
-    m_next_pose_ts += m_config.pose_period_ms;
+
+    m_next_pose_ts = std::max(m_next_pose_ts + m_config.pose_period_ms, current_time);
   }
 }
 
