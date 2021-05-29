@@ -114,6 +114,7 @@ void PropulsionTask::doStep() {
     m_next_watchdog_ts = hal::get_tick_count() + 100;
     Robot::instance().exchangeInternal().pushMessage(CommMessageType::WatchdogReset, &watchdog_id,
                                                      1);
+
     Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionTaskStatistics,
                                                     (const unsigned char*)&m_cycles_max, 4);
     m_cycles_max = 0;
@@ -464,7 +465,7 @@ void PropulsionTask::onCommandBegin(uint16_t sequence_number) {
   buff[2] = static_cast<uint8_t>(CommandEvent::Begin);
   buff[3] = static_cast<uint8_t>(m_controller.error());
   *(uint16_t*)(buff) = m_current_command_sequence_number;
-  Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionCommandEvent, buff, 4);
+  Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::PropulsionCommandEvent, buff, 4);
   m_is_executing_command = true;
 }
 
@@ -475,7 +476,7 @@ void PropulsionTask::onCommandEnd() {
                                      : CommandEvent::Error);
   buff[3] = static_cast<uint8_t>(m_controller.error());
   *(uint16_t*)(buff) = m_current_command_sequence_number;
-  Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionCommandEvent, buff, 4);
+  Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::PropulsionCommandEvent, buff, 4);
   m_is_executing_command = false;
   if(m_controller.state() == PropulsionController::State::Error)
   {
@@ -490,7 +491,7 @@ void PropulsionTask::onCommandCancel(uint16_t sequence_number) {
   buff[2] = static_cast<uint8_t>(CommandEvent::Cancel);
   buff[3] = static_cast<uint8_t>(m_controller.error());
   *(uint16_t*)(buff) = m_current_command_sequence_number;
-  Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionCommandEvent, buff, 4);
+  Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::PropulsionCommandEvent, buff, 4);
   m_is_executing_command = false;
 }
 

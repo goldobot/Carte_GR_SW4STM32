@@ -5,7 +5,6 @@
 #include "goldobot/core/message_exchange.hpp"
 #include "goldobot/propulsion/robot_simulator.hpp"
 #include "goldobot/tasks/servos.hpp"
-#include "goldobot/tasks/debug.hpp"
 #include "goldobot/tasks/fpga.hpp"
 #include "goldobot/tasks/heartbeat.hpp"
 #include "goldobot/tasks/main.hpp"
@@ -80,7 +79,6 @@ public:
 
   HeartbeatTask m_heartbeat_task;
   MainTask m_main_task;
-  DebugTask m_debug_task;
   PropulsionTask m_propulsion_task;
   ServosTask m_servos_task;
   FpgaTask m_fpga_task;

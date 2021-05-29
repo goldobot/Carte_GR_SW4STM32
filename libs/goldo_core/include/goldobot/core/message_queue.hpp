@@ -32,7 +32,7 @@ class MessageQueue {
   void push_data(const unsigned char* buffer, size_t size);
   void read_data(size_t start_index, unsigned char* buffer, size_t size);
   void pop_data(size_t size);
-  size_t buffer_capacity() const noexcept
+  size_t buffer_capacity() const noexcept;
 
   unsigned char* m_buffer;
   size_t m_buffer_size;

@@ -123,7 +123,7 @@ size_t MessageQueue::buffer_capacity() const noexcept {
 
 size_t MessageQueue::available_capacity() const {
   auto buff_capacity = buffer_capacity();
-  size_t retval = m_buffer_size > buff_capacity + 5 ? m_buffer_size - size - 5 : 0;
+  size_t retval = buff_capacity > 4 ? buff_capacity - 4 : 0;
   return retval;
 }
 }  // namespace goldobot

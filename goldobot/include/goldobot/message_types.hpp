@@ -10,6 +10,7 @@ enum class CommMessageType : uint16_t {
   HeapStats,
   Reset,
 
+
   MatchTimer=10,
   MatchTimerStart,
   MatchEnd,
@@ -87,7 +88,9 @@ enum class CommMessageType : uint16_t {
   PropulsionConfigSet,
 
   WatchdogReset=250,
-  WatchdogStatus
+  WatchdogStatus,
+
+  UartCommTaskStatistics=300,
 };
 
 // task ids for watchdog

@@ -101,7 +101,7 @@ void MainTask::process_message_config() {
       uint16_t crc;
       m_message_queue.pop_message((unsigned char*)&crc, 2);
       uint8_t status = Robot::instance().endLoadConfig(crc) ? 0 : 1;
-      Robot::instance().mainExchangeOut().pushMessage(CommMessageType::RobotConfigLoadStatus,
+      Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::RobotConfigLoadStatus,
                                                       (unsigned char*)&status, 1);
     } break;
     default:
