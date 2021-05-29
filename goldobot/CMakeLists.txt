@@ -9,7 +9,6 @@ add_library(goldobot STATIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include/goldobot/hal.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/goldobot/tasks/main.hpp
 
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/tasks/debug.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/tasks/dynamixels_comm.cpp  
   ${CMAKE_CURRENT_SOURCE_DIR}/src/tasks/fpga.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/tasks/heartbeat.cpp

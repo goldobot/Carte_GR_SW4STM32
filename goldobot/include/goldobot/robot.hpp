@@ -5,7 +5,6 @@
 #include "goldobot/core/message_exchange.hpp"
 #include "goldobot/propulsion/robot_simulator.hpp"
 #include "goldobot/tasks/servos.hpp"
-#include "goldobot/tasks/debug.hpp"
 #include "goldobot/tasks/fpga.hpp"
 #include "goldobot/tasks/heartbeat.hpp"
 #include "goldobot/tasks/main.hpp"
@@ -54,6 +53,7 @@ public:
 
   MessageExchange& mainExchangeIn() { return m_main_exchange_in; };
   MessageExchange& mainExchangeOut() { return m_main_exchange_out; };
+  MessageExchange& mainExchangeOutPrio() { return m_main_exchange_out_prio; };
   MessageExchange& exchangeInternal() { return m_exchange_internal; };
 
   const RobotGeometryConfig& robotGeometry() const;
@@ -79,7 +79,6 @@ public:
 
   HeartbeatTask m_heartbeat_task;
   MainTask m_main_task;
-  DebugTask m_debug_task;
   PropulsionTask m_propulsion_task;
   ServosTask m_servos_task;
   FpgaTask m_fpga_task;
@@ -95,6 +94,7 @@ public:
 
   MessageExchange m_main_exchange_in;
   MessageExchange m_main_exchange_out;
+  MessageExchange m_main_exchange_out_prio;
   MessageExchange m_exchange_internal;
 
   static unsigned char s_config_area[16384];
