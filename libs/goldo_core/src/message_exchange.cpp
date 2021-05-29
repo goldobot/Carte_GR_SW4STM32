@@ -10,7 +10,7 @@ MessageExchange::~MessageExchange(){};
 
 bool MessageExchange::pushMessage(CommMessageType message_type, const unsigned char* buffer,
                                   size_t size) {
-  std::unique_lock<detail::LockerMutex>(m_mutex);
+  std::unique_lock<detail::LockerMutex> lock(m_mutex);
 
   for (int i = 0; i < m_num_subscriptions; i++) {
     auto& sub = m_subscriptions[i];
@@ -24,7 +24,7 @@ bool MessageExchange::pushMessage(CommMessageType message_type, const unsigned c
 
 void MessageExchange::subscribe(const Subscription& sub) {
   assert(sub.queue != nullptr);
-  std::unique_lock<detail::LockerMutex>(m_mutex);
+  std::unique_lock<detail::LockerMutex> lock(m_mutex);
   m_subscriptions[m_num_subscriptions] = sub;
   m_num_subscriptions++;
 }

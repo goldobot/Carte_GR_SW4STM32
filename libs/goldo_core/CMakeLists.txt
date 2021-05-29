@@ -29,3 +29,7 @@ endif ()
 if (GOLDO_BUILD_TESTS)
   add_subdirectory(tests)
 endif ()
+
+if (GOLDO_BUILD_FUZZERS)
+  add_subdirectory(fuzzers)
+endif ()
