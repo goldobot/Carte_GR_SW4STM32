@@ -33,8 +33,6 @@ UARTCommTask::UARTCommTask()
 const char* UARTCommTask::name() const { return "uart_comm"; }
 
 void UARTCommTask::init() {
-  Robot::instance().mainExchangeOut().subscribe({0, 1000, &m_out_queue});
-  Robot::instance().mainExchangeOutPrio().subscribe({0, 1000, &m_out_prio_queue});
   Task::init();
 }
 
@@ -42,6 +40,9 @@ void UARTCommTask::taskFunction() {
   set_priority(5);
 
   m_last_timestamp = hal::get_tick_count();
+
+  Robot::instance().mainExchangeOut().subscribe({0, 1000, &m_out_queue});
+  Robot::instance().mainExchangeOutPrio().subscribe({0, 1000, &m_out_prio_queue});
 
   // flush uart to ensure first message is well received
   memset(s_scratch_buffer, 0, sizeof(s_scratch_buffer));
