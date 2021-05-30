@@ -3,6 +3,8 @@
 #include "goldobot/hal.hpp"
 #include "goldobot/robot.hpp"
 
+#include "goldobot/core/math_utils.hpp"
+
 #include <cassert>
 
 // test, measure task running time
@@ -222,10 +224,6 @@ void PropulsionTask::processUrgentMessage() {
   auto message_size = m_urgent_message_queue.message_size();
 
   switch (message_type) {
-    case CommMessageType::MatchEnd: {
-      m_urgent_message_queue.pop_message(nullptr, 0);
-      setMotorsEnable(false);
-    } break;
     case CommMessageType::ODriveResponsePacket: {
       uint8_t buff[6];
       m_urgent_message_queue.pop_message((unsigned char*)&buff, 16);
@@ -509,6 +507,49 @@ void PropulsionTask::clearCommandQueue() {
     uint16_t sequence_number = *(uint16_t*)exec_traj_buff;
     onCommandCancel(sequence_number);
   }
+}
+
+float PropulsionTask::scopeGetVariable(ScopeVariable type)
+{
+	return 0;
+}
+
+void PropulsionTask::updateScope()
+{
+	if(m_scope_config.num_channels == 0)
+	{
+		return;
+	}
+
+	auto current_time = hal::get_tick_count();
+
+	if(current_time < m_next_scope_ts)
+	{
+		return;
+	}
+
+	m_next_scope_ts = std::max(m_next_scope_ts + m_scope_config.period, current_time);
+
+	if(m_scope_idx == 0)
+	{
+		*reinterpret_cast<uint32_t*>(&m_scope_buffer[m_scope_idx]) = hal::get_tick_count();
+		m_scope_idx = 4;
+	}
+
+	for(unsigned i = 0; i < m_scope_config.num_channels; i++)
+	{
+		const auto& chan = m_scope_config.channels[i];
+		float val_normalized = (scopeGetVariable(chan.variable) - chan.min_value) / (chan.max_value - chan.min_value);
+		val_normalized = clamp(val_normalized, 0.0f, 1.0f);
+		uint16_t val = static_cast<uint16_t>(val_normalized * std::numeric_limits<uint16_t>::max());
+		*reinterpret_cast<uint16_t*>(&m_scope_buffer[m_scope_idx]) = val;
+		m_scope_idx += 2;
+	}
+	if(m_scope_idx + m_scope_config.num_channels * 2 >= sizeof(m_scope_buffer))
+	{
+		Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionScope, m_scope_buffer, m_scope_idx);
+		m_scope_idx = 0;
+	}
 }
 
 void PropulsionTask::taskFunction() {

@@ -11,22 +11,10 @@
 
 using namespace goldobot;
 
-#ifndef M_PI
-#define M_PI (3.14159265358979323846)
-#endif
-
 unsigned char g_temp_buffer[32];
 
-#ifdef GOLDO_GIT_VERSION
-#define _STRINGIFY(A) #A
-#define STRINGIFY(A) _STRINGIFY(A)
-#define MY_GIT_VERSION STRINGIFY(GOLDO_GIT_VERSION)
-#else
-#define MY_GIT_VERSION "GOLDO HACK"
-#endif
 
 #define MY_FIRMWARE_VER_SZ 64
-const char my_firmware_ver[MY_FIRMWARE_VER_SZ] = MY_GIT_VERSION;
 
 unsigned char __attribute__((section(".ccmram"))) MainTask::s_message_queue_buffer[2048];
 
@@ -62,6 +50,8 @@ void MainTask::taskFunction() {
     while (m_message_queue.message_ready()) {
       process_message();
     }
+
+    checkSensorsState();
 
     // Check match timer
     auto remaining_time = remainingMatchTime();
@@ -177,4 +167,35 @@ void MainTask::process_message() {
       m_message_queue.pop_message(nullptr, 0);
       break;
   }
+}
+
+void MainTask::checkSensorsState()
+{
+  uint32_t sensors_state{0};
+  auto& robot = Robot::instance();
+  for(unsigned i = 0; i < robot.m_sensors_config.num_sensors; i++)
+  {
+	  const auto& sensor = robot.m_sensors_config.sensors[i];
+	  switch(sensor.type)
+	  {
+	  case 1:
+		  sensors_state |= hal::gpio_get(sensor.id) ? 1 << i : 0;
+		  break;
+	  default:
+		  break;
+	  }
+  }
+int a = 1;
+  //bool has_changed = (gpio_state != m_gpio_state);
+  /*if(has_changed || m_fpga_gpio_state_changed)
+  {
+	  m_fpga_gpio_state_changed = 0;
+	  m_gpio_state = gpio_state;
+
+     Robot::instance().mainExchangeOut().pushMessage(CommMessageType::SensorsState,
+	 												(unsigned char *)&m_gpio_state, 8);
+     Robot::instance().exchangeInternal().pushMessage(CommMessageType::SensorsState,
+														  (unsigned char *)&m_gpio_state, 8);
+  }*/
+
 }

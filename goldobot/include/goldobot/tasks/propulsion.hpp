@@ -9,6 +9,40 @@
 #include <cstdint>
 
 namespace goldobot {
+
+enum class ScopeVariable: uint32_t
+{
+	None,
+	PoseX,
+	PoseY,
+	PoseYaw,
+	PoseSpeed,
+	PoseYawRate,
+	TargetX,
+	TargetY,
+	TargetYaw,
+	TargetYawRate,
+	LeftMotorVelocitySetpoint,
+	RightMotorVelocitySetpoint,
+	ODriveAxis0VelEstimate,
+	ODriveAxis1VelEstimate
+};
+
+struct ScopeChannelConfig
+{
+	ScopeVariable variable{ScopeVariable::None};
+	float min_value;
+	float max_value;
+};
+
+struct ScopeConfig
+{
+	uint16_t period;
+	uint16_t num_channels;
+	ScopeChannelConfig channels[8];
+};
+
+
 class PropulsionTask : public Task {
 	public:
 	enum class MotorControllerType : uint8_t {
@@ -94,6 +128,14 @@ class PropulsionTask : public Task {
   void onCommandBegin(uint16_t sequence_number);
   void onCommandEnd();
   void onCommandCancel(uint16_t sequence_number);
+
+  float scopeGetVariable(ScopeVariable type);
+  void updateScope();
+
+  ScopeConfig m_scope_config;
+  uint8_t m_scope_buffer[64]; // uint32 packet timestamp followed by values
+  size_t m_scope_idx{0};
+  uint32_t m_next_scope_ts{0};
 
   ODriveClient m_odrive_client;
 

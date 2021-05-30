@@ -19,14 +19,14 @@ struct ServosConfig {
 
 struct SensorConfig
 {
-	int8_t type; // 0 unknown, 1: gpio, 2: fpga
-	int8_t id;
+	uint8_t type{0};
+	uint8_t id{0};
 };
 
 struct SensorsConfig
 {
 	int8_t num_sensors;
-	SensorConfig ensors[32];
+	SensorConfig sensors[32];
 };
 
 struct RobotGeometryConfig {

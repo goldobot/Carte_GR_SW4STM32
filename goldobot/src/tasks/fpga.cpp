@@ -61,9 +61,6 @@ void FpgaTask::taskFunction() {
     m_cnt++;
     if(m_cnt == 100)
     {
-    	uint8_t watchdog_id = 2;
-    	Robot::instance().exchangeInternal().pushMessage(CommMessageType::WatchdogReset,&watchdog_id, 1);
-
     	m_cnt = 0;
     }
 

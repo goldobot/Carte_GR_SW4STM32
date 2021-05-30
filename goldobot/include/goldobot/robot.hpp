@@ -17,6 +17,7 @@
 
 namespace goldobot {
 
+
 class Robot {
 public:
 	enum class ConfigSection : uint8_t {
@@ -34,9 +35,6 @@ public:
   static Robot& instance();
   void init();
   void start();
-
-  Side side() const noexcept { return m_side; };
-  void setSide(Side side) noexcept { m_side = side; };
 
   MatchState matchState() const noexcept { return m_match_state; };
   void setMatchState(MatchState state) noexcept { m_match_state = state; };
@@ -69,8 +67,9 @@ public:
   void loadConfig(char* buffer, size_t size);
   bool endLoadConfig(uint16_t crc);
 
+  SensorsConfig m_sensors_config;
+
  private:
-  Side m_side{Side::Unknown};
   MatchState m_match_state{MatchState::Unconfigured};
 
   std::atomic<int> m_start_match_time{0};

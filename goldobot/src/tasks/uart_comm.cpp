@@ -105,9 +105,6 @@ void UARTCommTask::taskFunction() {
     // send task statistics every second
     if (timestamp - m_last_timestamp >= 1000) {
       sendStatistics();
-
-
-
       m_last_timestamp = timestamp;
     }
 

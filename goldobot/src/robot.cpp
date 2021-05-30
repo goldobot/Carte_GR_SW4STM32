@@ -85,6 +85,9 @@ bool Robot::endLoadConfig(uint16_t crc) {
       case ConfigSection::Hal:
         hal::configure(s_config_area + section_offset);
         break;
+      case ConfigSection::Sensors:
+    	  memcpy(&m_sensors_config, s_config_area + section_offset, section_size);
+    	  break;
       case ConfigSection::PropulsionTask:
 		m_propulsion_task.setTaskConfig(*reinterpret_cast<PropulsionTask::Config*>(s_config_area + section_offset));
 		break;
