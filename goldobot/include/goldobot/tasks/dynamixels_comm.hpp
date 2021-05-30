@@ -54,5 +54,6 @@ class DynamixelsCommTask : public Task {
   unsigned char m_message_queue_buffer[256];
 
   void processMessage();
+  void onRequest();
 };
 }  // namespace goldobot

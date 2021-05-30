@@ -76,25 +76,8 @@ void DynamixelsCommTask::processMessage() {
   auto message_size = m_message_queue.message_size();
   switch (m_message_queue.message_type()) {
     case CommMessageType::DynamixelsRequest: {
-      unsigned char buff[3];
-      unsigned char data_read[64];
-      auto message_size = m_message_queue.message_size();
-      m_message_queue.pop_message(m_scratchpad, 256);
-      // uint16_t sequence_id, uint8_t protocol version, uint8_t flags, payload
-      // flags: 0x01
-      uint16_t sequence_id = *reinterpret_cast<uint16_t*>(m_scratchpad);
-      uint8_t proto_version = m_scratchpad[2];
-      uint8_t flags = m_scratchpad[3];
-      transmitPacket(m_scratchpad[4], (DynamixelCommand)m_scratchpad[5], &m_scratchpad[6], message_size - 6);
-      if(flags & 0x01)
-      {
-    	  receivePacket();
-    	  *reinterpret_cast<uint16_t*>(m_scratchpad) = m_dynamixels_receive_size;
-    	  memcpy(m_scratchpad, m_dynamixels_buffer, m_dynamixels_receive_size);
-    	  Robot::instance().mainExchangeOut().pushMessage(CommMessageType::DynamixelsResponse,
-    	                                                          (unsigned char*)m_scratchpad, m_dynamixels_receive_size + 2);
+    	onRequest();
 
-      }
     } break;
 
     default:
@@ -103,6 +86,27 @@ void DynamixelsCommTask::processMessage() {
   }
 }
 
+void DynamixelsCommTask::onRequest()
+{unsigned char buff[3];
+  unsigned char data_read[64];
+  auto message_size = m_message_queue.message_size();
+  m_message_queue.pop_message(m_scratchpad, 256);
+  // uint16_t sequence_id, uint8_t protocol version, uint8_t flags, payload
+  // flags: 0x01
+  uint16_t sequence_id = *reinterpret_cast<uint16_t*>(m_scratchpad);
+  uint8_t proto_version = m_scratchpad[2];
+  uint8_t flags = m_scratchpad[3];
+  transmitPacket(m_scratchpad[4], (DynamixelCommand)m_scratchpad[5], &m_scratchpad[6], message_size - 6);
+  if(flags & 0x01)
+  {
+	  receivePacket();
+	  *reinterpret_cast<uint16_t*>(m_scratchpad) = m_dynamixels_receive_size;
+	  memcpy(m_scratchpad, m_dynamixels_buffer, m_dynamixels_receive_size);
+	  Robot::instance().mainExchangeOut().pushMessage(CommMessageType::DynamixelsResponse,
+															  (unsigned char*)m_scratchpad, m_dynamixels_receive_size + 2);
+
+  }
+}
 void DynamixelsCommTask::transmitPacket(uint8_t id, DynamixelCommand command, uint8_t* parameters,
                                         size_t num_parameters) {
   //protocol v1
