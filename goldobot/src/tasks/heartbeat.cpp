@@ -74,8 +74,6 @@ void HeartbeatTask::taskFunction() {
       Robot::instance().mainExchangeOut().pushMessage(CommMessageType::WatchdogStatus, watchdogs, 8);
     }
 
-   	checkGpioState();
-
     i++;
     if(i == 10)
     {
@@ -83,29 +81,4 @@ void HeartbeatTask::taskFunction() {
     }
     delay_periodic(100);
   }
-}
-
-void HeartbeatTask::checkGpioState()
-{
-  uint32_t gpio_state{0};
-  for(int i = 0; i < 32; i++)
-  {
-	if(hal::gpio_get(i))
-	{
-		gpio_state |= 1 << i;
-	}
-  }
-
-  bool has_changed = (gpio_state != m_gpio_state);
-  if(has_changed || m_fpga_gpio_state_changed)
-  {
-	  m_fpga_gpio_state_changed = 0;
-	  m_gpio_state = gpio_state;
-
-     Robot::instance().mainExchangeOut().pushMessage(CommMessageType::SensorsState,
-	 												(unsigned char *)&m_gpio_state, 8);
-     Robot::instance().exchangeInternal().pushMessage(CommMessageType::SensorsState,
-														  (unsigned char *)&m_gpio_state, 8);
-  }
-
 }

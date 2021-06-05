@@ -35,6 +35,10 @@ class MainTask : public Task {
   unsigned char m_scratchpad[128];
 
   uint32_t m_sensors_state{0};
+  uint32_t m_fpga_gpio_state{0};
+  bool m_sensors_state_changed{true};
+  uint32_t m_sensors_state_next_ts{0};
+  uint32_t m_sensors_state_next_ts_min{0};
 
   SequenceEngine m_sequence_engine;
 };
