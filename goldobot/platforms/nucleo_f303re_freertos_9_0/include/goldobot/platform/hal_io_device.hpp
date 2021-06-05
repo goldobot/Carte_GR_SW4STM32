@@ -14,22 +14,19 @@ namespace goldobot {
 namespace hal {
 namespace platform {
 
-struct IORequest;
 struct IODevice;
 
-typedef void (*IORequestCallback)(IORequest*, IODevice* device);
-typedef void (*IORequestFunction)(IORequest*, uint32_t device_index);
+//typedef void (*IORequestCallback)(IORequest*, IODevice* device);
+
 
 enum class IORequestState : uint32_t { Ready, Pending, Busy, Complete, Error };
 
-struct IORequest {
-  uint8_t* rx_ptr;
-  uint8_t* tx_ptr;
-  uint32_t size;
+struct IORequestImpl : IORequest {
   std::atomic<uint32_t> remaining;
   std::atomic<IORequestState> state{IORequestState::Ready};
-  IORequestCallback callback;
 };
+
+typedef void (*IORequestFunction)(IORequestImpl*, uint32_t device_index);
 
 struct IODeviceFunctions {
   IORequestFunction start_request;
@@ -39,7 +36,8 @@ struct IODeviceFunctions {
 
 class IODevice {
  public:
-  size_t read(uint8_t* buffer, size_t buffer_size);
+  void execute(IORequest request, uint32_t timeout);
+  size_t read(uint8_t* buffer, size_t buffer_size, uint32_t timeout);
   size_t write(const uint8_t* buffer, size_t buffer_size);
 
   size_t map_read(uint8_t** buffer);
@@ -59,15 +57,13 @@ class IODevice {
 
   IODeviceFunctions* rx_functions;
   IODeviceQueue rx_queue;
-  IORequest rx_request;
-  IORequest rx_request_next;
-  uint8_t* rx_next_head{nullptr};
-  SemaphoreHandle_t rx_semaphore;
+  IORequestImpl rx_request;
 
   IODeviceFunctions* tx_functions;
   IODeviceQueue tx_queue;
-  IORequest tx_request;
-  SemaphoreHandle_t tx_semaphore;
+  IORequestImpl tx_request;
+
+  SemaphoreHandle_t req_finished_semaphore;
 };
 
 void init_io_device(IODeviceConfig* config);

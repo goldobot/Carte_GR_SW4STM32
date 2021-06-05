@@ -9,6 +9,33 @@ typedef uint32_t TickType_t;
 
 enum class Status { Error = 0, Ok = 1 };
 
+struct IORequest;
+struct IORequestStatus
+{
+	enum StatusCode : uint32_t {
+		Success,
+		Error,
+		UartIdleDetected
+	};
+	StatusCode code;
+	uint32_t size;
+};
+
+typedef bool (*IORequestCallback)(IORequest*, IORequestStatus);
+
+struct IORequest {
+  uint8_t* rx_ptr{nullptr};
+  uint8_t* tx_ptr{nullptr};
+  uint32_t size{0};
+  // callback will be called in interrupt context
+  // the callback can modify the request and return true to start a new rx or tx command immediately
+  // else io_execute will return to the calling task
+  IORequestCallback callback{nullptr};
+  void* userdata{nullptr};
+};
+
+
+
 void init();
 
 //! \brief Configure peripherals
@@ -24,7 +51,9 @@ void pwm_set(int pwm_id, float value);
 uint16_t encoder_get(int encoder_id);
 uint16_t encoder_set(int encoder_id, uint16_t value);
 
-size_t io_read(int id, uint8_t* buffer, size_t size);
+void io_execute(int id, IORequest request, uint32_t timeout = -1);
+
+size_t io_read(int id, uint8_t* buffer, size_t size, uint32_t timeout = -1);
 size_t io_write(int id, const uint8_t* buffer, size_t size);
 size_t io_readwrite(int id, uint8_t read_buffer, const uint8_t* write_buffer, size_t size);
 

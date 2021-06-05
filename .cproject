@@ -79,6 +79,10 @@
 								</option>
 								<option id="gnu.cpp.compiler.option.preprocessor.def.881752816" name="Defined symbols (-D)" superClass="gnu.cpp.compiler.option.preprocessor.def" useByScannerDiscovery="false" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="USE_HAL_DRIVER"/>
+									<listOptionValue builtIn="false" value="GOLDO_GIT_COMMIT_ID=&quot;&quot;"/>
+									<listOptionValue builtIn="false" value="GOLDO_GIT_COMMIT_SHORT_ID=&quot;&quot;"/>
+									<listOptionValue builtIn="false" value="GOLDO_GIT_COMMIT_DATE=&quot;&quot;"/>
+									<listOptionValue builtIn="false" value="GOLDO_GIT_BRANCH=&quot;&quot;"/>
 									<listOptionValue builtIn="false" value="USE_FULL_LL_DRIVER"/>
 									<listOptionValue builtIn="false" value="STM32F303xE"/>
 									<listOptionValue builtIn="false" value="GOLDOBOT_PLATFORM_OS_FreeRTOS"/>
@@ -209,6 +213,10 @@
 								</option>
 								<option id="gnu.cpp.compiler.option.preprocessor.def.764300935" name="Defined symbols (-D)" superClass="gnu.cpp.compiler.option.preprocessor.def" useByScannerDiscovery="false" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="USE_HAL_DRIVER"/>
+									<listOptionValue builtIn="false" value="GOLDO_GIT_COMMIT_ID=&quot;&quot;"/>
+									<listOptionValue builtIn="false" value="GOLDO_GIT_COMMIT_SHORT_ID=&quot;&quot;"/>
+									<listOptionValue builtIn="false" value="GOLDO_GIT_COMMIT_DATE=&quot;&quot;"/>
+									<listOptionValue builtIn="false" value="GOLDO_GIT_BRANCH=&quot;&quot;"/>
 									<listOptionValue builtIn="false" value="USE_FULL_LL_DRIVER"/>
 									<listOptionValue builtIn="false" value="STM32F303xE"/>
 									<listOptionValue builtIn="false" value="GOLDOBOT_PLATFORM_OS_FreeRTOS"/>

@@ -50,6 +50,8 @@ class DynamixelsCommTask : public Task {
   uint8_t m_dynamixels_receive_error;
   uint8_t* m_dynamixels_receive_params;
 
+  bool m_response_ok;
+
   MessageQueue m_message_queue;
   unsigned char m_message_queue_buffer[256];
 

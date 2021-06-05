@@ -9,7 +9,7 @@ struct LockerNull {
 };
 
 struct LockerMutex {
-  LockerMutex() : m_handle(xSemaphoreCreateBinary()){};
+  LockerMutex() : m_handle(xSemaphoreCreateMutex()){};
   ~LockerMutex() { vSemaphoreDelete(m_handle); };
 
   void lock() {

@@ -34,7 +34,7 @@ void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef* hspi) {
   auto io_device = g_spi_io_devices[spi_index];
 
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-  xSemaphoreGiveFromISR(io_device->tx_semaphore, &xHigherPriorityTaskWoken);
+  xSemaphoreGiveFromISR(io_device->req_finished_semaphore, &xHigherPriorityTaskWoken);
   portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
@@ -47,7 +47,7 @@ void HAL_SPI_ErrorCallback(SPI_HandleTypeDef* hspi) {
   auto io_device = g_spi_io_devices[spi_index];
 
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-  xSemaphoreGiveFromISR(io_device->tx_semaphore, &xHigherPriorityTaskWoken);
+  xSemaphoreGiveFromISR(io_device->req_finished_semaphore, &xHigherPriorityTaskWoken);
   portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 // void HAL_SPI_AbortCpltCallback(SPI_HandleTypeDef *hspi)
@@ -158,7 +158,7 @@ void spi_read_write(int id, uint8_t* read_buffer, const uint8_t* write_buffer, s
   auto hspi = &g_spi_handles[g_io_devices[id].device_index];
   auto& io_device = g_io_devices[id];
   HAL_SPI_TransmitReceive_IT(hspi, const_cast<uint8_t*>(write_buffer), read_buffer, size);
-  while (xSemaphoreTake(io_device.tx_semaphore, portMAX_DELAY) != pdTRUE &&
+  while (xSemaphoreTake(io_device.req_finished_semaphore, portMAX_DELAY) != pdTRUE &&
          HAL_SPI_GetState(hspi) != HAL_SPI_STATE_READY) {
   }
 }
