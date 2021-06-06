@@ -56,14 +56,14 @@ void goldobot_hal_uart_irq_handler(int uart_index) {
 
 void goldobot_hal_uart_do_callback(IORequestImpl* req, IORequestStatus status, IODevice* io_device, uint8_t uart_index)
 {
-	if(req->callback && req->callback(req, status))
+	if(req->callback && req->callback(req, status) && req->size != 0)
   {
 		// hacky solution to allow request callbacks to switch between tx and rx
 		// used mostly in dynamixels communications now
 		// because the delay between end of tx and arrival of dynamixels data is  20 us, shorter than FreeRTOS task switch time
 		if(req->rx_ptr != nullptr)
 		{
-			assert(io_device->rx_request.state != IORequestState::Busy);
+			//assert(io_device->rx_request.state != IORequestState::Busy);
 			io_device->rx_request.state = IORequestState::Ready;
 			io_device->rx_request.rx_ptr = req->rx_ptr;
 			io_device->rx_request.tx_ptr = nullptr;
@@ -74,7 +74,7 @@ void goldobot_hal_uart_do_callback(IORequestImpl* req, IORequestStatus status, I
 			io_device->rx_functions->start_request(&io_device->rx_request, uart_index);
 		} else
 		{
-			assert(io_device->tx_request.state != IORequestState::Busy);
+			//assert(io_device->tx_request.state != IORequestState::Busy);
 			io_device->tx_request.state = IORequestState::Ready;
 			io_device->tx_request.rx_ptr = nullptr;
 			io_device->tx_request.tx_ptr = req->tx_ptr;
@@ -302,13 +302,15 @@ void uart_update_tx_request_dma(IORequestImpl* req, uint32_t device_index) {
 
 IODeviceFunctions g_uart_device_rx_functions = {&uart_start_rx_request, &uart_update_rx_request, &uart_abort_rx_request};
 
-IODeviceFunctions g_uart_device_tx_functions = {&uart_start_tx_request, &uart_update_tx_request, 0};
+IODeviceFunctions g_uart_device_tx_functions = {&uart_start_tx_request, &uart_update_tx_request, &uart_abort_tx_request};
 
 IODeviceFunctions g_uart_device_rx_functions_dma = {&uart_start_rx_request_dma,
-                                                    &uart_update_rx_request_dma, &uart_abort_rx_request};
+                                                    &uart_update_rx_request_dma,
+													&uart_abort_rx_request};
 
 IODeviceFunctions g_uart_device_tx_functions_dma = {&uart_start_tx_request_dma,
-                                                    &uart_update_tx_request_dma, 0};
+                                                    &uart_update_tx_request_dma,
+													&uart_abort_tx_request};
 
 void hal_usart_init(IODevice* device, const IODeviceConfigUart* config) {
   int uart_index = (int)config->device_id - (int)DeviceId::Usart1;

@@ -179,17 +179,46 @@ void DynamixelsCommTask::transmitPacket(uint8_t id, DynamixelCommand command, ui
 
   g_dynamixels_has_status = false;
 
-  if(command == DynamixelCommand::Read)
+  switch(command)
   {
+  case DynamixelCommand::Read:
 	  g_dynamixels_has_status = true;
+  case DynamixelCommand::Write:
+	  g_dynamixels_has_status = true;
+  case DynamixelCommand::Ping:
+	  g_dynamixels_has_status = true;
+  default:
+	  g_dynamixels_has_status = false;
   }
 
   g_dynamixels_parse_state = DynamixelParseState::Transmit;
   g_dynamixels_buff = m_dynamixels_buffer;
   g_dynamixels_bytes_received = 0;
-  hal::io_execute(2,req);
+  hal::io_execute(2,req,1);
+
   if(g_dynamixels_has_status)
   {
+	  // minimal status packet is 2 sync bytes, id, length, error, crc, 6 bytes
+	  // add parameters to length
+	  if(g_dynamixels_bytes_received == num_parameters + 6)
+	  {
+		  m_response_ok = false;
+		  return;
+	  }
+	  // check sync bytes
+	  if(m_dynamixels_buffer[0] != 0xff || m_dynamixels_buffer[1] != 0xff)
+	  {
+		  m_response_ok = false;
+		  return;
+	  }
+
+	  // check that length is matching
+	  if(m_dynamixels_buffer[3] != header.length)
+	  {
+		  m_response_ok = false;
+		  return;
+	  }
+
 	  //check checksum
 	  uint8_t rx_checksum = 0;
 	   for (unsigned i = 2; i < 5 + num_parameters; i++) {
@@ -200,6 +229,9 @@ void DynamixelsCommTask::transmitPacket(uint8_t id, DynamixelCommand command, ui
 	   if (rx_checksum == m_dynamixels_buffer[5 + num_parameters]) {
 		   // ok
 		  m_response_ok = true;
+	   } else
+	   {
+		   m_response_ok = false;
 	   }
   }
 }
