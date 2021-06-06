@@ -16,6 +16,7 @@ void ServosTask::taskFunction() {
   set_priority(4);
   Robot::instance().mainExchangeIn().subscribe({40, 49, &m_message_queue});
   Robot::instance().exchangeInternal().subscribe({31, 31, &m_message_queue});
+  Robot::instance().exchangeInternal().subscribe({61, 61, &m_message_queue});
 
   m_servos_config = Robot::instance().servosConfig();
 
@@ -81,6 +82,12 @@ void ServosTask::updateServo(int id, uint16_t pos, uint16_t speed)
 		Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaWriteReg,
 		                                                      (unsigned char *)buff, 8);
 	}
+	if(config.type == ServoType::DynamixelAX12)
+		{
+			//uint32_t buff[2] = {c_fpga_servos_base + 8 * config.id, static_cast<uint32_t>(pos) << 2};
+			//Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaWriteReg,
+			//                                                      (unsigned char *)buff, 8);
+		}
 }
 
 void ServosTask::publishServoState(int servo_id, bool state)

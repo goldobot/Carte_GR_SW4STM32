@@ -149,9 +149,17 @@ void DynamixelsCommTask::onRequest()
 	  *reinterpret_cast<uint16_t*>(m_scratchpad) = sequence_id;
 	  m_scratchpad[2] = proto_version;
 	  m_scratchpad[3] = _id;
-	  memcpy(m_scratchpad + 4, m_dynamixels_buffer + 4, num_parameters + 1);
-	  Robot::instance().mainExchangeOut().pushMessage(CommMessageType::DynamixelsResponse,
-															  (unsigned char*)m_scratchpad, num_parameters + 5);
+	  memcpy(m_scratchpad + 4, m_dynamixels_buffer + 4, m_response_num_parameters + 1);
+	  if(sequence_id & 0x8000)
+	  {
+		  Robot::instance().exchangeInternal().pushMessage(CommMessageType::DynamixelsResponse,
+		  															  (unsigned char*)m_scratchpad, m_response_num_parameters + 5);
+	  } else
+	  {
+		  Robot::instance().mainExchangeOut().pushMessage(CommMessageType::DynamixelsResponse,
+		  															  (unsigned char*)m_scratchpad, m_response_num_parameters + 5);
+	  }
+
   }
 }
 void DynamixelsCommTask::transmitPacket(uint8_t id, DynamixelCommand command, uint8_t* parameters,
@@ -178,17 +186,23 @@ void DynamixelsCommTask::transmitPacket(uint8_t id, DynamixelCommand command, ui
   req.userdata = this;
 
   g_dynamixels_has_status = false;
+  m_response_ok = false;
+  m_response_num_parameters = 0;
 
   switch(command)
   {
   case DynamixelCommand::Read:
 	  g_dynamixels_has_status = true;
+	  break;
   case DynamixelCommand::Write:
 	  g_dynamixels_has_status = true;
+	  break;
   case DynamixelCommand::Ping:
 	  g_dynamixels_has_status = true;
+	  break;
   default:
 	  g_dynamixels_has_status = false;
+	  break;
   }
 
   g_dynamixels_parse_state = DynamixelParseState::Transmit;
@@ -199,8 +213,7 @@ void DynamixelsCommTask::transmitPacket(uint8_t id, DynamixelCommand command, ui
   if(g_dynamixels_has_status)
   {
 	  // minimal status packet is 2 sync bytes, id, length, error, crc, 6 bytes
-	  // add parameters to length
-	  if(g_dynamixels_bytes_received == num_parameters + 6)
+	  if(g_dynamixels_bytes_received < 6)
 	  {
 		  m_response_ok = false;
 		  return;
@@ -212,8 +225,11 @@ void DynamixelsCommTask::transmitPacket(uint8_t id, DynamixelCommand command, ui
 		  return;
 	  }
 
+	  uint8_t len = m_dynamixels_buffer[3];
+	  m_response_num_parameters = len - 2; //response = error + parameters + crc
+
 	  // check that length is matching
-	  if(m_dynamixels_buffer[3] != header.length)
+	  if(g_dynamixels_bytes_received != len + 4)
 	  {
 		  m_response_ok = false;
 		  return;
@@ -221,12 +237,12 @@ void DynamixelsCommTask::transmitPacket(uint8_t id, DynamixelCommand command, ui
 
 	  //check checksum
 	  uint8_t rx_checksum = 0;
-	   for (unsigned i = 2; i < 5 + num_parameters; i++) {
+	   for (unsigned i = 2; i < len + 3; i++) {
 		   rx_checksum += m_dynamixels_buffer[i];
 	   }
 	   rx_checksum = ~rx_checksum;
 
-	   if (rx_checksum == m_dynamixels_buffer[5 + num_parameters]) {
+	   if (rx_checksum == m_dynamixels_buffer[len + 3]) {
 		   // ok
 		  m_response_ok = true;
 	   } else
