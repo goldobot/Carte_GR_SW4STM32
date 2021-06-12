@@ -31,7 +31,6 @@ void ServosTask::taskFunction() {
       processMessage();
     }
 
-
     // Recompute servo targets
     float delta_t = c_update_period * 1e-3;
 

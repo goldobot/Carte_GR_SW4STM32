@@ -8,6 +8,11 @@
 namespace goldobot {
 
 class ServosTask : public Task {
+public:
+	struct Config
+	{
+		uint16_t update_period;
+	};
  public:
   ServosTask();
   const char *name() const override;

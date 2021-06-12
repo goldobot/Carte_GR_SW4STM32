@@ -56,7 +56,7 @@ void goldobot_hal_uart_irq_handler(int uart_index) {
 
 void goldobot_hal_uart_do_callback(IORequestImpl* req, IORequestStatus status, IODevice* io_device, uint8_t uart_index)
 {
-	if(req->callback && req->callback(req, status) && req->size != 0)
+  if(req->callback && req->callback(req, status) && req->size != 0)
   {
 		// hacky solution to allow request callbacks to switch between tx and rx
 		// used mostly in dynamixels communications now
@@ -125,7 +125,15 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart) {
 
 void HAL_UART_ErrorCallback(UART_HandleTypeDef* huart) {
   uint8_t uart_index = get_uart_index(huart);
-  hal_callback_send_from_isr(HalCallback{DeviceType::Uart, uart_index, 2, 0});
+  auto io_device = g_uart_io_devices[uart_index];
+  auto req = &io_device->rx_request;
+
+  IORequestStatus status;
+  status.size = req->size - req->remaining;
+  status.code = IORequestStatus::Error;
+  req->state = IORequestState::Error;
+
+  goldobot_hal_uart_do_callback(req, status, io_device, uart_index);
 }
 
 namespace goldobot {
@@ -261,15 +269,10 @@ void uart_start_rx_request_dma(IORequestImpl* req, uint32_t device_index) {
   req->remaining = req->size;
   req->state = IORequestState::Busy;
 
-  __HAL_UART_ENABLE_IT(uart_handle, UART_IT_IDLE);
+ // __HAL_UART_ENABLE_IT(uart_handle, UART_IT_IDLE);
 
   auto status = HAL_UART_Receive_DMA(uart_handle, req->rx_ptr, req->size);
   assert(status == HAL_OK);
-
-  if(device_index == 0)
-  {
-    goldobot::hal::gpio_set(31, true);
-  }
 }
 
 void uart_update_rx_request_dma(IORequestImpl* req, uint32_t device_index) {

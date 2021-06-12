@@ -71,11 +71,8 @@ void ODriveCommTask::taskFunction() {
     {
     	uint8_t watchdog_id = 3;
     	Robot::instance().exchangeInternal().pushMessage(CommMessageType::WatchdogReset,&watchdog_id, 1);
-
     	 m_cnt = 0;
-
     };
-
 
     // Wait for next tick
     delay_periodic(1);

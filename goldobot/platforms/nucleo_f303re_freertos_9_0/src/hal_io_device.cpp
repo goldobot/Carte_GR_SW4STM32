@@ -53,7 +53,7 @@ bool io_device_rx_complete_callback_fifo(IORequest* req, IORequestStatus status)
   uint8_t* ptr;
   auto size = device->rx_queue.map_push(&ptr);
 
-  if (size > 0) {
+  if (size > 0 && status.code == IORequestStatus::Success) {
      req->rx_ptr = ptr;
 	 req->size = size;
     return true;

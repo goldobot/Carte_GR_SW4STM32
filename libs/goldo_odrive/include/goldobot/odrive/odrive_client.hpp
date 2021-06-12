@@ -52,7 +52,21 @@ class ODriveClient {
   };
 
   enum class State : uint8_t {
+	  Uninitialized,
+  };
 
+  enum class AxisRequestId {
+	  CurrentState=0,
+	  RequestedState,
+	  AxisError,
+	  MotorError,
+	  ControllerError,
+	  EncoderError,
+	  SensorlessEstimatorError,
+	  PosEstimate,
+	  VelEstimate,
+	  CurrentIqSetpoint,
+	  ClearErrors
   };
 
  public:
@@ -81,6 +95,8 @@ class ODriveClient {
     uint32_t requested_state{0};
     uint32_t control_mode;
 
+    // value of 0 means no request pending
+    uint8_t seq_numbers[11] = {0,0,0,0,0,0,0,0,0,0,0};
     uint16_t seq_current_state{0};
     uint16_t seq_requested_state{0};
     uint16_t seq_axis_error{0};
@@ -119,6 +135,7 @@ class ODriveClient {
   uint16_t m_timeout_set_motors_enable{0};
 
   Config m_config;
+  State m_state;
 
   uint16_t m_seq{1};  //! sequence id of next odrive request packet
 
