@@ -10,7 +10,7 @@
 
 namespace goldobot {
 
-enum class ScopeVariable: uint32_t
+enum class ScopeVariable: uint16_t
 {
 	None,
 	PoseX,
@@ -28,9 +28,21 @@ enum class ScopeVariable: uint32_t
 	ODriveAxis1VelEstimate
 };
 
+enum class ScopeVariableEncoding: uint16_t
+{
+	Raw8 = 0,
+	Raw16 = 1,
+	Raw32 = 2,
+	Scaled8 = 4,
+	Scaled16 = 5,
+	Scaled32 = 6,
+	Float = 8
+};
+
 struct ScopeChannelConfig
 {
 	ScopeVariable variable{ScopeVariable::None};
+	ScopeVariableEncoding encoding {ScopeVariableEncoding::Raw8};
 	float min_value;
 	float max_value;
 };
@@ -131,8 +143,11 @@ class PropulsionTask : public Task {
 
   float scopeGetVariable(ScopeVariable type);
   void updateScope();
+  void resetScope();
+  void scopePush(float val, ScopeVariableEncoding encoding);
 
   ScopeConfig m_scope_config;
+  uint8_t m_scope_total_size{0};
   uint8_t m_scope_buffer[64]; // uint32 packet timestamp followed by values
   size_t m_scope_idx{0};
   uint32_t m_next_scope_ts{0};

@@ -51,13 +51,14 @@ enum class CommMessageType : uint16_t {
   PropulsionClearError,
   PropulsionClearCommandQueue,
   PropulsionSetSimulationMode,
+  PropulsionScopeConfig,
 
   PropulsionTelemetry=120,
   PropulsionTelemetryEx,
   PropulsionPose,
   PropulsionState,
   PropulsionODriveTelemetry,
-  PropulsionScope,
+  PropulsionScopeData,
   PropulsionCommandEvent=130,
 
   PropulsionExecuteTranslation=140,

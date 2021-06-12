@@ -106,6 +106,7 @@ void PropulsionTask::doStep() {
   }
 
   sendTelemetryMessages();
+  updateScope();
 
   uint32_t cyccnt_end = DWT->CYCCNT;
   uint32_t cycles_count = cyccnt_end - cyccnt_begin;
@@ -302,6 +303,10 @@ void PropulsionTask::processUrgentMessage() {
       setSimulationMode(enable);
 
     } break;
+    case CommMessageType::PropulsionScopeConfig: {
+          m_urgent_message_queue.pop_message((unsigned char*)&m_scope_config, sizeof(m_scope_config));
+          resetScope();
+        } break;
     case CommMessageType::PropulsionMotorsEnableSet: {
       uint8_t enabled;
       m_urgent_message_queue.pop_message((unsigned char*)&enabled, 1);
@@ -511,7 +516,74 @@ void PropulsionTask::clearCommandQueue() {
 
 float PropulsionTask::scopeGetVariable(ScopeVariable type)
 {
+	switch(type)
+	{
+	case ScopeVariable::PoseSpeed:
+		return m_odometry.pose().speed;
+	}
 	return 0;
+}
+
+void PropulsionTask::resetScope()
+{
+	m_scope_total_size = 0;
+	m_scope_idx = 0;
+	if(m_scope_config.num_channels > 8)
+	{
+		m_scope_config.num_channels = 8;
+	}
+
+	for(unsigned i = 0; i < m_scope_config.num_channels; i++)
+	{
+		switch(m_scope_config.channels[i].encoding)
+		{
+		case ScopeVariableEncoding::Raw8:
+			m_scope_total_size += 1;
+			break;
+		case ScopeVariableEncoding::Raw16:
+			m_scope_total_size += 2;
+			break;
+		case ScopeVariableEncoding::Raw32:
+			m_scope_total_size += 4;
+			break;
+		case ScopeVariableEncoding::Scaled8:
+			m_scope_total_size += 1;
+			break;
+		case ScopeVariableEncoding::Scaled16:
+			m_scope_total_size += 2;
+			break;
+		case ScopeVariableEncoding::Scaled32:
+			m_scope_total_size += 4;
+			break;
+		case ScopeVariableEncoding::Float:
+			m_scope_total_size += 4;
+			break;
+		default:
+			break;
+		}
+	}
+}
+
+void  PropulsionTask::scopePush(float val, ScopeVariableEncoding encoding)
+{
+	uint8_t* ptr = &m_scope_buffer[m_scope_idx];
+	switch(encoding)
+		{
+		case ScopeVariableEncoding::Scaled8:
+			*reinterpret_cast<uint8_t*>(ptr) = static_cast<uint8_t>(val * std::numeric_limits<uint8_t>::max());
+			m_scope_idx += 1;
+			break;
+		case ScopeVariableEncoding::Scaled16:
+			*reinterpret_cast<uint16_t*>(ptr) = static_cast<uint8_t>(val * std::numeric_limits<uint16_t>::max());
+			m_scope_idx += 2;
+			break;
+		case ScopeVariableEncoding::Scaled32:
+			*reinterpret_cast<uint8_t*>(ptr) = static_cast<uint32_t>(val * std::numeric_limits<uint32_t>::max());
+			m_scope_idx += 4;
+			break;
+		default:
+			break;
+		}
 }
 
 void PropulsionTask::updateScope()
@@ -532,22 +604,30 @@ void PropulsionTask::updateScope()
 
 	if(m_scope_idx == 0)
 	{
-		*reinterpret_cast<uint32_t*>(&m_scope_buffer[m_scope_idx]) = hal::get_tick_count();
-		m_scope_idx = 4;
+		*reinterpret_cast<uint16_t*>(&m_scope_buffer[m_scope_idx]) = (uint16_t)hal::get_tick_count();
+		m_scope_idx = 2;
 	}
 
 	for(unsigned i = 0; i < m_scope_config.num_channels; i++)
 	{
 		const auto& chan = m_scope_config.channels[i];
-		float val_normalized = (scopeGetVariable(chan.variable) - chan.min_value) / (chan.max_value - chan.min_value);
-		val_normalized = clamp(val_normalized, 0.0f, 1.0f);
-		uint16_t val = static_cast<uint16_t>(val_normalized * std::numeric_limits<uint16_t>::max());
-		*reinterpret_cast<uint16_t*>(&m_scope_buffer[m_scope_idx]) = val;
-		m_scope_idx += 2;
+		if(chan.encoding == ScopeVariableEncoding::Float)
+		{
+			float val = scopeGetVariable(chan.variable);
+			uint8_t* ptr = &m_scope_buffer[m_scope_idx];
+			*reinterpret_cast<float*>(ptr) = val;
+			m_scope_idx += 4;
+		} else
+		{
+			float val = scopeGetVariable(chan.variable);
+			float val_normalized = (val - chan.min_value) / (chan.max_value - chan.min_value);
+			val_normalized = clamp(val_normalized, 0.0f, 1.0f);
+			scopePush(val_normalized, chan.encoding);
+		}
 	}
-	if(m_scope_idx + m_scope_config.num_channels * 2 >= sizeof(m_scope_buffer))
+	if(m_scope_idx + m_scope_total_size >= sizeof(m_scope_buffer))
 	{
-		Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionScope, m_scope_buffer, m_scope_idx);
+		Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionScopeData, m_scope_buffer, m_scope_idx);
 		m_scope_idx = 0;
 	}
 }
