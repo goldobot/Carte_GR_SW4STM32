@@ -1,6 +1,7 @@
 #pragma once
 #include <chrono>
 #include <cstdint>
+#include <array>
 
 namespace goldobot {
 class MessageExchange;
@@ -32,10 +33,6 @@ class ODriveClient {
     uint32_t sensorless_estimator{0};
   };
 
-  struct Errors {
-    AxisErrorState axis[2];
-  };
-
   struct AxisTelemetry {
     float pos_estimate{0};
     float vel_estimate{0};
@@ -49,12 +46,13 @@ class ODriveClient {
 
   struct AxisState {
 	uint32_t current_state{0};
+	uint32_t requested_state{0};
 	uint32_t control_mode{0};
   };
-  struct AxisStates {
-    uint32_t axis[2] = {0, 0};
-  };
 
+  struct AxisCalibrationState {
+	bool encoder_is_ready{0};
+  };
 
   enum class AxisRequestId {
 	  CurrentState=0, // state control
@@ -89,7 +87,7 @@ class ODriveClient {
   void setOutputExchange(MessageExchange* exchange, CommMessageType message_type);
 
   // Process one ODrive response packet
-  bool processResponse(sequence_number_t sequence_number, uint8_t* payload, size_t payload_size);
+  bool processResponse(uint32_t timestamp, sequence_number_t sequence_number, uint8_t* payload, size_t payload_size);
   void doStep(uint32_t timestamp);
 
   void setMotorsEnable(bool motors_enable);
@@ -98,9 +96,10 @@ class ODriveClient {
   bool startMotorsCalibration();  // run motors startup procedure
   void clearErrors();
 
-  const Errors& errors() const noexcept;
+  const std::array<AxisErrorState, 2>& errors() const noexcept;
   const Telemetry& telemetry() const noexcept;
-  const AxisStates axisStates() const noexcept;
+  const std::array<AxisState,2>& axisStates() const noexcept;
+  const std::array<AxisCalibrationState, 2>& axisCalibrationStates() const noexcept;
 
  private:
   struct AxisPendingRequests {
@@ -113,6 +112,12 @@ class ODriveClient {
     // value of 0 means no request pending
     uint8_t seq_numbers[21];
     uint8_t req_timestamps[21];
+    uint32_t read_pending_flags{0};
+    uint32_t read_requested_flags{0x1fffff};
+    uint8_t write_seq_numbers[21];
+    uint8_t write_req_timestamps[21];
+    uint32_t write_pending_flags{0};
+    uint32_t write_requested_flags{0};
   };
 
 
@@ -120,7 +125,7 @@ class ODriveClient {
   // other bits are the AxisRequestId value
   // sequence ids are 0bcc dddd ddee eeee
   // MSB is 0 as defined in the odrive protocol
-  // a is 1 for internal requests, 0 for raspberry requests
+  // b is 1 for internal requests, 0 for raspberry requests
   // cc is the axis id
   // dddddd is the request id
   // eeeeee is a cyclic sequence id for error detection
@@ -128,6 +133,7 @@ class ODriveClient {
   sequence_number_t queueReadEndpoint(endpoint_id_t endpoint, uint8_t req_id);
 
   void queueReadRequest(int axis, AxisRequestId req_id, uint32_t timestamp);
+  void processReadResponse(int axis, AxisRequestId req_id, uint8_t* payload);
   void writeRequest(int axis, AxisRequestId req_id, uint32_t timestamp);
 
   template <typename T>
@@ -138,9 +144,10 @@ class ODriveClient {
   MessageExchange* m_exchange{nullptr};
   CommMessageType m_request_packet_message_type;
 
-  AxisStates m_axis_states;
+  std::array<AxisState,2> m_axis_states;
   Telemetry m_telemetry;
-  Errors m_errors;
+  std::array<AxisErrorState, 2> m_errors;
+  std::array<AxisCalibrationState, 2> m_axis_calibration_states;
   AxisPendingRequests m_axis_requests[2];
   uint16_t m_requested_state_flags{0};
 
@@ -158,6 +165,11 @@ class ODriveClient {
   bool m_is_calibrated{false};
 
   uint8_t m_synchronize_idx{0};
+  uint32_t m_synchronize_timestamp{0};
+
+  uint8_t m_req_idx{0};
+  uint32_t m_next_write_inputs_timestamp{0};
+  uint32_t m_next_states_timestamp{0};
 
   uint16_t m_seq{1};  //! sequence id of next odrive request packet
 

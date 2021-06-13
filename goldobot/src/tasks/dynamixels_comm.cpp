@@ -29,7 +29,7 @@ unsigned char* g_dynamixels_buff;
 size_t g_dynamixels_bytes_received{0};
 
 
-bool goldo_dynamixels_callback(hal::IORequest* req, hal::IORequestStatus status)
+bool goldo_dynamixels_callback(hal::IORequestTmp* req, hal::IORequestTmpStatus status)
 {
 	auto& dynamixels_task = *reinterpret_cast<DynamixelsCommTask*>(req->userdata);
 	switch(g_dynamixels_parse_state)
@@ -179,7 +179,7 @@ void DynamixelsCommTask::transmitPacket(uint8_t id, DynamixelCommand command, ui
   checksum = ~checksum;
   m_dynamixels_buffer[5 + num_parameters] = checksum;
 
-  hal::IORequest req;
+  hal::IORequestTmp req;
   req.tx_ptr = m_dynamixels_buffer;
   req.size = 6 + num_parameters;
   req.callback = &goldo_dynamixels_callback;

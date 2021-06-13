@@ -9,8 +9,8 @@ typedef uint32_t TickType_t;
 
 enum class Status { Error = 0, Ok = 1 };
 
-struct IORequest;
-struct IORequestStatus
+struct IORequestTmp;
+struct IORequestTmpStatus
 {
 	enum StatusCode : uint32_t {
 		Success,
@@ -21,16 +21,16 @@ struct IORequestStatus
 	uint32_t size;
 };
 
-typedef bool (*IORequestCallback)(IORequest*, IORequestStatus);
+typedef bool (*IORequestTmpCallback)(IORequestTmp*, IORequestTmpStatus);
 
-struct IORequest {
+struct IORequestTmp {
   uint8_t* rx_ptr{nullptr};
   uint8_t* tx_ptr{nullptr};
   uint32_t size{0};
   // callback will be called in interrupt context
   // the callback can modify the request and return true to start a new rx or tx command immediately
   // else io_execute will return to the calling task
-  IORequestCallback callback{nullptr};
+  IORequestTmpCallback callback{nullptr};
   void* userdata{nullptr};
 };
 
@@ -51,7 +51,7 @@ void pwm_set(int pwm_id, float value);
 uint16_t encoder_get(int encoder_id);
 uint16_t encoder_set(int encoder_id, uint16_t value);
 
-void io_execute(int id, IORequest request, uint32_t timeout = -1);
+void io_execute(int id, IORequestTmp request, uint32_t timeout = -1);
 
 size_t io_read(int id, uint8_t* buffer, size_t size, uint32_t timeout = -1);
 size_t io_write(int id, const uint8_t* buffer, size_t size);

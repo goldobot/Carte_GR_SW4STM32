@@ -63,10 +63,6 @@ DMA_HandleTypeDef* hal_dma_init_device(DeviceId device, int signal, const DMA_In
       HAL_NVIC_EnableIRQ(irq_n);
 
       DMA_HandleTypeDef* handle = &g_dma_handles[dma_index];
-
-      // break if the dma channel is already used by another device
-      assert(handle->Parent == nullptr);
-
       handle->Instance = g_dma_channels[dma_index];
       handle->Init = init;
       HAL_DMA_Init(handle);

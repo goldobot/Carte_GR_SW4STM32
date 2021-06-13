@@ -224,12 +224,14 @@ void PropulsionTask::processUrgentMessage() {
   auto message_type = (CommMessageType)m_urgent_message_queue.message_type();
   auto message_size = m_urgent_message_queue.message_size();
 
+  uint32_t current_time = hal::get_tick_count();
+
   switch (message_type) {
     case CommMessageType::ODriveResponsePacket: {
       uint8_t buff[6];
       m_urgent_message_queue.pop_message((unsigned char*)&buff, 16);
-      uint16_t seq = *(uint16_t*)buff & 0x1fff;
-      m_odrive_client.processResponse(seq, buff + 2, message_size - 2);
+      uint16_t seq = *(uint16_t*)buff & 0x3fff;
+      m_odrive_client.processResponse(current_time, seq, buff + 2, message_size - 2);
 
     } break;
     case CommMessageType::PropulsionCalibrateODrive: {

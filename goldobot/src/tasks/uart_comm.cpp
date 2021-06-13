@@ -206,7 +206,7 @@ void UARTCommTask::sendStatistics()
   m_statistics.out_ftdi_queue = m_out_ftdi_queue.statistics();
 
   m_out_prio_queue.push_message(CommMessageType::UartCommTaskStatistics, (unsigned char*)&m_statistics, sizeof(m_statistics));
-  memset(&m_statistics, sizeof(m_statistics), 0);
+  memset(&m_statistics, 0, sizeof(m_statistics));
 
  // HeapStats_t heap_stats;
  //       vPortGetHeapStats(&heap_stats);

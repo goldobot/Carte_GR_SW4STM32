@@ -51,7 +51,7 @@ void ODriveCommTask::taskFunction() {
       size_t packet_size = m_stream_parser.packetSize();
       m_stream_parser.popPacket(s_scratchpad, sizeof(s_scratchpad));
       uint16_t sequence_number = *(uint16_t*) s_scratchpad;
-      if(sequence_number & 0x2000)
+      if(!(sequence_number & 0x4000))
       {
     	  Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ODriveResponsePacket,
     	                                                        s_scratchpad, packet_size);
