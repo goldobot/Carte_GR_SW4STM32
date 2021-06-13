@@ -52,6 +52,7 @@ public:
   MessageExchange& mainExchangeIn() { return m_main_exchange_in; };
   MessageExchange& mainExchangeOut() { return m_main_exchange_out; };
   MessageExchange& mainExchangeOutPrio() { return m_main_exchange_out_prio; };
+  MessageExchange& exchangeOutFtdi() { return m_exchange_out_ftdi; };
   MessageExchange& exchangeInternal() { return m_exchange_internal; };
 
   const RobotGeometryConfig& robotGeometry() const;
@@ -76,7 +77,6 @@ public:
   std::atomic<int> m_remaining_match_time{0};
   uint32_t m_sensors_state{0};
 
-  HeartbeatTask m_heartbeat_task;
   MainTask m_main_task;
   PropulsionTask m_propulsion_task;
   ServosTask m_servos_task;
@@ -94,6 +94,7 @@ public:
   MessageExchange m_main_exchange_in;
   MessageExchange m_main_exchange_out;
   MessageExchange m_main_exchange_out_prio;
+  MessageExchange m_exchange_out_ftdi;
   MessageExchange m_exchange_internal;
 
   static unsigned char s_config_area[16384];

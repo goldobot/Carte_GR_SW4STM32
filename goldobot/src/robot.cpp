@@ -15,7 +15,6 @@ Robot& Robot::instance() { return s_instance; }
 void Robot::init() {
   m_comm_task.init();
   m_main_task.init();
-  m_heartbeat_task.init();
 }
 
 void Robot::start() { m_propulsion_task.start(); }
