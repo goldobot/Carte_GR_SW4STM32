@@ -21,11 +21,15 @@ enum class ScopeVariable: uint16_t
 	TargetX,
 	TargetY,
 	TargetYaw,
+	TargetSpeed,
 	TargetYawRate,
 	LeftMotorVelocitySetpoint,
 	RightMotorVelocitySetpoint,
 	ODriveAxis0VelEstimate,
-	ODriveAxis1VelEstimate
+	ODriveAxis1VelEstimate,
+	ODriveAxis0CurrentIqSetpoint,
+	ODriveAxis1CurrentIqSetpoint,
+	ODriveVBus
 };
 
 enum class ScopeVariableEncoding: uint16_t
@@ -98,6 +102,9 @@ class PropulsionTask : public Task {
 
   uint16_t m_encoder_left{0};
   uint16_t m_encoders_right{0};
+
+  float m_left_vel_setpoint{0};
+  float m_right_vel_setpoint{0};
 
   uint32_t m_next_telemetry_ts{0};
   uint32_t m_next_telemetry_ex_ts{0};

@@ -446,6 +446,8 @@ void PropulsionTask::setSimulationMode(bool enable) {
 }
 
 void PropulsionTask::setMotorsPwm(float left_pwm, float right_pwm) {
+	m_left_vel_setpoint = left_pwm;
+	m_right_vel_setpoint = right_pwm;
   if (m_use_simulator) {
     m_robot_simulator.m_left_pwm = left_pwm;
     m_robot_simulator.m_right_pwm = right_pwm;
@@ -520,10 +522,46 @@ float PropulsionTask::scopeGetVariable(ScopeVariable type)
 {
 	switch(type)
 	{
+	case ScopeVariable::PoseX:
+		return m_odometry.pose().position.x;
+	case ScopeVariable::PoseY:
+		return m_odometry.pose().position.y;
+	case ScopeVariable::PoseYaw:
+		return m_odometry.pose().yaw;
 	case ScopeVariable::PoseSpeed:
 		return m_odometry.pose().speed;
+	case ScopeVariable::PoseYawRate:
+		return m_odometry.pose().yaw_rate;
+	case ScopeVariable::TargetX:
+		return m_controller.targetPose().position.x;
+	case ScopeVariable::TargetY:
+		return m_controller.targetPose().position.y;
+	case ScopeVariable::TargetYaw:
+		return m_controller.targetPose().yaw;
+	case ScopeVariable::TargetSpeed:
+		return m_controller.targetPose().speed;
+	case ScopeVariable::TargetYawRate:
+		return m_controller.targetPose().yaw_rate;
+	case ScopeVariable::LeftMotorVelocitySetpoint:
+		return m_left_vel_setpoint;
+	case ScopeVariable::RightMotorVelocitySetpoint:
+		return m_right_vel_setpoint;
+	// ODrive telemetry
+	case ScopeVariable::ODriveAxis0VelEstimate:
+		return m_odrive_client.telemetry().axis[0].vel_estimate;
+	case ScopeVariable::ODriveAxis1VelEstimate:
+		return m_odrive_client.telemetry().axis[1].vel_estimate;
+	case ScopeVariable::ODriveAxis0CurrentIqSetpoint:
+		return m_odrive_client.telemetry().axis[0].current_iq_setpoint;
+	case ScopeVariable::ODriveAxis1CurrentIqSetpoint:
+		return m_odrive_client.telemetry().axis[1].current_iq_setpoint;
+	case ScopeVariable::ODriveVBus:
+		return 0;
+
+	default:
+		return 0;
 	}
-	return 0;
+	m_odrive_client.telemetry().axis[0].current_iq_setpoint;
 }
 
 void PropulsionTask::resetScope()
