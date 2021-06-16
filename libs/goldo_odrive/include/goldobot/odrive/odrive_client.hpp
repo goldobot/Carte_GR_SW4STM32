@@ -169,6 +169,7 @@ class ODriveClient {
 
   uint8_t m_req_idx{0};
   uint32_t m_next_write_inputs_timestamp{0};
+  uint32_t m_next_read_telemetry_timestamp{0};
   uint32_t m_next_states_timestamp{0};
 
   uint16_t m_seq{1};  //! sequence id of next odrive request packet
