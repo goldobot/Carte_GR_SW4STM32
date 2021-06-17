@@ -38,9 +38,9 @@ class MessageQueue {
   size_t m_buffer_size;
   size_t m_begin_index;
   size_t m_end_index;
-  bool m_message_ready;
-  uint16_t m_message_size;
-  CommMessageType m_message_type;
+  bool m_message_ready{false};
+  uint16_t m_message_size{0};
+  CommMessageType m_message_type{static_cast<CommMessageType>(0)};
   Statistics m_statistics;
 
   detail::LockerMutex m_mutex;
