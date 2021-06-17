@@ -108,7 +108,45 @@ void io_device_tx_complete_callback_blocking(IORequest* req, IODevice* device) {
   xSemaphoreGive(device->tx_semaphore);
 }
 
-size_t IODevice::read(uint8_t* buffer, size_t buffer_size) {
+void IODevice::execute(IORequestTmp req, uint32_t timeout) {
+	return;
+	if(req.rx_ptr != nullptr)
+	{
+		assert(rx_request.state != IORequestState::Busy);
+		rx_request.state = IORequestState::Ready;
+		rx_request.rx_ptr = req.rx_ptr;
+		rx_request.tx_ptr = nullptr;
+		rx_request.size = req.size;
+		//rx_request.callback = req.callback;
+		//rx_request.userdata = req.userdata;
+		//rx_functions->start_request(&rx_request, device_index);
+	} else
+	{
+		assert(tx_request.state != IORequestState::Busy);
+		tx_request.state = IORequestState::Ready;
+		tx_request.rx_ptr = nullptr;
+		tx_request.tx_ptr = req.tx_ptr;
+		tx_request.size = req.size;
+		//tx_request.callback = req.callback;
+		//tx_request.userdata = req.userdata;
+		//tx_functions->start_request(&tx_request, device_index);
+	}
+    auto tick_count_timeout = xTaskGetTickCount() + timeout;
+    while (true) {
+     // xSemaphoreTake(req_finished_semaphore, 1);
+      if (rx_request.state != IORequestState::Busy && tx_request.state != IORequestState::Busy) {
+       return;
+      }
+      if(timeout != -1 && xTaskGetTickCount() > tick_count_timeout )
+      {
+    	  rx_functions->abort_request(&rx_request, device_index);
+    	  tx_functions->abort_request(&tx_request, device_index);
+    	  return ;
+      }
+    }
+}
+
+size_t IODevice::read(uint8_t* buffer, size_t buffer_size, uint32_t timeout) {
   if (buffer_size == 0) {
     return 0;
   }
@@ -299,9 +337,15 @@ static void check_io_device_id(int id) {
   assert(id >= 0 && (unsigned)id < sizeof(g_io_devices) / sizeof(IODevice));
 }
 
-size_t io_read(int id, uint8_t* buffer, size_t buffer_size) {
+void io_execute(int id, IORequestTmp request, uint32_t timeout)
+{
+	check_io_device_id(id);
+	g_io_devices[id].execute(request, timeout);
+}
+
+size_t io_read(int id, uint8_t* buffer, size_t buffer_size, uint32_t timeout) {
   check_io_device_id(id);
-  return g_io_devices[id].read(buffer, buffer_size);
+  return g_io_devices[id].read(buffer, buffer_size, timeout);
 }
 
 size_t io_write(int id, const uint8_t* buffer, size_t buffer_size) {

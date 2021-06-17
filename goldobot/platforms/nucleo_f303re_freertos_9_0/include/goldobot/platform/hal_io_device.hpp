@@ -39,7 +39,9 @@ struct IODeviceFunctions {
 
 class IODevice {
  public:
-  size_t read(uint8_t* buffer, size_t buffer_size);
+  void execute(IORequestTmp request, uint32_t timeout);
+
+  size_t read(uint8_t* buffer, size_t buffer_size, uint32_t timeout);
   size_t write(const uint8_t* buffer, size_t buffer_size);
 
   size_t map_read(uint8_t** buffer);
