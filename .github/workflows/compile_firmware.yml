@@ -1,7 +1,7 @@
 name: Compile Firmware
 on:
   push:
-    branches: [ develop ]
+    branches: [ master, develop ]
 jobs:
   build:
     runs-on: ubuntu-18.04
@@ -11,17 +11,47 @@ jobs:
       run: sudo apt-get update && sudo apt-get install cmake gcc-arm-none-eabi
     - name: create build directory
       run: mkdir build
+    - name: create build directory for release
+      run: mkdir build/release
+    - name: create build directory for debug
+      run: mkdir build/debug
+    # release build
     - name: run cmake
-      run: cmake -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchain/gcc-stm32f303xe.toolchain ..
-      working-directory: ./build
+      run: cmake -DCMAKE_TOOLCHAIN_FILE=../../cmake/toolchain/gcc-stm32f303xe.toolchain -DCMAKE_BUILD_TYPE=Release ../..
+      working-directory: ./build/release
     - name: run cmake build
       run: cmake --build .
-      working-directory: ./build
+      working-directory: ./build/release
+    # debug build
+    - name: run cmake
+      run: cmake -DCMAKE_TOOLCHAIN_FILE=../../cmake/toolchain/gcc-stm32f303xe.toolchain -DCMAKE_BUILD_TYPE=Debug ../..
+      working-directory: ./build/debug
+    - name: run cmake build
+      run: cmake --build .
+      working-directory: ./build/debug
+    # upload artifacts for release
     - uses: actions/upload-artifact@v2
       with:
         name: firmware.elf
-        path: build/firmware/firmware.elf
+        path: build/release/firmware/firmware.elf
     - uses: actions/upload-artifact@v2
       with:
         name: firmware.hex
-        path: build/firmware/firmware.hex
+        path: build/release/firmware/firmware.hex
+    - uses: actions/upload-artifact@v2
+      with:
+        name: firmware.bin
+        path: build/release/firmware/firmware.bin
+    # upload artifacts for debug
+    - uses: actions/upload-artifact@v2
+      with:
+        name: debug_firmware.elf
+        path: build/debug/firmware/firmware.elf
+    - uses: actions/upload-artifact@v2
+      with:
+        name: debug_firmware.hex
+        path: build/debug/firmware/firmware.hex
+    - uses: actions/upload-artifact@v2
+      with:
+        name: debug_firmware.bin
+        path: build/debug/firmware/firmware.bin
