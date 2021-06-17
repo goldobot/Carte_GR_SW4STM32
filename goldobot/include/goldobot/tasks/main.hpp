@@ -23,6 +23,7 @@ class MainTask : public Task {
 
  private:
   void taskFunction() override;
+  void checkSensorsState();
   void process_message();
   void process_message_config();
 
@@ -32,6 +33,12 @@ class MainTask : public Task {
   MessageQueue m_message_queue;
   static unsigned char s_message_queue_buffer[2048];
   unsigned char m_scratchpad[128];
+
+  uint32_t m_sensors_state{0};
+  uint32_t m_fpga_gpio_state{0};
+  bool m_sensors_state_changed{true};
+  uint32_t m_sensors_state_next_ts{0};
+  uint32_t m_sensors_state_next_ts_min{0};
 
   SequenceEngine m_sequence_engine;
 };

@@ -15,7 +15,6 @@ Robot& Robot::instance() { return s_instance; }
 void Robot::init() {
   m_comm_task.init();
   m_main_task.init();
-  m_heartbeat_task.init();
 }
 
 void Robot::start() { m_propulsion_task.start(); }
@@ -24,10 +23,9 @@ SimpleOdometry& Robot::odometry() { return m_propulsion_task.odometry(); }
 
 ServosConfig* Robot::servosConfig() { return m_servos_config; }
 
-const RobotGeometryConfig& Robot::robotGeometry() const
-{
-	return *m_robot_geometry_config;
-}
+const SensorsConfig& Robot::sensorsConfig() const noexcept { return m_sensors_config; }
+
+const RobotGeometryConfig& Robot::robotGeometry() const { return *m_robot_geometry_config; }
 
 PropulsionController::State Robot::propulsionState() {
   return m_propulsion_task.controller().state();
@@ -85,24 +83,30 @@ bool Robot::endLoadConfig(uint16_t crc) {
       case ConfigSection::Hal:
         hal::configure(s_config_area + section_offset);
         break;
+      case ConfigSection::Sensors:
+        memcpy(&m_sensors_config, s_config_area + section_offset, section_size);
+        break;
       case ConfigSection::PropulsionTask:
-		m_propulsion_task.setTaskConfig(*reinterpret_cast<PropulsionTask::Config*>(s_config_area + section_offset));
-		break;
+        m_propulsion_task.setTaskConfig(
+            *reinterpret_cast<PropulsionTask::Config*>(s_config_area + section_offset));
+        break;
       case ConfigSection::Odometry:
         odometry().setConfig(*reinterpret_cast<OdometryConfig*>(s_config_area + section_offset));
         break;
       case ConfigSection::PropulsionController:
-    	m_propulsion_task.setControllerConfig(*reinterpret_cast<PropulsionControllerConfig*>(s_config_area + section_offset));
+        m_propulsion_task.setControllerConfig(
+            *reinterpret_cast<PropulsionControllerConfig*>(s_config_area + section_offset));
         break;
       case ConfigSection::RobotSimulator:
-      	m_propulsion_task.setRobotSimulatorConfig(*reinterpret_cast<RobotSimulatorConfig*>(s_config_area + section_offset));
-      	break;
+        m_propulsion_task.setRobotSimulatorConfig(
+            *reinterpret_cast<RobotSimulatorConfig*>(s_config_area + section_offset));
+        break;
       case ConfigSection::Servos:
-    	  m_servos_config = reinterpret_cast<ServosConfig*>(s_config_area + section_offset);
-      	break;
+        m_servos_config = reinterpret_cast<ServosConfig*>(s_config_area + section_offset);
+        break;
       case ConfigSection::TasksEnable:
-         tasks_enable = *reinterpret_cast<uint32_t*>(s_config_area + section_offset);
-         break;
+        tasks_enable = *reinterpret_cast<uint32_t*>(s_config_area + section_offset);
+        break;
       default:
         break;
     }
@@ -127,29 +131,24 @@ bool Robot::endLoadConfig(uint16_t crc) {
   // dynamixels_comm: 3
   // fpga: 4
 
-  if((tasks_enable & (1 << 0)) != 0)
-  {
-	  m_propulsion_task.init();
+  if ((tasks_enable & (1 << 0)) != 0) {
+    m_propulsion_task.init();
   }
 
-  if((tasks_enable & (1 << 1)) != 0)
-    {
-	  m_odrive_comm_task.init();
-    }
+  if ((tasks_enable & (1 << 1)) != 0) {
+    m_odrive_comm_task.init();
+  }
 
-  if((tasks_enable & (1 << 2)) != 0)
-    {
-	  m_servos_task.init(256);
-    }
+  if ((tasks_enable & (1 << 2)) != 0) {
+    m_servos_task.init(256);
+  }
 
-  if((tasks_enable & (1 << 3)) != 0)
-    {
-	  m_dynamixels_comm_task.init(256);
-    }
-  if((tasks_enable & (1 << 4)) != 0)
-     {
- 	  m_fpga_task.init(256);
-     }
+  if ((tasks_enable & (1 << 3)) != 0) {
+    m_dynamixels_comm_task.init(256);
+  }
+  if ((tasks_enable & (1 << 4)) != 0) {
+    m_fpga_task.init(256);
+  }
 
   start();
   m_match_state = MatchState::Idle;

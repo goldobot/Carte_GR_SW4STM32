@@ -18,25 +18,23 @@
 namespace goldobot {
 
 class Robot {
-public:
-	enum class ConfigSection : uint8_t {
-	Hal,
-	RobotGeometry,
-	Sensors,
-	RobotSimulator,
+ public:
+  enum class ConfigSection : uint8_t {
+    Hal,
+    RobotGeometry,
+    Sensors,
+    RobotSimulator,
     Odometry,
-	PropulsionController,
-	Servos,
-	PropulsionTask,
-	TasksEnable
-	};
+    PropulsionController,
+    Servos,
+    PropulsionTask,
+    TasksEnable
+  };
+
  public:
   static Robot& instance();
   void init();
   void start();
-
-  Side side() const noexcept { return m_side; };
-  void setSide(Side side) noexcept { m_side = side; };
 
   MatchState matchState() const noexcept { return m_match_state; };
   void setMatchState(MatchState state) noexcept { m_match_state = state; };
@@ -58,8 +56,9 @@ public:
 
   const RobotGeometryConfig& robotGeometry() const;
 
-  //ArmConfig* armConfig(int arm_id);
+  // ArmConfig* armConfig(int arm_id);
   ServosConfig* servosConfig();
+  const SensorsConfig& sensorsConfig() const noexcept;
 
   PropulsionController::State propulsionState();
 
@@ -70,7 +69,7 @@ public:
   bool endLoadConfig(uint16_t crc);
 
  private:
-  Side m_side{Side::Unknown};
+  SensorsConfig m_sensors_config;
   MatchState m_match_state{MatchState::Unconfigured};
 
   std::atomic<int> m_start_match_time{0};
