@@ -11,36 +11,35 @@ enum class CommMessageType : uint16_t {
   Reset,
   GetNucleoFirmwareVersion,
 
-
-  MatchTimer=10,
+  MatchTimer = 10,
   MatchTimerStart,
   MatchEnd,
 
-  DbgGpioGet=20,
+  DbgGpioGet = 20,
   DbgGpioGetStatus,
   DbgGpioSet,
   DbgPwmSet,
 
   DbgGoldo = 29,
 
-  FpgaReadReg=30,
+  FpgaReadReg = 30,
   FpgaReadRegStatus,
   FpgaWriteReg,
   SensorsState,
   FpgaGpioState,
 
-  ServoMove=40,
+  ServoMove = 40,
   ServoState,
 
-  ODriveRequestPacket=50,
+  ODriveRequestPacket = 50,
   ODriveResponsePacket,
   ODriveTelemetry,
   ODriveCommStats,
 
-  DynamixelsRequest=60,
+  DynamixelsRequest = 60,
   DynamixelsResponse,
 
-  PropulsionEnableSet=100,
+  PropulsionEnableSet = 100,
   PropulsionMotorsEnableSet,
   PropulsionMotorsVelocitySetpointsSet,
   PropulsionSetTargetSpeed,
@@ -51,15 +50,17 @@ enum class CommMessageType : uint16_t {
   PropulsionClearError,
   PropulsionClearCommandQueue,
   PropulsionSetSimulationMode,
+  PropulsionScopeConfig,
 
-  PropulsionTelemetry=120,
+  PropulsionTelemetry = 120,
   PropulsionTelemetryEx,
   PropulsionPose,
   PropulsionState,
   PropulsionODriveTelemetry,
-  PropulsionCommandEvent=130,
+  PropulsionScopeData,
+  PropulsionCommandEvent = 130,
 
-  PropulsionExecuteTranslation=140,
+  PropulsionExecuteTranslation = 140,
   PropulsionExecuteMoveTo,
   PropulsionExecuteRotation,
   PropulsionExecutePointTo,
@@ -73,25 +74,25 @@ enum class CommMessageType : uint16_t {
   PropulsionCalibrateODrive,
   PropulsionODriveClearErrors,
 
-  PropulsionTaskStatistics=170,
+  PropulsionTaskStatistics = 170,
 
-  RobotConfigLoadBegin=200,
+  RobotConfigLoadBegin = 200,
   RobotConfigLoadChunk,
   RobotConfigLoadEnd,
   RobotConfigLoadStatus,
 
-  OdometryConfigGet=210,
+  OdometryConfigGet = 210,
   OdometryConfigGetStatus,
   OdometryConfigSet,
 
-  PropulsionConfigGet=215,
+  PropulsionConfigGet = 215,
   PropulsionConfigGetStatus,
   PropulsionConfigSet,
 
-  WatchdogReset=250,
+  WatchdogReset = 250,
   WatchdogStatus,
 
-  UartCommTaskStatistics=300,
+  UartCommTaskStatistics = 300,
 };
 
 // task ids for watchdog

@@ -3,6 +3,8 @@
 #include "goldobot/hal.hpp"
 #include "goldobot/robot.hpp"
 
+#include "goldobot/core/math_utils.hpp"
+
 #include <cassert>
 
 // test, measure task running time
@@ -16,7 +18,6 @@ unsigned char __attribute__((section(".ccmram")))
 PropulsionTask::s_urgent_message_queue_buffer[1024];
 
 unsigned char PropulsionTask::exec_traj_buff[256];
-
 
 PropulsionTask::PropulsionTask()
     : m_message_queue(s_message_queue_buffer, sizeof(s_message_queue_buffer)),
@@ -73,9 +74,8 @@ void PropulsionTask::doStep() {
   // Send command status
   if (m_controller.commandFinished()) {
     onCommandEnd();
-    if(m_message_queue.message_ready())
-    {
-    	processMessage();
+    if (m_message_queue.message_ready()) {
+      processMessage();
     }
   }
 
@@ -94,9 +94,8 @@ void PropulsionTask::doStep() {
     setMotorsPwm(m_controller.leftMotorVelocityInput(), m_controller.rightMotorVelocityInput());
   }
 
-  if(m_config.motor_controller_type == MotorControllerType::ODriveUART)
-  {
-	  m_odrive_client.doStep(hal::get_tick_count());
+  if (m_config.motor_controller_type == MotorControllerType::ODriveUART) {
+    m_odrive_client.doStep(hal::get_tick_count());
   }
 
   if (m_use_simulator) {
@@ -104,6 +103,7 @@ void PropulsionTask::doStep() {
   }
 
   sendTelemetryMessages();
+  updateScope();
 
   uint32_t cyccnt_end = DWT->CYCCNT;
   uint32_t cycles_count = cyccnt_end - cyccnt_begin;
@@ -128,24 +128,26 @@ void PropulsionTask::sendTelemetryMessages() {
     auto msg = m_controller.getTelemetry();
     Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionTelemetry,
                                                     (unsigned char*)&msg, sizeof(msg));
-    m_next_telemetry_ts = std::max(m_next_telemetry_ts + m_config.telemetry_period_ms, current_time);
+    m_next_telemetry_ts =
+        std::max(m_next_telemetry_ts + m_config.telemetry_period_ms, current_time);
   }
 
   if (current_time >= m_next_telemetry_ex_ts) {
     auto msg = m_controller.getTelemetryEx();
     Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionTelemetryEx,
                                                     (unsigned char*)&msg, sizeof(msg));
-    m_next_telemetry_ex_ts = std::max(m_next_telemetry_ex_ts + m_config.telemetry_ex_period_ms, current_time);
+    m_next_telemetry_ex_ts =
+        std::max(m_next_telemetry_ex_ts + m_config.telemetry_ex_period_ms, current_time);
   }
 
-  if (current_time >= m_next_odrive_telemetry_ts && m_config.motor_controller_type == MotorControllerType::ODriveUART ) {
+  if (current_time >= m_next_odrive_telemetry_ts &&
+      m_config.motor_controller_type == MotorControllerType::ODriveUART) {
     auto msg = m_odrive_client.telemetry();
     Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionODriveTelemetry,
-                                                   (unsigned char*)&msg, sizeof(msg));
+                                                    (unsigned char*)&msg, sizeof(msg));
 
-
-
-    m_next_odrive_telemetry_ts = std::max(m_next_odrive_telemetry_ts + m_config.telemetry_odrive_period_ms, current_time);
+    m_next_odrive_telemetry_ts =
+        std::max(m_next_odrive_telemetry_ts + m_config.telemetry_odrive_period_ms, current_time);
   }
 
   if (current_time >= m_next_pose_ts) {
@@ -164,9 +166,8 @@ void PropulsionTask::sendTelemetryMessages() {
 void PropulsionTask::processMessage() {
   auto message_type = (CommMessageType)m_message_queue.message_type();
   auto msg_size = m_message_queue.message_size();
-  if(msg_size > sizeof(exec_traj_buff))
-  {
-	  msg_size = sizeof(exec_traj_buff);
+  if (msg_size > sizeof(exec_traj_buff)) {
+    msg_size = sizeof(exec_traj_buff);
   }
 
   m_message_queue.pop_message(exec_traj_buff, msg_size);
@@ -194,17 +195,17 @@ void PropulsionTask::processMessage() {
     case CommMessageType::PropulsionExecuteReposition:
       onMsgExecuteReposition(msg_size);
       break;
-    //case CommMessageType::PropulsionEnterManualControl:
-    //  m_controller.enterManualControl();
-    //  break;
-    //case CommMessageType::PropulsionExitManualControl:
-    //  m_controller.exitManualControl();
-    //  break;
-    //case CommMessageType::PropulsionSetControlLevels: {
-    //  uint8_t buff[2];
-     // m_message_queue.pop_message((unsigned char*)buff, 2);
-     // m_controller.setControlLevels(buff[0], buff[1]);
-   // } break;
+      // case CommMessageType::PropulsionEnterManualControl:
+      //  m_controller.enterManualControl();
+      //  break;
+      // case CommMessageType::PropulsionExitManualControl:
+      //  m_controller.exitManualControl();
+      //  break;
+      // case CommMessageType::PropulsionSetControlLevels: {
+      //  uint8_t buff[2];
+      // m_message_queue.pop_message((unsigned char*)buff, 2);
+      // m_controller.setControlLevels(buff[0], buff[1]);
+      // } break;
     case CommMessageType::PropulsionSetTargetPose:
       onMsgExecuteSetTargetPose(msg_size);
       break;
@@ -221,16 +222,14 @@ void PropulsionTask::processUrgentMessage() {
   auto message_type = (CommMessageType)m_urgent_message_queue.message_type();
   auto message_size = m_urgent_message_queue.message_size();
 
+  uint32_t current_time = hal::get_tick_count();
+
   switch (message_type) {
-    case CommMessageType::MatchEnd: {
-      m_urgent_message_queue.pop_message(nullptr, 0);
-      setMotorsEnable(false);
-    } break;
     case CommMessageType::ODriveResponsePacket: {
       uint8_t buff[6];
       m_urgent_message_queue.pop_message((unsigned char*)&buff, 16);
-      uint16_t seq = *(uint16_t*)buff & 0x1fff;
-      m_odrive_client.processResponse(seq, buff + 2, message_size - 2);
+      uint16_t seq = *(uint16_t*)buff & 0x3fff;
+      m_odrive_client.processResponse(current_time, seq, buff + 2, message_size - 2);
 
     } break;
     case CommMessageType::PropulsionCalibrateODrive: {
@@ -304,6 +303,10 @@ void PropulsionTask::processUrgentMessage() {
       setSimulationMode(enable);
 
     } break;
+    case CommMessageType::PropulsionScopeConfig: {
+      m_urgent_message_queue.pop_message((unsigned char*)&m_scope_config, sizeof(m_scope_config));
+      resetScope();
+    } break;
     case CommMessageType::PropulsionMotorsEnableSet: {
       uint8_t enabled;
       m_urgent_message_queue.pop_message((unsigned char*)&enabled, 1);
@@ -327,7 +330,6 @@ void PropulsionTask::processUrgentMessage() {
       break;
   }
 }
-
 
 // Command messages
 void PropulsionTask::onMsgExecuteReposition(size_t msg_size) {
@@ -369,7 +371,6 @@ void PropulsionTask::onMsgExecuteFaceDirection(size_t msg_size) {
   float yaw = *(float*)(exec_traj_buff + 2);
   float yaw_rate = *(float*)(exec_traj_buff + 6);
   m_controller.executeFaceDirection(yaw, yaw_rate);
-
 }
 
 void PropulsionTask::onMsgExecutePointTo(size_t msg_size) {
@@ -379,9 +380,10 @@ void PropulsionTask::onMsgExecutePointTo(size_t msg_size) {
 }
 
 void PropulsionTask::onMsgExecuteTrajectory(size_t msg_size) {
-	// todo: send error message if message size is too large
+  // todo: send error message if message size is too large
   if (msg_size <= 134) {
-	// message has a header of  6 bytes: uint16 sequence number and float speed. each point is 2 floats
+    // message has a header of  6 bytes: uint16 sequence number and float speed. each point is 2
+    // floats
     int num_points = (msg_size - 6) / 8;
     float speed = *(float*)(exec_traj_buff + 2);
     Vector2D* points = (Vector2D*)(exec_traj_buff + 6);
@@ -441,6 +443,8 @@ void PropulsionTask::setSimulationMode(bool enable) {
 }
 
 void PropulsionTask::setMotorsPwm(float left_pwm, float right_pwm) {
+  m_left_vel_setpoint = left_pwm;
+  m_right_vel_setpoint = right_pwm;
   if (m_use_simulator) {
     m_robot_simulator.m_left_pwm = left_pwm;
     m_robot_simulator.m_right_pwm = right_pwm;
@@ -469,7 +473,8 @@ void PropulsionTask::onCommandBegin(uint16_t sequence_number) {
   buff[2] = static_cast<uint8_t>(CommandEvent::Begin);
   buff[3] = static_cast<uint8_t>(m_controller.error());
   *(uint16_t*)(buff) = m_current_command_sequence_number;
-  Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::PropulsionCommandEvent, buff, 4);
+  Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::PropulsionCommandEvent, buff,
+                                                      4);
   m_is_executing_command = true;
 }
 
@@ -480,11 +485,11 @@ void PropulsionTask::onCommandEnd() {
                                      : CommandEvent::Error);
   buff[3] = static_cast<uint8_t>(m_controller.error());
   *(uint16_t*)(buff) = m_current_command_sequence_number;
-  Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::PropulsionCommandEvent, buff, 4);
+  Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::PropulsionCommandEvent, buff,
+                                                      4);
   m_is_executing_command = false;
-  if(m_controller.state() == PropulsionController::State::Error)
-  {
-	  int a = 1;
+  if (m_controller.state() == PropulsionController::State::Error) {
+    int a = 1;
   }
 }
 
@@ -495,7 +500,8 @@ void PropulsionTask::onCommandCancel(uint16_t sequence_number) {
   buff[2] = static_cast<uint8_t>(CommandEvent::Cancel);
   buff[3] = static_cast<uint8_t>(m_controller.error());
   *(uint16_t*)(buff) = m_current_command_sequence_number;
-  Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::PropulsionCommandEvent, buff, 4);
+  Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::PropulsionCommandEvent, buff,
+                                                      4);
   m_is_executing_command = false;
 }
 
@@ -508,6 +514,148 @@ void PropulsionTask::clearCommandQueue() {
     m_message_queue.pop_message(exec_traj_buff, 2);
     uint16_t sequence_number = *(uint16_t*)exec_traj_buff;
     onCommandCancel(sequence_number);
+  }
+}
+
+float PropulsionTask::scopeGetVariable(ScopeVariable type) {
+  switch (type) {
+    case ScopeVariable::PoseX:
+      return m_odometry.pose().position.x;
+    case ScopeVariable::PoseY:
+      return m_odometry.pose().position.y;
+    case ScopeVariable::PoseYaw:
+      return m_odometry.pose().yaw;
+    case ScopeVariable::PoseSpeed:
+      return m_odometry.pose().speed;
+    case ScopeVariable::PoseYawRate:
+      return m_odometry.pose().yaw_rate;
+    case ScopeVariable::TargetX:
+      return m_controller.targetPose().position.x;
+    case ScopeVariable::TargetY:
+      return m_controller.targetPose().position.y;
+    case ScopeVariable::TargetYaw:
+      return m_controller.targetPose().yaw;
+    case ScopeVariable::TargetSpeed:
+      return m_controller.targetPose().speed;
+    case ScopeVariable::TargetYawRate:
+      return m_controller.targetPose().yaw_rate;
+    case ScopeVariable::LeftMotorVelocitySetpoint:
+      return m_left_vel_setpoint;
+    case ScopeVariable::RightMotorVelocitySetpoint:
+      return m_right_vel_setpoint;
+    // ODrive telemetry
+    case ScopeVariable::ODriveAxis0VelEstimate:
+      return m_odrive_client.telemetry().axis[0].vel_estimate;
+    case ScopeVariable::ODriveAxis1VelEstimate:
+      return m_odrive_client.telemetry().axis[1].vel_estimate;
+    case ScopeVariable::ODriveAxis0CurrentIqSetpoint:
+      return m_odrive_client.telemetry().axis[0].current_iq_setpoint;
+    case ScopeVariable::ODriveAxis1CurrentIqSetpoint:
+      return m_odrive_client.telemetry().axis[1].current_iq_setpoint;
+    case ScopeVariable::ODriveVBus:
+      return 0;
+
+    default:
+      return 0;
+  }
+  m_odrive_client.telemetry().axis[0].current_iq_setpoint;
+}
+
+void PropulsionTask::resetScope() {
+  m_scope_total_size = 0;
+  m_scope_idx = 0;
+  if (m_scope_config.num_channels > 8) {
+    m_scope_config.num_channels = 8;
+  }
+
+  for (unsigned i = 0; i < m_scope_config.num_channels; i++) {
+    switch (m_scope_config.channels[i].encoding) {
+      case ScopeVariableEncoding::Raw8:
+        m_scope_total_size += 1;
+        break;
+      case ScopeVariableEncoding::Raw16:
+        m_scope_total_size += 2;
+        break;
+      case ScopeVariableEncoding::Raw32:
+        m_scope_total_size += 4;
+        break;
+      case ScopeVariableEncoding::Scaled8:
+        m_scope_total_size += 1;
+        break;
+      case ScopeVariableEncoding::Scaled16:
+        m_scope_total_size += 2;
+        break;
+      case ScopeVariableEncoding::Scaled32:
+        m_scope_total_size += 4;
+        break;
+      case ScopeVariableEncoding::Float:
+        m_scope_total_size += 4;
+        break;
+      default:
+        break;
+    }
+  }
+}
+
+void PropulsionTask::scopePush(float val, ScopeVariableEncoding encoding) {
+  uint8_t* ptr = &m_scope_buffer[m_scope_idx];
+  switch (encoding) {
+    case ScopeVariableEncoding::Scaled8:
+      *reinterpret_cast<uint8_t*>(ptr) =
+          static_cast<uint8_t>(val * std::numeric_limits<uint8_t>::max());
+      m_scope_idx += 1;
+      break;
+    case ScopeVariableEncoding::Scaled16:
+      *reinterpret_cast<uint16_t*>(ptr) =
+          static_cast<uint8_t>(val * std::numeric_limits<uint16_t>::max());
+      m_scope_idx += 2;
+      break;
+    case ScopeVariableEncoding::Scaled32:
+      *reinterpret_cast<uint8_t*>(ptr) =
+          static_cast<uint32_t>(val * std::numeric_limits<uint32_t>::max());
+      m_scope_idx += 4;
+      break;
+    default:
+      break;
+  }
+}
+
+void PropulsionTask::updateScope() {
+  if (m_scope_config.num_channels == 0) {
+    return;
+  }
+
+  auto current_time = hal::get_tick_count();
+
+  if (current_time < m_next_scope_ts) {
+    return;
+  }
+
+  m_next_scope_ts = std::max(m_next_scope_ts + m_scope_config.period, current_time);
+
+  if (m_scope_idx == 0) {
+    *reinterpret_cast<uint16_t*>(&m_scope_buffer[m_scope_idx]) = (uint16_t)hal::get_tick_count();
+    m_scope_idx = 2;
+  }
+
+  for (unsigned i = 0; i < m_scope_config.num_channels; i++) {
+    const auto& chan = m_scope_config.channels[i];
+    if (chan.encoding == ScopeVariableEncoding::Float) {
+      float val = scopeGetVariable(chan.variable);
+      uint8_t* ptr = &m_scope_buffer[m_scope_idx];
+      *reinterpret_cast<float*>(ptr) = val;
+      m_scope_idx += 4;
+    } else {
+      float val = scopeGetVariable(chan.variable);
+      float val_normalized = (val - chan.min_value) / (chan.max_value - chan.min_value);
+      val_normalized = clamp(val_normalized, 0.0f, 1.0f);
+      scopePush(val_normalized, chan.encoding);
+    }
+  }
+  if (m_scope_idx + m_scope_total_size >= sizeof(m_scope_buffer)) {
+    Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionScopeData,
+                                                    m_scope_buffer, m_scope_idx);
+    m_scope_idx = 0;
   }
 }
 
@@ -539,7 +687,8 @@ void PropulsionTask::taskFunction() {
   m_odometry.setConfig(m_odometry.config());
   m_odometry.reset(left, right);
 
-  m_odrive_client.setOutputExchange(&Robot::instance().mainExchangeIn(), CommMessageType::ODriveRequestPacket);
+  m_odrive_client.setOutputExchange(&Robot::instance().mainExchangeIn(),
+                                    CommMessageType::ODriveRequestPacket);
 
   while (1) {
     checkStateUpdate();

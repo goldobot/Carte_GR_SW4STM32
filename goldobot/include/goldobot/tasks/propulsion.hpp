@@ -9,23 +9,64 @@
 #include <cstdint>
 
 namespace goldobot {
-class PropulsionTask : public Task {
-	public:
-	enum class MotorControllerType : uint8_t {
-		None,
-		Pwm,
-		ODriveUART
-	};
 
-	struct Config
-	{
-		MotorControllerType motor_controller_type{MotorControllerType::None};
-		uint8_t update_period_ms{1};
-		uint8_t telemetry_period_ms{10};
-		uint8_t telemetry_ex_period_ms{20};
-		uint8_t pose_period_ms{50};
-		uint8_t telemetry_odrive_period_ms{100};
-	};
+enum class ScopeVariable : uint16_t {
+  None,
+  PoseX,
+  PoseY,
+  PoseYaw,
+  PoseSpeed,
+  PoseYawRate,
+  TargetX,
+  TargetY,
+  TargetYaw,
+  TargetSpeed,
+  TargetYawRate,
+  LeftMotorVelocitySetpoint,
+  RightMotorVelocitySetpoint,
+  ODriveAxis0VelEstimate,
+  ODriveAxis1VelEstimate,
+  ODriveAxis0CurrentIqSetpoint,
+  ODriveAxis1CurrentIqSetpoint,
+  ODriveVBus
+};
+
+enum class ScopeVariableEncoding : uint16_t {
+  Raw8 = 0,
+  Raw16 = 1,
+  Raw32 = 2,
+  Scaled8 = 4,
+  Scaled16 = 5,
+  Scaled32 = 6,
+  Float = 8
+};
+
+struct ScopeChannelConfig {
+  ScopeVariable variable{ScopeVariable::None};
+  ScopeVariableEncoding encoding{ScopeVariableEncoding::Raw8};
+  float min_value;
+  float max_value;
+};
+
+struct ScopeConfig {
+  uint16_t period;
+  uint16_t num_channels;
+  ScopeChannelConfig channels[8];
+};
+
+class PropulsionTask : public Task {
+ public:
+  enum class MotorControllerType : uint8_t { None, Pwm, ODriveUART };
+
+  struct Config {
+    MotorControllerType motor_controller_type{MotorControllerType::None};
+    uint8_t update_period_ms{1};
+    uint8_t telemetry_period_ms{10};
+    uint8_t telemetry_ex_period_ms{20};
+    uint8_t pose_period_ms{50};
+    uint8_t telemetry_odrive_period_ms{100};
+  };
+
  public:
   PropulsionTask();
   const char* name() const override;
@@ -53,6 +94,9 @@ class PropulsionTask : public Task {
   uint16_t m_encoder_left{0};
   uint16_t m_encoders_right{0};
 
+  float m_left_vel_setpoint{0};
+  float m_right_vel_setpoint{0};
+
   uint32_t m_next_telemetry_ts{0};
   uint32_t m_next_telemetry_ex_ts{0};
   uint32_t m_next_pose_ts{0};
@@ -79,7 +123,6 @@ class PropulsionTask : public Task {
   void onMsgExecuteSetTargetPose(size_t msg_size);
   void onMsgExecuteMeasureNormal(size_t msg_size);
 
-
   void clearCommandQueue();
 
   void measureNormal(float angle, float distance);
@@ -94,6 +137,17 @@ class PropulsionTask : public Task {
   void onCommandBegin(uint16_t sequence_number);
   void onCommandEnd();
   void onCommandCancel(uint16_t sequence_number);
+
+  float scopeGetVariable(ScopeVariable type);
+  void updateScope();
+  void resetScope();
+  void scopePush(float val, ScopeVariableEncoding encoding);
+
+  ScopeConfig m_scope_config;
+  uint8_t m_scope_total_size{0};
+  uint8_t m_scope_buffer[64];  // uint32 packet timestamp followed by values
+  size_t m_scope_idx{0};
+  uint32_t m_next_scope_ts{0};
 
   ODriveClient m_odrive_client;
 

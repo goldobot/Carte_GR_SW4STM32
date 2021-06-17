@@ -8,15 +8,13 @@
 
 namespace goldobot {
 
-struct ODriveCommStats
-{
-	uint16_t bytes_sent{0};
-	uint16_t requests_sent{0};
-	uint16_t bytes_received{0};
-	uint16_t requests_received{0};
-	uint16_t tx_highwater{0};
-	uint16_t rx_highwater{0};
-
+struct ODriveCommStats {
+  uint16_t bytes_sent{0};
+  uint16_t requests_sent{0};
+  uint16_t bytes_received{0};
+  uint16_t requests_received{0};
+  uint16_t tx_highwater{0};
+  uint16_t rx_highwater{0};
 };
 
 class ODriveCommTask : public Task {
@@ -32,7 +30,6 @@ class ODriveCommTask : public Task {
   MessageQueue m_message_queue;
   ODriveStreamParser m_stream_parser;
   ODriveStreamWriter m_stream_writer;
-
 
   size_t m_bytes_sent{0};
   size_t m_requests_sent{0};

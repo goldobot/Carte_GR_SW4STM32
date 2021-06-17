@@ -50,15 +50,13 @@ void ODriveCommTask::taskFunction() {
     if (m_stream_parser.packetReady()) {
       size_t packet_size = m_stream_parser.packetSize();
       m_stream_parser.popPacket(s_scratchpad, sizeof(s_scratchpad));
-      uint16_t sequence_number = *(uint16_t*) s_scratchpad;
-      if(sequence_number & 0x2000)
-      {
-    	  Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ODriveResponsePacket,
-    	                                                        s_scratchpad, packet_size);
-      } else
-      {
-    	  Robot::instance().exchangeInternal().pushMessage(CommMessageType::ODriveResponsePacket,
-    	      	                                                        s_scratchpad, packet_size);
+      uint16_t sequence_number = *(uint16_t*)s_scratchpad;
+      if (!(sequence_number & 0x4000)) {
+        Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ODriveResponsePacket,
+                                                        s_scratchpad, packet_size);
+      } else {
+        Robot::instance().exchangeInternal().pushMessage(CommMessageType::ODriveResponsePacket,
+                                                         s_scratchpad, packet_size);
       }
     }
 
@@ -67,15 +65,12 @@ void ODriveCommTask::taskFunction() {
     }
 
     m_cnt++;
-    if(m_cnt == 100)
-    {
-    	uint8_t watchdog_id = 3;
-    	Robot::instance().exchangeInternal().pushMessage(CommMessageType::WatchdogReset,&watchdog_id, 1);
-
-    	 m_cnt = 0;
-
+    if (m_cnt == 100) {
+      uint8_t watchdog_id = 3;
+      Robot::instance().exchangeInternal().pushMessage(CommMessageType::WatchdogReset, &watchdog_id,
+                                                       1);
+      m_cnt = 0;
     };
-
 
     // Wait for next tick
     delay_periodic(1);
@@ -83,24 +78,24 @@ void ODriveCommTask::taskFunction() {
 }
 
 bool ODriveCommTask::processMessage() {
-  if(!m_message_queue.message_ready())
-  {
-	  return false;
+  if (!m_message_queue.message_ready()) {
+    return false;
   }
   auto message_type = (CommMessageType)m_message_queue.message_type();
 
   switch (message_type) {
     case CommMessageType::ODriveRequestPacket: {
       auto packet_size = m_message_queue.message_size();
-      if(packet_size > m_stream_writer.availableSpace() || packet_size > sizeof(s_scratchpad)) {
-    	  m_message_queue.pop_message(nullptr, 0);
-    	  return false;
+      if (packet_size > m_stream_writer.availableSpace() || packet_size > sizeof(s_scratchpad)) {
+        m_message_queue.pop_message(nullptr, 0);
+        return false;
       };
       m_message_queue.pop_message(s_scratchpad, 128);
       m_stream_writer.pushPacket((unsigned char*)s_scratchpad, packet_size);
-      m_requests_sent+=1;
-      m_bytes_sent+=packet_size;
-      m_comm_stats.tx_highwater = std::max<uint16_t>(m_comm_stats.tx_highwater, m_stream_writer.size());
+      m_requests_sent += 1;
+      m_bytes_sent += packet_size;
+      m_comm_stats.tx_highwater =
+          std::max<uint16_t>(m_comm_stats.tx_highwater, m_stream_writer.size());
     } break;
     default:
       m_message_queue.pop_message(nullptr, 0);
