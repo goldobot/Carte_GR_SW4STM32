@@ -10,14 +10,19 @@ if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git")
     execute_process(COMMAND ${GIT_EXECUTABLE}  show -s --format=%h OUTPUT_VARIABLE GOLDO_GIT_COMMIT_SHORT_ID OUTPUT_STRIP_TRAILING_WHITESPACE)
     execute_process(COMMAND ${GIT_EXECUTABLE}  show -s --format=%ci OUTPUT_VARIABLE GOLDO_GIT_COMMIT_DATE OUTPUT_STRIP_TRAILING_WHITESPACE)
     execute_process(COMMAND ${GIT_EXECUTABLE}  show -s --format=%D OUTPUT_VARIABLE GOLDO_GIT_COMMIT_REF_NAMES OUTPUT_STRIP_TRAILING_WHITESPACE)
+    message("git version is: " ${GOLDO_GIT_COMMIT_ID})
 else()
-    message(WARNING "Git not found, cannot set version info")
-    SET(REVISION "GOLDO_GIT_COMMIT_ID")
+    message(WARNING "git not found, cannot set version info")
+    set(GOLDO_GIT_COMMIT_ID "")
+    set(GOLDO_GIT_COMMIT_SHORT_ID "")
+    set(GOLDO_GIT_COMMIT_DATE "")
+    set(GOLDO_GIT_COMMIT_REF_NAMES "")
 endif()
 
 option(GOLDO_BUILD_TESTS "Build the unit tests" OFF)
 option(GOLDO_BUILD_FUZZERS "Build the fuzzers" OFF)
 option(GOLDO_BUILD_NUCLEO_FIRMWARE "Build the Nucleo firmware" ON)
+option(GOLDO_NUCLEO_HAL_TRACE "Enable HAL trace functions in the Nucleo firmware" OFF)
 
 include("cmake/goldo_git_version.cmake")
 
@@ -27,11 +32,7 @@ if (GOLDO_BUILD_TESTS)
 endif ()
 
 if (GOLDO_BUILD_NUCLEO_FIRMWARE)
-  set(GOLDOBOT_PLATFORM_OS FreeRTOS)
-  goldo_git_version(GOLDO_GIT_VERSION)
-  message("git version is: " ${GOLDO_GIT_VERSION})
-
-  add_definitions("-DGOLDO_GIT_VERSION=\"${GOLDO_GIT_VERSION}\"")
+  set(GOLDOBOT_PLATFORM_OS FreeRTOS)  
 
   include_directories(firmware/Inc)
 
