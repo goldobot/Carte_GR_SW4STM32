@@ -6,9 +6,8 @@
 
 using namespace goldobot;
 
-ServosTask::ServosTask() : m_message_queue(m_message_queue_buffer, sizeof(m_message_queue_buffer)) {
-
-}
+ServosTask::ServosTask()
+    : m_message_queue(m_message_queue_buffer, sizeof(m_message_queue_buffer)) {}
 
 const char *ServosTask::name() const { return "servos"; }
 
@@ -24,12 +23,10 @@ void ServosTask::taskFunction() {
     m_servos_target_positions[i] = 0;
   }
 
-
   while (1) {
     while (m_message_queue.message_ready()) {
       processMessage();
     }
-
 
     // Recompute servo targets
     float delta_t = c_update_period * 1e-3;
@@ -46,50 +43,48 @@ void ServosTask::taskFunction() {
       auto target_position = m_servos_target_positions[i];
 
       if (position > target_position) {
-        m_servos_positions[i] = std::max<float>(
-        		target_position, position - m_servos_speeds[i] * delta_t);
-        updateServo(i, static_cast<uint16_t>(m_servos_positions[i]), m_servos_speeds[i] );
+        m_servos_positions[i] =
+            std::max<float>(target_position, position - m_servos_speeds[i] * delta_t);
+        updateServo(i, static_cast<uint16_t>(m_servos_positions[i]), m_servos_speeds[i]);
         was_moving = true;
       }
 
       if (position < target_position) {
-        m_servos_positions[i] = std::min<float>(
-        		target_position, position + m_servos_speeds[i] * delta_t);
+        m_servos_positions[i] =
+            std::min<float>(target_position, position + m_servos_speeds[i] * delta_t);
         updateServo(i, static_cast<uint16_t>(m_servos_positions[i]), m_servos_speeds[i]);
         was_moving = true;
       }
 
       if (was_moving && m_servos_positions[i] == m_servos_target_positions[i]) {
-    	  publishServoState(i, false);
+        publishServoState(i, false);
       }
     }
 
     uint8_t watchdog_id = 5;
-    Robot::instance().exchangeInternal().pushMessage(CommMessageType::WatchdogReset,&watchdog_id, 1);
+    Robot::instance().exchangeInternal().pushMessage(CommMessageType::WatchdogReset, &watchdog_id,
+                                                     1);
 
     delay_periodic(c_update_period);
   } /* while(1) */
 }
 
-void ServosTask::updateServo(int id, uint16_t pos, uint16_t speed)
-{
-	const auto& config = m_servos_config->servos[id];
-	// fpga servo
-	if(config.type == ServoType::StandardServo)
-	{
-		uint32_t buff[2] = {c_fpga_servos_base + 8 * config.id, static_cast<uint32_t>(pos) << 2};
-		Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaWriteReg,
-		                                                      (unsigned char *)buff, 8);
-	}
+void ServosTask::updateServo(int id, uint16_t pos, uint16_t speed) {
+  const auto &config = m_servos_config->servos[id];
+  // fpga servo
+  if (config.type == ServoType::StandardServo) {
+    uint32_t buff[2] = {c_fpga_servos_base + 8 * config.id, static_cast<uint32_t>(pos) << 2};
+    Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaWriteReg,
+                                                   (unsigned char *)buff, 8);
+  }
 }
 
-void ServosTask::publishServoState(int servo_id, bool state)
-{
-	unsigned char buff[2] = {(unsigned char)servo_id, true};
-	Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ServoState,
-	                                      (unsigned char *)buff, 2);
-	Robot::instance().exchangeInternal().pushMessage(CommMessageType::ServoState,
-		                                      (unsigned char *)buff, 2);
+void ServosTask::publishServoState(int servo_id, bool state) {
+  unsigned char buff[2] = {(unsigned char)servo_id, true};
+  Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ServoState,
+                                                  (unsigned char *)buff, 2);
+  Robot::instance().exchangeInternal().pushMessage(CommMessageType::ServoState,
+                                                   (unsigned char *)buff, 2);
 }
 
 void ServosTask::processMessage() {
@@ -107,13 +102,15 @@ void ServosTask::processMessage() {
         updateServo(servo_id, pwm, m_servos_config->servos[servo_id].max_speed);
       }
       // Send message when servo start moving
-      bool is_moving = m_servos_positions[servo_id] >=0 && m_servos_target_positions[servo_id] != m_servos_positions[servo_id];
+      bool is_moving = m_servos_positions[servo_id] >= 0 &&
+                       m_servos_target_positions[servo_id] != m_servos_positions[servo_id];
       bool target_changed = m_servos_target_positions[servo_id] != pwm;
       if (target_changed && !is_moving) {
-    	publishServoState(servo_id, true);
+        publishServoState(servo_id, true);
       }
       m_servos_target_positions[servo_id] = pwm;
-      m_servos_speeds[servo_id] = (m_servos_config->servos[servo_id].max_speed * target_speed) / 100;
+      m_servos_speeds[servo_id] =
+          (m_servos_config->servos[servo_id].max_speed * target_speed) / 100;
     } break;
     default:
       m_message_queue.pop_message(nullptr, 0);

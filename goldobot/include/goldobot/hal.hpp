@@ -10,15 +10,10 @@ typedef uint32_t TickType_t;
 enum class Status { Error = 0, Ok = 1 };
 
 struct IORequestTmp;
-struct IORequestTmpStatus
-{
-	enum StatusCode : uint32_t {
-		Success,
-		Error,
-		UartIdleDetected
-	};
-	StatusCode code;
-	uint32_t size;
+struct IORequestTmpStatus {
+  enum StatusCode : uint32_t { Success, Error, UartIdleDetected };
+  StatusCode code;
+  uint32_t size;
 };
 
 typedef bool (*IORequestTmpCallback)(IORequestTmp*, IORequestTmpStatus);
@@ -33,8 +28,6 @@ struct IORequestTmp {
   IORequestTmpCallback callback{nullptr};
   void* userdata{nullptr};
 };
-
-
 
 void init();
 

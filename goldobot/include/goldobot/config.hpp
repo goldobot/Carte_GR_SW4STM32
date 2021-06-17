@@ -17,16 +17,14 @@ struct ServosConfig {
   ServoConfig servos[32];
 };
 
-struct SensorConfig
-{
-	uint8_t type{0};
-	uint8_t id{0};
+struct SensorConfig {
+  uint8_t type{0};
+  uint8_t id{0};
 };
 
-struct SensorsConfig
-{
-	int8_t num_sensors;
-	SensorConfig sensors[32];
+struct SensorsConfig {
+  int8_t num_sensors;
+  SensorConfig sensors[32];
 };
 
 struct RobotGeometryConfig {

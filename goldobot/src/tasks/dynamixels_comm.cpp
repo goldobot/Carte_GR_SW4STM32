@@ -16,47 +16,38 @@ struct DynamixelPacketHeaderV1 {
   uint8_t command;
 };
 
-enum class DynamixelParseState
-{
-	Transmit,
-	ReceiveHeader,
-	ReceiveBody
-};
+enum class DynamixelParseState { Transmit, ReceiveHeader, ReceiveBody };
 
 bool g_dynamixels_has_status;
 volatile DynamixelParseState g_dynamixels_parse_state;
 unsigned char* g_dynamixels_buff;
 size_t g_dynamixels_bytes_received{0};
 
-
-bool goldo_dynamixels_callback(hal::IORequestTmp* req, hal::IORequestTmpStatus status)
-{
-	auto& dynamixels_task = *reinterpret_cast<DynamixelsCommTask*>(req->userdata);
-	switch(g_dynamixels_parse_state)
-	{
-	case DynamixelParseState::Transmit:
-		goldobot::hal::gpio_set(31, true);
-		req->rx_ptr = g_dynamixels_buff;
-		req->tx_ptr = nullptr;
-		req->size = 4;
-		g_dynamixels_parse_state = DynamixelParseState::ReceiveHeader;
-		g_dynamixels_bytes_received = 0;
-		return true;
-	case DynamixelParseState::ReceiveHeader:
-		g_dynamixels_bytes_received += status.size;
-		g_dynamixels_parse_state = DynamixelParseState::ReceiveBody;
-		req->rx_ptr = g_dynamixels_buff + g_dynamixels_bytes_received;
-		req->size = g_dynamixels_buff[3];
-		return true;
-	case DynamixelParseState::ReceiveBody:
-		g_dynamixels_bytes_received += status.size;
-		return false;
-	default:
-		break;
-
-	}
-	goldobot::hal::gpio_set(31, false);
-	return false;
+bool goldo_dynamixels_callback(hal::IORequestTmp* req, hal::IORequestTmpStatus status) {
+  auto& dynamixels_task = *reinterpret_cast<DynamixelsCommTask*>(req->userdata);
+  switch (g_dynamixels_parse_state) {
+    case DynamixelParseState::Transmit:
+      goldobot::hal::gpio_set(31, true);
+      req->rx_ptr = g_dynamixels_buff;
+      req->tx_ptr = nullptr;
+      req->size = 4;
+      g_dynamixels_parse_state = DynamixelParseState::ReceiveHeader;
+      g_dynamixels_bytes_received = 0;
+      return true;
+    case DynamixelParseState::ReceiveHeader:
+      g_dynamixels_bytes_received += status.size;
+      g_dynamixels_parse_state = DynamixelParseState::ReceiveBody;
+      req->rx_ptr = g_dynamixels_buff + g_dynamixels_bytes_received;
+      req->size = g_dynamixels_buff[3];
+      return true;
+    case DynamixelParseState::ReceiveBody:
+      g_dynamixels_bytes_received += status.size;
+      return false;
+    default:
+      break;
+  }
+  goldobot::hal::gpio_set(31, false);
+  return false;
 }
 
 DynamixelsCommTask::DynamixelsCommTask()
@@ -65,7 +56,7 @@ DynamixelsCommTask::DynamixelsCommTask()
 const char* DynamixelsCommTask::name() const { return "dynamixels_comm"; }
 
 void DynamixelsCommTask::taskFunction() {
-  Robot::instance().mainExchangeIn().subscribe({60,79, &m_message_queue});
+  Robot::instance().mainExchangeIn().subscribe({60, 79, &m_message_queue});
   int cnt = 0;
   while (1) {
     while (m_message_queue.message_ready()) {
@@ -73,11 +64,11 @@ void DynamixelsCommTask::taskFunction() {
     }
 
     cnt++;
-    if(cnt == 100)
-    {
-    	uint8_t watchdog_id = 4;
-    	    Robot::instance().exchangeInternal().pushMessage(CommMessageType::WatchdogReset,&watchdog_id, 1);
-    	    cnt = 0;
+    if (cnt == 100) {
+      uint8_t watchdog_id = 4;
+      Robot::instance().exchangeInternal().pushMessage(CommMessageType::WatchdogReset, &watchdog_id,
+                                                       1);
+      cnt = 0;
     }
     delay_periodic(1);
   }
@@ -119,7 +110,7 @@ void DynamixelsCommTask::processMessage() {
   auto message_size = m_message_queue.message_size();
   switch (m_message_queue.message_type()) {
     case CommMessageType::DynamixelsRequest: {
-    	onRequest();
+      onRequest();
 
     } break;
 
@@ -129,8 +120,8 @@ void DynamixelsCommTask::processMessage() {
   }
 }
 
-void DynamixelsCommTask::onRequest()
-{unsigned char buff[3];
+void DynamixelsCommTask::onRequest() {
+  unsigned char buff[3];
   unsigned char data_read[64];
   auto message_size = m_message_queue.message_size();
   m_message_queue.pop_message(m_scratchpad, 256);
@@ -141,31 +132,30 @@ void DynamixelsCommTask::onRequest()
   uint8_t _id = m_scratchpad[3];
   uint8_t num_parameters = (uint8_t)m_scratchpad[5];
   m_response_ok = true;
-  transmitPacket(m_scratchpad[3], (DynamixelCommand)m_scratchpad[4], &m_scratchpad[5], message_size - 5);
+  transmitPacket(m_scratchpad[3], (DynamixelCommand)m_scratchpad[4], &m_scratchpad[5],
+                 message_size - 5);
 
-
-  if(m_response_ok)
-  {
-	  *reinterpret_cast<uint16_t*>(m_scratchpad) = sequence_id;
-	  m_scratchpad[2] = proto_version;
-	  m_scratchpad[3] = _id;
-	  memcpy(m_scratchpad + 4, m_dynamixels_buffer + 4, m_response_num_parameters + 1);
-	  if(sequence_id & 0x8000)
-	  {
-		  Robot::instance().exchangeInternal().pushMessage(CommMessageType::DynamixelsResponse,
-		  															  (unsigned char*)m_scratchpad, m_response_num_parameters + 5);
-	  } else
-	  {
-		  Robot::instance().mainExchangeOut().pushMessage(CommMessageType::DynamixelsResponse,
-		  															  (unsigned char*)m_scratchpad, m_response_num_parameters + 5);
-	  }
-
+  if (m_response_ok) {
+    *reinterpret_cast<uint16_t*>(m_scratchpad) = sequence_id;
+    m_scratchpad[2] = proto_version;
+    m_scratchpad[3] = _id;
+    memcpy(m_scratchpad + 4, m_dynamixels_buffer + 4, m_response_num_parameters + 1);
+    if (sequence_id & 0x8000) {
+      Robot::instance().exchangeInternal().pushMessage(CommMessageType::DynamixelsResponse,
+                                                       (unsigned char*)m_scratchpad,
+                                                       m_response_num_parameters + 5);
+    } else {
+      Robot::instance().mainExchangeOut().pushMessage(CommMessageType::DynamixelsResponse,
+                                                      (unsigned char*)m_scratchpad,
+                                                      m_response_num_parameters + 5);
+    }
   }
 }
 void DynamixelsCommTask::transmitPacket(uint8_t id, DynamixelCommand command, uint8_t* parameters,
                                         size_t num_parameters) {
-  //protocol v1
-  DynamixelPacketHeaderV1& header = *reinterpret_cast<DynamixelPacketHeaderV1*>(m_dynamixels_buffer);
+  // protocol v1
+  DynamixelPacketHeaderV1& header =
+      *reinterpret_cast<DynamixelPacketHeaderV1*>(m_dynamixels_buffer);
   header.magic = 0xFFFF;
   header.id = id;
   header.length = num_parameters + 2;
@@ -189,66 +179,60 @@ void DynamixelsCommTask::transmitPacket(uint8_t id, DynamixelCommand command, ui
   m_response_ok = false;
   m_response_num_parameters = 0;
 
-  switch(command)
-  {
-  case DynamixelCommand::Read:
-	  g_dynamixels_has_status = true;
-	  break;
-  case DynamixelCommand::Write:
-	  g_dynamixels_has_status = true;
-	  break;
-  case DynamixelCommand::Ping:
-	  g_dynamixels_has_status = true;
-	  break;
-  default:
-	  g_dynamixels_has_status = false;
-	  break;
+  switch (command) {
+    case DynamixelCommand::Read:
+      g_dynamixels_has_status = true;
+      break;
+    case DynamixelCommand::Write:
+      g_dynamixels_has_status = true;
+      break;
+    case DynamixelCommand::Ping:
+      g_dynamixels_has_status = true;
+      break;
+    default:
+      g_dynamixels_has_status = false;
+      break;
   }
 
   g_dynamixels_parse_state = DynamixelParseState::Transmit;
   g_dynamixels_buff = m_dynamixels_buffer;
   g_dynamixels_bytes_received = 0;
-  hal::io_execute(2,req,1);
+  hal::io_execute(2, req, 1);
 
-  if(g_dynamixels_has_status)
-  {
-	  // minimal status packet is 2 sync bytes, id, length, error, crc, 6 bytes
-	  if(g_dynamixels_bytes_received < 6)
-	  {
-		  m_response_ok = false;
-		  return;
-	  }
-	  // check sync bytes
-	  if(m_dynamixels_buffer[0] != 0xff || m_dynamixels_buffer[1] != 0xff)
-	  {
-		  m_response_ok = false;
-		  return;
-	  }
+  if (g_dynamixels_has_status) {
+    // minimal status packet is 2 sync bytes, id, length, error, crc, 6 bytes
+    if (g_dynamixels_bytes_received < 6) {
+      m_response_ok = false;
+      return;
+    }
+    // check sync bytes
+    if (m_dynamixels_buffer[0] != 0xff || m_dynamixels_buffer[1] != 0xff) {
+      m_response_ok = false;
+      return;
+    }
 
-	  uint8_t len = m_dynamixels_buffer[3];
-	  m_response_num_parameters = len - 2; //response = error + parameters + crc
+    uint8_t len = m_dynamixels_buffer[3];
+    m_response_num_parameters = len - 2;  // response = error + parameters + crc
 
-	  // check that length is matching
-	  if(g_dynamixels_bytes_received != len + 4)
-	  {
-		  m_response_ok = false;
-		  return;
-	  }
+    // check that length is matching
+    if (g_dynamixels_bytes_received != len + 4) {
+      m_response_ok = false;
+      return;
+    }
 
-	  //check checksum
-	  uint8_t rx_checksum = 0;
-	   for (unsigned i = 2; i < len + 3; i++) {
-		   rx_checksum += m_dynamixels_buffer[i];
-	   }
-	   rx_checksum = ~rx_checksum;
+    // check checksum
+    uint8_t rx_checksum = 0;
+    for (unsigned i = 2; i < len + 3; i++) {
+      rx_checksum += m_dynamixels_buffer[i];
+    }
+    rx_checksum = ~rx_checksum;
 
-	   if (rx_checksum == m_dynamixels_buffer[len + 3]) {
-		   // ok
-		  m_response_ok = true;
-	   } else
-	   {
-		   m_response_ok = false;
-	   }
+    if (rx_checksum == m_dynamixels_buffer[len + 3]) {
+      // ok
+      m_response_ok = true;
+    } else {
+      m_response_ok = false;
+    }
   }
 }
 

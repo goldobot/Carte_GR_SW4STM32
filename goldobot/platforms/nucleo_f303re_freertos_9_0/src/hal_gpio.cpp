@@ -17,9 +17,8 @@ using namespace platform;
 
 void gpio_set(int gpio_index, bool value) {
   auto& gpio_device = g_gpio_devices[gpio_index];
-  if(!(gpio_device.flags & 0x02))
-  {
-	  return;
+  if (!(gpio_device.flags & 0x02)) {
+    return;
   }
   auto gpio_port = g_gpio_ports[gpio_device.port];
   uint32_t pin = (uint32_t)(1U << gpio_device.pin);
@@ -33,9 +32,8 @@ void gpio_set(int gpio_index, bool value) {
 
 bool gpio_get(int gpio_index) {
   auto& gpio_device = g_gpio_devices[gpio_index];
-  if(!(gpio_device.flags & 0x01))
-  {
-	  return false;
+  if (!(gpio_device.flags & 0x01)) {
+    return false;
   }
   auto gpio_port = g_gpio_ports[gpio_device.port];
   uint32_t pin = (uint32_t)(1U << gpio_device.pin);
@@ -262,9 +260,8 @@ void hal_gpio_init(const DeviceConfigGpio* config) {
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 
-  if(config->dir & 0x04)
-  {
-	  GPIO_InitStruct.Pull = LL_GPIO_PULL_UP;
+  if (config->dir & 0x04) {
+    GPIO_InitStruct.Pull = LL_GPIO_PULL_UP;
   }
 
   switch (config->dir & 0x03) {
@@ -299,7 +296,7 @@ bool hal_gpio_init_pin(PinID pin, const LL_GPIO_InitTypeDef& init) {
   }
 
   LL_GPIO_InitTypeDef init2 = init;
-  init2.Pin =  (uint32_t)(1U << pin.pin);
+  init2.Pin = (uint32_t)(1U << pin.pin);
 
   switch (port_index) {
     case 0:

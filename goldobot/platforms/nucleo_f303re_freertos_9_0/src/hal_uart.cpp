@@ -136,12 +136,12 @@ void hal_uart_callback(int uart_index, int callback_id) {
       }
       if (huart->RxState == HAL_UART_STATE_READY) {
       }*/
-        HAL_UART_AbortReceive(huart);
-        req->remaining = huart->RxXferCount;
-        req->state = IORequestState::Complete;
-        if (req->callback) {
-          req->callback(req, io_device);
-        }
+      HAL_UART_AbortReceive(huart);
+      req->remaining = huart->RxXferCount;
+      req->state = IORequestState::Complete;
+      if (req->callback) {
+        req->callback(req, io_device);
+      }
       return;
     } break;
     case 3:  // rx idle interrupt

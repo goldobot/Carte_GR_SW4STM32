@@ -29,7 +29,7 @@ const char *FpgaTask::name() const { return "fpga"; }
 
 void FpgaTask::taskFunction() {
   Robot::instance().mainExchangeIn().subscribe({30, 49, &m_message_queue});
-  auto& exchange_out = Robot::instance().mainExchangeOut();
+  auto &exchange_out = Robot::instance().mainExchangeOut();
 
   m_last_timestamp = hal::get_tick_count();
 
@@ -42,34 +42,30 @@ void FpgaTask::taskFunction() {
       process_message();
     }
 
-    if(m_cnt % 5 == 0)
-    {
-
-    // Read sensors
-    unsigned int apb_data = 0;
-    uint32_t apb_addr = 0x800084e4;  // gpio register
-    if (goldo_fpga_master_spi_read_word(apb_addr, &apb_data) == 0) {
-      if(apb_data != m_sensors_state)
-      {
-    	  m_sensors_state = apb_data;
+    if (m_cnt % 5 == 0) {
+      // Read sensors
+      unsigned int apb_data = 0;
+      uint32_t apb_addr = 0x800084e4;  // gpio register
+      if (goldo_fpga_master_spi_read_word(apb_addr, &apb_data) == 0) {
+        if (apb_data != m_sensors_state) {
+          m_sensors_state = apb_data;
           Robot::instance().exchangeInternal().pushMessage(CommMessageType::FpgaGpioState,
-                                                                 (unsigned char *)&m_sensors_state, 4);
+                                                           (unsigned char *)&m_sensors_state, 4);
+        }
       }
-    }
     }
 
     m_cnt++;
-    if(m_cnt == 100)
-    {
-    	uint8_t watchdog_id = 2;
-    	Robot::instance().exchangeInternal().pushMessage(CommMessageType::WatchdogReset,&watchdog_id, 1);
+    if (m_cnt == 100) {
+      uint8_t watchdog_id = 2;
+      Robot::instance().exchangeInternal().pushMessage(CommMessageType::WatchdogReset, &watchdog_id,
+                                                       1);
 
-    	m_cnt = 0;
+      m_cnt = 0;
     }
 
 #if 1 /* FIXME : DEBUG : GOLDO */
-    if((m_cnt % 10 == 0) && (g_dbg_asserv_cnt != 0))
-    {
+    if ((m_cnt % 10 == 0) && (g_dbg_asserv_cnt != 0)) {
       unsigned int apb_data = 0;
       uint32_t apb_addr = 0x8000850c;  // asserv debug reg
       if (goldo_fpga_master_spi_read_word(apb_addr, &apb_data) == 0) {
@@ -249,8 +245,7 @@ void FpgaTask::process_message() {
       uint32_t apb_addr = *(uint32_t *)(buff);
       uint32_t apb_data = *(uint32_t *)(buff + 4);
 #if 1 /* FIXME : DEBUG : GOLDO */
-      if((apb_addr==0x80008500) && ((apb_data&0xf0000000)==0x60000000))
-      {
+      if ((apb_addr == 0x80008500) && ((apb_data & 0xf0000000) == 0x60000000)) {
         g_dbg_asserv_cnt = 100;
       }
 #endif
