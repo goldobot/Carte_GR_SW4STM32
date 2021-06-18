@@ -119,9 +119,10 @@ void hal_spi_init(IODevice* device, const IODeviceConfigSpi* config) {
 
   LL_GPIO_InitTypeDef GPIO_InitStruct;
 
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
 
   hal_gpio_init_pin_af(config->device_id, 0, config->sck_pin, GPIO_InitStruct);
   hal_gpio_init_pin_af(config->device_id, 1, config->mosi_pin, GPIO_InitStruct);
