@@ -64,7 +64,7 @@ class PropulsionTask : public Task {
     uint8_t telemetry_period_ms{10};
     uint8_t telemetry_ex_period_ms{20};
     uint8_t pose_period_ms{50};
-    uint8_t telemetry_odrive_period_ms{100};
+    uint8_t odrive_status_period_ms{100};
   };
 
  public:
@@ -100,8 +100,8 @@ class PropulsionTask : public Task {
   uint32_t m_next_telemetry_ts{0};
   uint32_t m_next_telemetry_ex_ts{0};
   uint32_t m_next_pose_ts{0};
-  uint32_t m_next_odrive_telemetry_ts{0};
-  uint32_t m_next_watchdog_ts{0};
+  uint32_t m_next_odrive_status_ts{0};
+
   uint16_t m_current_command_sequence_number{0};
   bool m_is_executing_command{false};
 
@@ -133,6 +133,7 @@ class PropulsionTask : public Task {
   void setSimulationMode(bool enable);
 
   void sendTelemetryMessages();
+  void sendODriveStatus();
 
   void onCommandBegin(uint16_t sequence_number);
   void onCommandEnd();

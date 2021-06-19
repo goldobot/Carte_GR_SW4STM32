@@ -12,12 +12,19 @@ class ODriveClient {
   using endpoint_id_t = uint16_t;
   using sequence_number_t = uint16_t;
 
+  struct Statistics
+  {
+	  uint16_t max_latency{0};
+	  uint16_t timeout_errors{0};
+	  // todo: check uptime endpoint to detect odrive reset
+  };
+
   struct Config {
     uint16_t req_errors_period{100};
     uint16_t req_axis_states_period{100};
     uint16_t req_telemetry_period{10};
     uint16_t req_set_vel_setpoints_period{10};
-    uint16_t timeout;
+    uint16_t timeout{50};
   };
 
   struct PIDConfig {
@@ -78,8 +85,20 @@ class ODriveClient {
     MotorThermistorTemperature,
     BusVoltage,  // global data
     BusCurrent,
-    ClearErrors,
-    RebootODrive
+    ClearErrors
+
+  };
+
+  enum class ODrvRequestId: uint8_t
+  {
+	  VBus = 0,
+	  IBus,
+	  Uptime,
+	  RebootODrive,
+	  UserEndpoint0,
+	  UserEndpoint1,
+	  UserEndpoint2,
+	  UserEndpoint3
   };
 
  public:
@@ -102,13 +121,19 @@ class ODriveClient {
   const std::array<AxisState, 2>& axisStates() const noexcept;
   const std::array<AxisCalibrationState, 2>& axisCalibrationStates() const noexcept;
 
+  Statistics m_statistics;
+
+  uint16_t m_user_endpoints[4] = {0,0,0,0};
+  float m_user_endpoints_values[4] = {0, 0, 0, 0};
+
+
  private:
   struct AxisPendingRequests {
-    float input_vel;
-    float input_torque;
-    float torque_lim;
+    float input_vel{0};
+    float input_torque{0};
+    float torque_lim{0.4f};
     uint32_t requested_state{0};
-    uint32_t control_mode;
+    uint32_t control_mode{2};
 
     // value of 0 means no request pending
     uint8_t seq_numbers[21];
@@ -172,7 +197,8 @@ class ODriveClient {
   uint8_t m_req_idx{0};
   uint32_t m_next_write_inputs_timestamp{0};
   uint32_t m_next_read_telemetry_timestamp{0};
-  uint32_t m_next_states_timestamp{0};
+  uint32_t m_next_read_states_timestamp{0};
+  uint32_t m_next_read_errors_timestamp{0};
 
   uint16_t m_seq{1};  //! sequence id of next odrive request packet
 

@@ -45,6 +45,7 @@ void PropulsionTask::setRobotSimulatorConfig(const RobotSimulatorConfig& config)
 void PropulsionTask::doStep() {
   // test stopwatch
   uint32_t cyccnt_begin = DWT->CYCCNT;
+  auto current_time = hal::get_tick_count();
 
   // Process urgent messages
   while (m_urgent_message_queue.message_ready()) {
@@ -96,7 +97,15 @@ void PropulsionTask::doStep() {
 
   if (m_config.motor_controller_type == MotorControllerType::ODriveUART) {
     m_odrive_client.doStep(hal::get_tick_count());
+
+    if (current_time >= m_next_odrive_status_ts) {
+  	    sendODriveStatus();
+  	  m_next_odrive_status_ts =
+  	          std::max(m_next_odrive_status_ts + m_config.odrive_status_period_ms, current_time);
+    }
   }
+
+
 
   if (m_use_simulator) {
     m_robot_simulator.doStep();
@@ -109,16 +118,13 @@ void PropulsionTask::doStep() {
   uint32_t cycles_count = cyccnt_end - cyccnt_begin;
   m_cycles_max = std::max(m_cycles_max, cycles_count);
 
+  /*
   if (hal::get_tick_count() >= m_next_watchdog_ts) {
-    uint8_t watchdog_id = 1;
-    m_next_watchdog_ts = hal::get_tick_count() + 100;
-    Robot::instance().exchangeInternal().pushMessage(CommMessageType::WatchdogReset, &watchdog_id,
-                                                     1);
 
     Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionTaskStatistics,
                                                     (const unsigned char*)&m_cycles_max, 4);
     m_cycles_max = 0;
-  }
+  }*/
 }
 
 void PropulsionTask::sendTelemetryMessages() {
@@ -138,16 +144,6 @@ void PropulsionTask::sendTelemetryMessages() {
                                                     (unsigned char*)&msg, sizeof(msg));
     m_next_telemetry_ex_ts =
         std::max(m_next_telemetry_ex_ts + m_config.telemetry_ex_period_ms, current_time);
-  }
-
-  if (current_time >= m_next_odrive_telemetry_ts &&
-      m_config.motor_controller_type == MotorControllerType::ODriveUART) {
-    auto msg = m_odrive_client.telemetry();
-    Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionODriveTelemetry,
-                                                    (unsigned char*)&msg, sizeof(msg));
-
-    m_next_odrive_telemetry_ts =
-        std::max(m_next_odrive_telemetry_ts + m_config.telemetry_odrive_period_ms, current_time);
   }
 
   if (current_time >= m_next_pose_ts) {
@@ -489,7 +485,7 @@ void PropulsionTask::onCommandEnd() {
                                                       4);
   m_is_executing_command = false;
   if (m_controller.state() == PropulsionController::State::Error) {
-    int a = 1;
+
   }
 }
 
@@ -515,6 +511,18 @@ void PropulsionTask::clearCommandQueue() {
     uint16_t sequence_number = *(uint16_t*)exec_traj_buff;
     onCommandCancel(sequence_number);
   }
+}
+
+void PropulsionTask::sendODriveStatus()
+{
+	/*
+	  Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionCommandEvent, buff,
+	                                                      4);
+
+	const std::array<AxisErrorState, 2>& errors() const noexcept;
+	  const Telemetry& telemetry() const noexcept;
+	  const std::array<AxisState, 2>& axisStates() const noexcept;
+	  const std::array<AxisCalibrationState, 2>& axisCalibrationStates() const noexcept;*/
 }
 
 float PropulsionTask::scopeGetVariable(ScopeVariable type) {
