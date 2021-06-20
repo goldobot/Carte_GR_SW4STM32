@@ -4,6 +4,8 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
+#include "goldobot/platform/hal_private.hpp"
+
 extern "C" {
 void goldo_trace_task_switched_out(void* task);
 void goldo_trace_task_switched_in(void* task);
@@ -11,64 +13,66 @@ void goldo_trace_task_create(void* task);
 void goldo_trace_init(void);
 }
 
-uint8_t trace_task_tag = 0;
 
-struct TraceEvent {
-  uint8_t task_tag;
-  uint8_t event_type;
-  uint16_t reserved;
-  uint32_t cycle_counter;
-};
+namespace goldobot {
+namespace hal {
+namespace platform {
+// temporary
+  // hal error tracing
+  struct HalEventData
+  {
+  	uint32_t cycnt;
+  	uint8_t task_number;
+  	uint8_t interrupt_number;
+  	HalEvent event;
+  };
 
-TraceEvent g_trace_events[256];
-int g_trace_event_head = 0;
+  constexpr size_t c_hal_trace_buffer_size = 128;
+  HalEventData g_hal_trace_buffer[c_hal_trace_buffer_size];
+  const HalEventData* g_hal_trace_buffer_end = g_hal_trace_buffer + c_hal_trace_buffer_size;
 
-void goldo_trace_init() {
-  return;
-  CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
-  ITM->LAR = 0xC5ACCE55;
-  DWT->CYCCNT = 0;
-  DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
-  DWT->CTRL |= DWT_EXCCNT_EXCCNT_Msk;
+  HalEventData* g_hal_trace_head{g_hal_trace_buffer};
+
+  void hal_trace_push(const HalEventData& evt)
+  {
+	  HalEventData* head = g_hal_trace_head;
+	  auto new_head = head + 1;
+	  if(new_head == g_hal_trace_buffer_end)
+	  {
+		  new_head = g_hal_trace_buffer;
+	  }
+	  // /todo: should use atomics to ensure no other interrupt has pushed an event
+	  g_hal_trace_head = new_head;
+
+	  *head = evt;
+  }
+
+
+  void hal_trace_event(HalEvent event_code)
+  {
+  	HalEventData evt;
+  	evt.cycnt = DWT->CYCCNT;
+  	uint8_t interrupt_number = __get_IPSR() & 0xff;
+  	uint8_t task_number = -1;
+  	if(interrupt_number == 0)
+  	{
+  		// we are in task mode, get the current task from FreeRTOS
+  		task_number = uxTaskGetTaskNumber(xTaskGetCurrentTaskHandle()) & 0xff;
+  	}
+  	evt.interrupt_number = interrupt_number;
+  	evt.task_number = (uint8_t)task_number;
+  	evt.event = event_code;
+
+  	hal_trace_push(evt);
+  }
+
+  void hal_trace_error(HalEvent event_code)
+    {
+	  hal_trace_event(event_code);
+    }
+}
+}
 }
 
-void goldo_trace_task_create(void* task) {
-  return;
-  uint32_t cycle_counter = DWT->CYCCNT;
-  int task_tag = trace_task_tag;
-  trace_task_tag++;
-  vTaskSetApplicationTaskTag((TaskHandle_t)task, (TaskHookFunction_t)task_tag);
 
-  g_trace_events[g_trace_event_head].task_tag = task_tag;
-  g_trace_events[g_trace_event_head].event_type = 0;
-  g_trace_events[g_trace_event_head].reserved = 0;
-  g_trace_events[g_trace_event_head].cycle_counter = cycle_counter;
-  g_trace_event_head++;
-  if (g_trace_event_head == sizeof(g_trace_events) / sizeof(TraceEvent)) g_trace_event_head = 0;
-}
 
-void goldo_trace_task_switched_in(void* task) {
-  return;
-  uint32_t cycle_counter = DWT->CYCCNT;
-  int task_tag = (int)xTaskGetApplicationTaskTagFromISR((TaskHandle_t)task);
-
-  g_trace_events[g_trace_event_head].task_tag = task_tag;
-  g_trace_events[g_trace_event_head].event_type = 1;
-  g_trace_events[g_trace_event_head].reserved = 0;
-  g_trace_events[g_trace_event_head].cycle_counter = cycle_counter;
-  g_trace_event_head++;
-  if (g_trace_event_head == sizeof(g_trace_events) / sizeof(TraceEvent)) g_trace_event_head = 0;
-}
-
-void goldo_trace_task_switched_out(void* task) {
-  return;
-  uint32_t cycle_counter = DWT->CYCCNT;
-  int task_tag = (int)xTaskGetApplicationTaskTagFromISR((TaskHandle_t)task);
-
-  g_trace_events[g_trace_event_head].task_tag = task_tag;
-  g_trace_events[g_trace_event_head].event_type = 2;
-  g_trace_events[g_trace_event_head].reserved = 0;
-  g_trace_events[g_trace_event_head].cycle_counter = cycle_counter;
-  g_trace_event_head++;
-  if (g_trace_event_head == sizeof(g_trace_events) / sizeof(TraceEvent)) g_trace_event_head = 0;
-}

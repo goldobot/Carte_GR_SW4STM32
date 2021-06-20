@@ -110,7 +110,7 @@ extern uint32_t SystemCoreClock;
 #define configQUEUE_REGISTRY_SIZE 8
 #define configENABLE_BACKWARD_COMPATIBILITY 0
 #define configUSE_PORT_OPTIMISED_TASK_SELECTION 1
-#define configUSE_APPLICATION_TASK_TAG 1
+#define configUSE_TRACE_FACILITY 1
 
 /* Co-routine definitions. */
 #define configUSE_CO_ROUTINES 0

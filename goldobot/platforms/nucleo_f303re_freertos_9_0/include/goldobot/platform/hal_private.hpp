@@ -148,12 +148,35 @@ void hal_callback_send(const HalCallback& callback);
 void hal_callback_send_from_isr(const HalCallback& callback);
 void hal_callback_handler_task_start();
 
+void init_io_devices();
 void hal_iodevice_callback(int id, int callback_id);
 void hal_uart_callback(int uart_index, int callback_id);
 
-// GPIO helpers
+// event tracing
 
-// put it here for now
+enum class HalEvent : uint8_t
+{
+	UartIRQEnter,
+	UartIRQExit,
+	UartRxStart,
+	UartRxStartErrorBadReqState,
+	UartRxStartErrorHal,
+	UartRxUpdate,
+	UartRxUpdateErrorBadReqState,
+	//tx
+	UartTxStart,
+	UartTxStartErrorBadReqState,
+	UartTxStartErrorHal,
+	UartTxUpdate,
+	UartTxUpdateErrorBadReqState
+};
+
+void hal_trace_error(HalEvent event_code);
+void hal_trace_event(HalEvent event_code);
+inline void hal_assert(bool condition, HalEvent event_code)
+{
+	if(!condition) {hal_trace_error(event_code);}
+}
 
 }  // namespace platform
 }  // namespace hal

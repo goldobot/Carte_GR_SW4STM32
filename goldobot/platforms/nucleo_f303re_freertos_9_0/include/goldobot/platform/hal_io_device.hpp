@@ -18,7 +18,7 @@ struct IORequest;
 struct IODevice;
 
 typedef void (*IORequestCallback)(IORequest*, IODevice* device);
-typedef void (*IORequestFunction)(IORequest*, uint32_t device_index);
+typedef bool (*IORequestFunction)(IORequest*, uint32_t device_index);
 
 enum class IORequestState : uint32_t { Ready, Pending, Busy, Complete, Error };
 

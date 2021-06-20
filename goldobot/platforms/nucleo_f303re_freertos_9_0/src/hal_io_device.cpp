@@ -4,11 +4,42 @@
 #include "goldobot/platform/hal_spi.hpp"
 #include "goldobot/platform/hal_uart.hpp"
 
+#include <cassert>
+
 namespace goldobot {
 namespace hal {
 namespace platform {
 
+
+
+bool default_start_request(IORequest* req, uint32_t device_index) {
+  assert(false);
+  return false;
+}
+
+bool default_update_request(IORequest* req, uint32_t device_index) {
+	assert(false);
+	return false;
+}
+
+bool default_abort_request(IORequest* req, uint32_t device_index) {
+  assert(false);
+  return false;
+}
+
+
+IODeviceFunctions g_default_device_functions = {&default_start_request, &default_update_request, default_abort_request};
+
 IODevice g_io_devices[8];
+
+void init_io_devices()
+{
+	for(unsigned i = 0; i < 8; i++)
+	{
+		g_io_devices[i].rx_functions = &g_default_device_functions;
+		g_io_devices[i].tx_functions = &g_default_device_functions;
+	}
+}
 
 void init_io_device(IODeviceConfig* config) {
   IODevice* device = &g_io_devices[config->io_device_id];

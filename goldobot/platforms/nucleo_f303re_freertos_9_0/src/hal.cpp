@@ -66,6 +66,8 @@ void init() {
   DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
   DWT->CTRL |= DWT_EXCCNT_EXCCNT_Msk;
 
+  init_io_devices(),
+
   hal_callback_handler_task_start();
 
   // init uart

@@ -159,7 +159,7 @@ void spi_read_write(int id, uint8_t* read_buffer, const uint8_t* write_buffer, s
   auto hspi = &g_spi_handles[g_io_devices[id].device_index];
   auto& io_device = g_io_devices[id];
   HAL_SPI_TransmitReceive_IT(hspi, const_cast<uint8_t*>(write_buffer), read_buffer, size);
-  while (xSemaphoreTake(io_device.tx_semaphore, portMAX_DELAY) != pdTRUE &&
+  while (xSemaphoreTake(io_device.tx_semaphore, 1) != pdTRUE &&
          HAL_SPI_GetState(hspi) != HAL_SPI_STATE_READY) {
   }
 }

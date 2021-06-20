@@ -98,7 +98,6 @@ int main(void) {
   SystemClock_Config();
 
   /* USER CODE BEGIN 2 */
-  goldo_trace_init();
 
   /* add threads, ... */
   goldobot_main();
