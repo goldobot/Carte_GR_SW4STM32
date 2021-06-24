@@ -1,10 +1,13 @@
 #include "goldobot/tasks/servos.hpp"
 #include "goldobot/robot.hpp"
+#include "goldobot/utils/update_timestamp.hpp"
 
 #include <cstring>
 #include <algorithm>
 
 using namespace goldobot;
+
+const uint32_t ServosTask::c_lift_base[2] = {0x80008500, 0x80008510};
 
 ServosTask::ServosTask()
     : m_message_queue(m_message_queue_buffer, sizeof(m_message_queue_buffer)) {}
@@ -45,14 +48,14 @@ void ServosTask::taskFunction() {
       if (position > target_position) {
         m_servos_positions[i] =
             std::max<float>(target_position, position - m_servos_speeds[i] * delta_t);
-        updateServo(i, static_cast<uint16_t>(m_servos_positions[i]), m_servos_speeds[i]);
+        updateServo(i, static_cast<uint16_t>(m_servos_positions[i]), m_servos_speeds[i], m_servos_torques[i]);
         was_moving = true;
       }
 
       if (position < target_position) {
         m_servos_positions[i] =
             std::min<float>(target_position, position + m_servos_speeds[i] * delta_t);
-        updateServo(i, static_cast<uint16_t>(m_servos_positions[i]), m_servos_speeds[i]);
+        updateServo(i, static_cast<uint16_t>(m_servos_positions[i]), m_servos_speeds[i], m_servos_torques[i]);
         was_moving = true;
       }
 
@@ -69,13 +72,38 @@ void ServosTask::taskFunction() {
   } /* while(1) */
 }
 
-void ServosTask::updateServo(int id, uint16_t pos, uint16_t speed) {
+void ServosTask::updateServo(int id, uint16_t pos, uint16_t speed, uint16_t torque) {
   const auto &config = m_servos_config->servos[id];
   // fpga servo
   if (config.type == ServoType::StandardServo) {
     uint32_t buff[2] = {c_fpga_servos_base + 8 * config.id, static_cast<uint32_t>(pos) << 2};
     Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaWriteReg,
                                                    (unsigned char *)buff, 8);
+  }
+  if (config.type == ServoType::GoldoLift)
+  {
+	  uint32_t reg_val = 0x70000000 | (0x0fffffff & static_cast<uint32_t>(pos));
+	  uint32_t buff[2] = {c_lift_base[config.id], static_cast<uint32_t>(reg_val) << 2};
+	  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaWriteReg,
+	                                                     (unsigned char *)buff, 8);
+  }
+  if(config.type == ServoType::DynamixelAX12)
+  {
+	  // one pos unit = 0.29 deg
+	  // one speed unit is about 0.111 rpm, or 0.666 dps, or 2.3 pos units per second
+	  // speed = 0 correspond to max rpm in dynamixel, so add one
+	  uint16_t dyna_speed = static_cast<uint16_t>(speed * 1.1f / 2.3f) + 1;
+	  uint8_t buff[2];
+	  *reinterpret_cast<uint16_t*>(buff + 0) = 0x8000; // msb=1 => send response to internal exchange
+	  *reinterpret_cast<uint8_t*>(buff + 2) = 1;//protocol version
+	  *reinterpret_cast<uint8_t*>(buff + 3) = config.id;
+	  *reinterpret_cast<uint8_t*>(buff + 4) = 0x03; // write
+	  *reinterpret_cast<uint16_t*>(buff + 5) = pos;
+	  *reinterpret_cast<uint16_t*>(buff + 5) = dyna_speed;
+	  *reinterpret_cast<uint16_t*>(buff + 5) = torque;
+
+	  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DynamixelsRequest,
+	  	                                                     (unsigned char *)buff, 8);
   }
 }
 
@@ -97,9 +125,18 @@ void ServosTask::processMessage() {
       int servo_id = buff[0];
       int pwm = *(uint16_t *)(buff + 1);
       int target_speed = *(uint16_t *)(buff + 3);
+      auto& cfg = m_servos_config->servos[servo_id];
+      if(pwm < cfg.cw_limit)
+      {
+    	  pwm = cfg.cw_limit;
+      }
+      if(pwm > cfg.ccw_limit)
+      {
+    	  pwm = cfg.cw_limit;
+      }
       if (m_servos_positions[servo_id] < 0) {
         m_servos_positions[servo_id] = pwm;
-        updateServo(servo_id, pwm, m_servos_config->servos[servo_id].max_speed);
+        updateServo(servo_id, pwm, m_servos_config->servos[servo_id].max_speed, 0x1023);
       }
       // Send message when servo start moving
       bool is_moving = m_servos_positions[servo_id] >= 0 &&

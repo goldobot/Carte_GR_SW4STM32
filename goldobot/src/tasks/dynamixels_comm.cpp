@@ -130,7 +130,6 @@ void DynamixelsCommTask::onRequest() {
   uint16_t sequence_id = *reinterpret_cast<uint16_t*>(m_scratchpad);
   uint8_t proto_version = m_scratchpad[2];
   uint8_t _id = m_scratchpad[3];
-  uint8_t num_parameters = (uint8_t)m_scratchpad[5];
   m_response_ok = true;
   transmitPacket(m_scratchpad[3], (DynamixelCommand)m_scratchpad[4], &m_scratchpad[5],
                  message_size - 5);

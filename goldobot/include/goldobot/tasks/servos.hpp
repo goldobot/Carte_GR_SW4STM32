@@ -15,7 +15,7 @@ class ServosTask : public Task {
 
  private:
   void processMessage();
-  void updateServo(int id, uint16_t pos, uint16_t speed);
+  void updateServo(int id, uint16_t pos, uint16_t speed, uint16_t torque);
 
   void publishServoState(int id, bool state);
 
@@ -26,8 +26,13 @@ class ServosTask : public Task {
   static constexpr int c_max_num_servos = 32;
   static constexpr int c_update_period = 20;  // update period in ms
   static constexpr uint32_t c_fpga_servos_base = 0x80008404;
+  static const uint32_t c_lift_base[2];
   float m_servos_positions[32];
   uint16_t m_servos_speeds[32];
+  uint16_t m_servos_torques[32];
   uint16_t m_servos_target_positions[32];
+  uint32_t m_servo_enabled{0};
+
+   uint32_t m_next_statistics_ts{10};
 };
 }  // namespace goldobot
