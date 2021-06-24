@@ -43,6 +43,7 @@ class FpgaTask : public Task {
   unsigned char spi_buf_in[8];
   int goldo_fpga_send_spi_frame(void);
   void process_message();
+  void updateEmergencyStop();
 
   MessageQueue m_message_queue;
   unsigned char m_message_queue_buffer[256];
@@ -50,6 +51,7 @@ class FpgaTask : public Task {
   uint32_t m_gpio_sensors_state{0};
   uint32_t m_sensors_state{0};
   uint32_t m_last_timestamp{0};
+  uint32_t m_next_emergency_stop_update_ts{0};
   uint8_t m_cnt{0};
 
   unsigned char m_crc_table[256];

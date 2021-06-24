@@ -180,10 +180,11 @@ void MainTask::checkSensorsState() {
     const auto& sensor = sensors_config.sensors[i];
     switch (sensor.type) {
       case 1:
-        sensors_state |= hal::gpio_get(sensor.id) ? 1 << i : 0;
+        sensors_state |= hal::gpio_get(sensor.id) ? (1 << i) : 0;
         break;
       case 2:
-        sensors_state |= m_fpga_gpio_state & (1 << sensor.id) != 0 ? 1 << i : 0;
+        sensors_state |= (m_fpga_gpio_state & (1 << sensor.id)) != 0 ? (1 << i) : 0;
+        break;
       default:
         break;
     }

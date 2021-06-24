@@ -23,7 +23,7 @@ struct SensorConfig {
 };
 
 struct SensorsConfig {
-  int8_t num_sensors;
+  uint8_t num_sensors;
   SensorConfig sensors[32];
 };
 
