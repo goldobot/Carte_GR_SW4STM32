@@ -59,6 +59,12 @@ class IODevice {
   uint32_t device_index;  // index of raw device (0 for UART1 for example)
   uint16_t io_flags;
 
+  // special case to handle user processing in the interrupt handlers
+  // used for dynamixels (and could be used for the fpga)
+  // to redesign
+  // /todo
+  IORequestTmp tmp_request;
+
   IODeviceFunctions* rx_functions;
   IODeviceQueue rx_queue;
   IORequest rx_request;

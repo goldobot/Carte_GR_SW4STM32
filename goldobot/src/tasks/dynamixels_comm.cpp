@@ -197,6 +197,7 @@ void DynamixelsCommTask::transmitPacket(uint8_t id, DynamixelCommand command, ui
   g_dynamixels_buff = m_dynamixels_buffer;
   g_dynamixels_bytes_received = 0;
   hal::io_execute(2, req, 1);
+  delay(1);
 
   if (g_dynamixels_has_status) {
     // minimal status packet is 2 sync bytes, id, length, error, crc, 6 bytes

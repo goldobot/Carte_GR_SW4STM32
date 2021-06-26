@@ -15,12 +15,17 @@ class ServosTask : public Task {
 
  private:
   void processMessage();
-  void updateServo(int id, uint16_t pos, uint16_t speed, uint16_t torque);
+  void updateServo(int id, uint16_t pos, uint16_t speed, uint8_t torque);
 
   void publishServoState(int id, bool state);
 
+  void moveMultiple(int num_servos);
+
+  bool isEnabled(int id) const noexcept { return (m_servo_enabled & (1 << id)) != 0;};
+
   MessageQueue m_message_queue;
   unsigned char m_message_queue_buffer[128];
+  uint8_t m_scratchpad[128];
 
   ServosConfig* m_servos_config{nullptr};
   static constexpr int c_max_num_servos = 32;
@@ -29,9 +34,10 @@ class ServosTask : public Task {
   static const uint32_t c_lift_base[2];
   float m_servos_positions[32];
   uint16_t m_servos_speeds[32];
-  uint16_t m_servos_torques[32];
+  uint8_t m_servos_torques[32];
   uint16_t m_servos_target_positions[32];
   uint32_t m_servo_enabled{0};
+  uint32_t m_servo_moving{0};
 
    uint32_t m_next_statistics_ts{10};
 };

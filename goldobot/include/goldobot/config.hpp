@@ -9,7 +9,8 @@ struct ServoConfig {
   uint16_t cw_limit;
   uint16_t ccw_limit;
   uint16_t max_speed;
-  uint16_t max_torque;
+  uint8_t max_torque;
+  uint8_t reserved;
 };
 
 struct ServosConfig {

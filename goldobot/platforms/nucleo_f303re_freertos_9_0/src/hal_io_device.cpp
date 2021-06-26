@@ -139,26 +139,34 @@ void io_device_tx_complete_callback_blocking(IORequest* req, IODevice* device) {
   xSemaphoreGive(device->tx_semaphore);
 }
 
+void io_device_tx_complete_callback_execute(IORequest* req, IODevice* device)
+{
+	int a = 1;
+}
+
+void io_device_rx_complete_callback_execute(IORequest* req, IODevice* device)
+{
+	int a = 1;
+}
+
 void IODevice::execute(IORequestTmp req, uint32_t timeout) {
-  return;
+	tmp_request = req;
   if (req.rx_ptr != nullptr) {
     assert(rx_request.state != IORequestState::Busy);
     rx_request.state = IORequestState::Ready;
     rx_request.rx_ptr = req.rx_ptr;
     rx_request.tx_ptr = nullptr;
     rx_request.size = req.size;
-    // rx_request.callback = req.callback;
-    // rx_request.userdata = req.userdata;
-    // rx_functions->start_request(&rx_request, device_index);
+    rx_request.callback = &io_device_rx_complete_callback_execute;
+    rx_functions->start_request(&rx_request, device_index);
   } else {
     assert(tx_request.state != IORequestState::Busy);
     tx_request.state = IORequestState::Ready;
     tx_request.rx_ptr = nullptr;
     tx_request.tx_ptr = req.tx_ptr;
     tx_request.size = req.size;
-    // tx_request.callback = req.callback;
-    // tx_request.userdata = req.userdata;
-    // tx_functions->start_request(&tx_request, device_index);
+    tx_request.callback = io_device_tx_complete_callback_execute;
+    tx_functions->start_request(&tx_request, device_index);
   }
   auto tick_count_timeout = xTaskGetTickCount() + timeout;
   while (true) {

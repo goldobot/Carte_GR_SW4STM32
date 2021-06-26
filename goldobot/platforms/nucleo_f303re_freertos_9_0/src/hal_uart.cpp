@@ -263,15 +263,23 @@ bool uart_rx_abort(IORequest* req, uint32_t device_index)
 	return true;
 }
 
+bool uart_tx_abort(IORequest* req, uint32_t device_index)
+{
+	auto uart_handle = &g_uart_handles[device_index];
+
+	HAL_UART_AbortTransmit(uart_handle);
+	return true;
+}
+
 IODeviceFunctions g_uart_device_rx_functions = {&uart_start_rx_request, &uart_update_rx_request, &uart_rx_abort};
 
-IODeviceFunctions g_uart_device_tx_functions = {&uart_start_tx_request, &uart_update_tx_request, 0};
+IODeviceFunctions g_uart_device_tx_functions = {&uart_start_tx_request, &uart_update_tx_request, &uart_tx_abort};
 
 IODeviceFunctions g_uart_device_rx_functions_dma = {&uart_start_rx_request_dma,
                                                     &uart_update_rx_request_dma, &uart_rx_abort};
 
 IODeviceFunctions g_uart_device_tx_functions_dma = {&uart_start_tx_request_dma,
-                                                    &uart_update_tx_request_dma, 0};
+                                                    &uart_update_tx_request_dma, &uart_tx_abort};
 
 void hal_usart_init(IODevice* device, const IODeviceConfigUart* config) {
   int uart_index = (int)config->device_id - (int)DeviceId::Usart1;

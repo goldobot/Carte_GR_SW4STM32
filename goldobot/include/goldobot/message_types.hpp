@@ -29,6 +29,7 @@ enum class CommMessageType : uint16_t {
   FpgaGpioState,
 
   ServoMove = 40,
+  ServoMoveMultiple,
   ServoState,
 
   ODriveRequestPacket = 50,
