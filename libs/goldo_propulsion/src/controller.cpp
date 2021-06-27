@@ -88,6 +88,7 @@ void PropulsionController::update() {
     case State::FollowTrajectory: {
       m_speed_controller.update();
       updateTargetPositions();
+      detectBlocking();
       if (m_speed_controller.finished()) {
         m_target_pose = m_final_pose;
         on_stopped_enter();
@@ -231,6 +232,11 @@ void PropulsionController::updateReposition() {
     // m_command_end_time = m_time_base_ms + 500;
   }
 };
+
+bool PropulsionController::detectBlocking()
+{
+
+}
 
 void PropulsionController::on_stopped_enter() {
   m_state = State::Stopped;

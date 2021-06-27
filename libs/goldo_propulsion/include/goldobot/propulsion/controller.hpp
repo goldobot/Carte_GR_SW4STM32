@@ -98,6 +98,8 @@ class PropulsionController {
   // \brief Return target robot pose
   RobotPose targetPose() const;
 
+  const LowLevelController& lowLevelController() const { return m_low_level_controller;};
+
   void update();
 
   float leftMotorVelocityInput() const noexcept;
@@ -179,7 +181,7 @@ class PropulsionController {
   //! \brief Update target yaw and yaw rate in PointTo mode
   void updateTargetYaw();
   void updateReposition();
-  bool detectBlockage();
+  bool detectBlocking();
   void check_tracking_error();
   void on_stopped_enter();
   void on_reposition_exit();

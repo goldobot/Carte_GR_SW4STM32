@@ -105,8 +105,6 @@ void PropulsionTask::doStep() {
     }
   }
 
-
-
   if (m_use_simulator) {
     m_robot_simulator.doStep();
   }
@@ -117,14 +115,6 @@ void PropulsionTask::doStep() {
   uint32_t cyccnt_end = DWT->CYCCNT;
   uint32_t cycles_count = cyccnt_end - cyccnt_begin;
   m_cycles_max = std::max(m_cycles_max, cycles_count);
-
-  /*
-  if (hal::get_tick_count() >= m_next_watchdog_ts) {
-
-    Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionTaskStatistics,
-                                                    (const unsigned char*)&m_cycles_max, 4);
-    m_cycles_max = 0;
-  }*/
 }
 
 void PropulsionTask::sendTelemetryMessages() {
@@ -377,12 +367,12 @@ void PropulsionTask::onMsgExecutePointTo(size_t msg_size) {
 
 void PropulsionTask::onMsgExecuteTrajectory(size_t msg_size) {
   // todo: send error message if message size is too large
-  if (msg_size <= 134) {
-    // message has a header of  6 bytes: uint16 sequence number and float speed. each point is 2
+  if (msg_size <= 136) {
+    // message has a header of  8 bytes: uint16 sequence number, padding and float speed. each point is 2
     // floats
-    int num_points = (msg_size - 6) / 8;
-    float speed = *(float*)(exec_traj_buff + 2);
-    Vector2D* points = (Vector2D*)(exec_traj_buff + 6);
+    int num_points = (msg_size - 8) / 8;
+    float speed = *(float*)(exec_traj_buff + 4);
+    Vector2D* points = (Vector2D*)(exec_traj_buff + 8);
     m_controller.executeTrajectory(points, num_points, speed);
   }
 }
@@ -551,6 +541,14 @@ float PropulsionTask::scopeGetVariable(ScopeVariable type) {
       return m_left_vel_setpoint;
     case ScopeVariable::RightMotorVelocitySetpoint:
       return m_right_vel_setpoint;
+    case ScopeVariable::LongiError:
+      return m_controller.lowLevelController().m_longi_error;
+    case ScopeVariable::YawError:
+      return m_controller.lowLevelController().m_yaw_error;
+    case ScopeVariable::SpeedError:
+      return m_controller.lowLevelController().m_speed_error;
+    case ScopeVariable::YawRateError:
+      return m_controller.lowLevelController().m_yaw_rate_error;
     // ODrive telemetry
     case ScopeVariable::ODriveAxis0VelEstimate:
       return m_odrive_client.telemetry().axis[0].vel_estimate;
@@ -566,6 +564,7 @@ float PropulsionTask::scopeGetVariable(ScopeVariable type) {
     default:
       return 0;
   }
+
   m_odrive_client.telemetry().axis[0].current_iq_setpoint;
 }
 

@@ -114,7 +114,7 @@ void ServosTask::updateServo(int id, uint16_t pos, uint16_t speed, uint8_t torqu
  	  {
  		  dyna_speed = 0x3ff;
  	  }
-	  uint16_t dyna_torque = (torque * 0x3ff) / 0xff;
+	  uint16_t dyna_torque = ((uint32_t)torque * 0x3ff) / 0xff;
 	  uint8_t buff[12];
 	  *reinterpret_cast<uint16_t*>(buff + 0) = 0x8000; // msb=1 => send response to internal exchange
 	  *reinterpret_cast<uint8_t*>(buff + 2) = 1;//protocol version
