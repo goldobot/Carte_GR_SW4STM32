@@ -255,8 +255,11 @@ void PropulsionTask::processUrgentMessage() {
     } break;
     case CommMessageType::PropulsionSetTargetSpeed: {
       float target_speed;
-      m_urgent_message_queue.pop_message((unsigned char*)&target_speed, sizeof(target_speed));
+      m_urgent_message_queue.pop_message((unsigned char*)exec_traj_buff, 6);
+      memcpy(&target_speed, exec_traj_buff + 2, 4);
+      uint16_t sequence_number = *(uint16_t*)(exec_traj_buff);
       m_controller.setTargetSpeed(target_speed);
+      sendCommandEvent(sequence_number, CommandEvent::End);
     } break;
     case CommMessageType::PropulsionSetAccelerationLimits: {
       float params[4];
@@ -450,7 +453,15 @@ void PropulsionTask::setMotorsPwm(float left_pwm, float right_pwm) {
   }
 }
 
-enum class CommandEvent : uint8_t { Begin = 0, End, Error, Cancel };
+void PropulsionTask::sendCommandEvent(uint16_t sequence_number, CommandEvent event )
+{
+	  uint8_t buff[4];  // sequence_number, status, error
+	  buff[2] = static_cast<uint8_t>(event);
+	  buff[3] = static_cast<uint8_t>(m_controller.error());
+	  *(uint16_t*)(buff) = sequence_number;
+	  Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::PropulsionCommandEvent, buff,
+	                                                      4);
+}
 
 void PropulsionTask::onCommandBegin(uint16_t sequence_number) {
   m_current_command_sequence_number = sequence_number;

@@ -61,6 +61,7 @@ struct ScopeConfig {
 class PropulsionTask : public Task {
  public:
   enum class MotorControllerType : uint8_t { None, Pwm, ODriveUART };
+  enum class CommandEvent : uint8_t { Begin = 0, End, Error, Cancel };
 
   struct Config {
     MotorControllerType motor_controller_type{MotorControllerType::None};
@@ -139,6 +140,7 @@ class PropulsionTask : public Task {
   void sendTelemetryMessages();
   void sendODriveStatus();
 
+  void sendCommandEvent(uint16_t sequence_number, CommandEvent event);
   void onCommandBegin(uint16_t sequence_number);
   void onCommandEnd();
   void onCommandCancel(uint16_t sequence_number);

@@ -70,6 +70,7 @@ void PropulsionController::setAccelerationLimits(float accel, float deccel, floa
 void PropulsionController::setTargetSpeed(float speed) {
   // Todo: recompute parameter ramps with new speed
   if (m_state == State::FollowTrajectory) {
+	  m_speed_controller.setRequestedSpeed(speed);
   }
 }
 
