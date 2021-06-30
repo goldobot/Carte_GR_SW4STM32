@@ -16,7 +16,7 @@ class SpeedController {
   //! outputs.
   void update();
 
-  // REset the controller, the current speed and acceleration are set to given value.
+  // Reset the controller, the current speed and acceleration are set to given value.
   void reset(float current_parameter, float current_speed, float current_acceleration);
 
   //! Set the current trajectory parameter and the valid parameter range for the demanded move.
@@ -34,7 +34,7 @@ class SpeedController {
   bool finished() const noexcept;
 
  private:
-  TrapezoidalSpeedProfile m_speed_profile;
+  void recompute();
   float m_min_parameter{0};
   float m_max_parameter{0};
   float m_parameter{0};
@@ -47,5 +47,15 @@ class SpeedController {
 
   // temporary
   float m_time{0};
+  float m_period{1e-3f};
+  int m_index = 0;
+
+  // polynomial parameters
+  float m_c0[8];
+  float m_c1[8];
+  float m_c2[8];
+  float m_c3[8];
+  float m_t[8];
+  unsigned m_num_points;
 };
 }  // namespace goldobot
