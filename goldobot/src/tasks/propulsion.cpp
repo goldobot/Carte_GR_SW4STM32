@@ -516,14 +516,23 @@ void PropulsionTask::clearCommandQueue() {
 
 void PropulsionTask::sendODriveStatus()
 {
-	/*
-	  Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionCommandEvent, buff,
-	                                                      4);
+	{
+	auto axis_states = m_odrive_client.axisStates();
+	Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionODriveAxisStates, (unsigned char*)&axis_states,
+	                                                      sizeof(axis_states));
+	}
+	{
+		auto axis_errors = m_odrive_client.errors();
+		Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionODriveAxisErrors, (unsigned char*)&axis_errors,
+			                                                      sizeof(axis_errors));
+	}
+	{
+		auto statistics = m_odrive_client.statistics();
+		Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionODriveStatistics, (unsigned char*)&statistics,
+				                                                      sizeof(statistics));
+	}
 
-	const std::array<AxisErrorState, 2>& errors() const noexcept;
-	  const Telemetry& telemetry() const noexcept;
-	  const std::array<AxisState, 2>& axisStates() const noexcept;
-	  const std::array<AxisCalibrationState, 2>& axisCalibrationStates() const noexcept;*/
+	//const std::array<AxisCalibrationState, 2>& axisCalibrationStates() const noexcept;
 }
 
 float PropulsionTask::scopeGetVariable(ScopeVariable type) {

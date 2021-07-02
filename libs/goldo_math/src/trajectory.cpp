@@ -5,7 +5,7 @@
 using namespace goldobot;
 
 TrajectoryBuffer::TrajectoryBuffer()
-    : m_buffer_size(16), m_num_segments(0), m_current_first_index(0) {}
+    : m_buffer_size(32), m_num_segments(0), m_current_first_index(0) {}
 
 int TrajectoryBuffer::num_segments() const { return m_num_segments; }
 

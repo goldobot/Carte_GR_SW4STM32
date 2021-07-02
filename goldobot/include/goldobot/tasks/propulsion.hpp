@@ -68,8 +68,8 @@ class PropulsionTask : public Task {
     uint8_t update_period_ms{1};
     uint8_t telemetry_period_ms{10};
     uint8_t telemetry_ex_period_ms{20};
-    uint8_t pose_period_ms{50};
-    uint8_t odrive_status_period_ms{100};
+    uint16_t pose_period_ms{50};
+    uint16_t odrive_status_period_ms{500};
   };
 
  public:

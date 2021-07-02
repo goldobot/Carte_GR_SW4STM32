@@ -3,19 +3,20 @@
 #include "goldobot/core/message_exchange.hpp"
 
 #include <cassert>
+#include <cstring>
 
 namespace goldobot {
 constexpr uint16_t ODriveClient::c_axis_base[2];
 constexpr uint32_t ODriveClient::c_odrive_consts_axis_state[3];
 constexpr uint32_t ODriveClient::c_odrive_consts_control_mode;
 
-const uint16_t ODriveClient::c_endpoints[25] = {
+const uint16_t ODriveClient::c_endpoints[22] = {
     2,    // current state
     3,    // requested state
     137,  // control mode
     124,  // input vel
     125,  // input torque
-    126,  // torque limit
+    111,  // torque limit
     172,  // pos estimate
     178,  // vel estimate
     78,   // current iq setpoint
@@ -31,11 +32,19 @@ const uint16_t ODriveClient::c_endpoints[25] = {
     63,   // motor is_calibrated
     47,   // fet thermistor temperature
     52,   // motor thermistor temperature
+    228  // clear errors
+};
+
+const uint16_t ODriveClient::c_odrv_endpoints[4] = {
     1,    // bus voltage
     2,    // bus current
-    228,  // clear errors
-    346   // reboot
+	14,   // uptime
+    546   // reboot
 };
+
+ODriveClient::ODriveClient() {
+	requestSynchronization();
+}
 
 const std::array<ODriveClient::AxisErrorState, 2>& ODriveClient::errors() const noexcept {
   return m_errors;
@@ -94,6 +103,16 @@ void ODriveClient::setOutputExchange(MessageExchange* exchange, CommMessageType 
   m_request_packet_message_type = message_type;
 }
 
+ODriveClient::Statistics ODriveClient::statistics()
+{
+	m_statistics.uptime = m_odrv_requests.uptime;
+	m_statistics.is_synchronized = m_is_synchronized;
+
+	Statistics retval = m_statistics;
+	m_statistics = Statistics();
+	return retval;
+}
+
 void ODriveClient::setMotorsEnable(bool enable) {
   uint32_t axis_state = enable ? c_odrive_consts_axis_state[1] : c_odrive_consts_axis_state[0];
 
@@ -103,7 +122,8 @@ void ODriveClient::setMotorsEnable(bool enable) {
   for (int i = 0; i < 2; i++) {
     m_axis_requests[i].requested_state = axis_state;
     m_axis_requests[i].control_mode = c_odrive_consts_control_mode;
-    m_axis_requests[i].write_requested_flags |= 0x3;
+    m_axis_requests[i].requestWrite(AxisRequestId::RequestedState);
+    m_axis_requests[i].requestWrite(AxisRequestId::ControlMode);
   }
 }
 
@@ -135,103 +155,211 @@ bool ODriveClient::startMotorsCalibration() {
 }
 
 void ODriveClient::doStep(uint32_t timestamp) {
-  int reqs_left = 3;  // maximum number of requests sent per cycle
-  // one request = 8 bytes + 5 bytes of uart protocol overhead
-  // at 500kbps, the uart can send 50 bytes per 1 ms cycle
-  // this allows 3 requests per cycle
+	updateEndpoints(timestamp);
+
+	if(!m_is_synchronized)
+	{
+		checkSynchronization();
+		return;
+	}
+
+	// check latency on uptime
+	if(timestamp - m_last_uptime_ts > 200)
+	{
+		requestSynchronization();
+	}
+
+	//global state
+	  if (timestamp > m_next_read_global_state_timestamp) {
+	    m_next_read_global_state_timestamp = std::max(m_next_read_global_state_timestamp + m_config.req_global_data_period, timestamp);
+	    auto& reqs = m_odrv_requests;
+	    for(unsigned i = 0; i < 3; i++)
+		{
+			reqs.requestRead(static_cast<ODrvRequestId>(i));
+		}
+	  }
+
+	  // axis states
+	  if (timestamp > m_next_read_states_timestamp) {
+	    for(unsigned axis = 0; axis < 2; axis++)
+	    {
+	    	auto& reqs = m_axis_requests[axis];
+	    	reqs.requestRead(AxisRequestId::CurrentState);
+	    	reqs.requestRead(AxisRequestId::RequestedState);
+	    	reqs.requestRead(AxisRequestId::ControlMode);
+	    }
+	    m_next_read_states_timestamp =
+	        std::max(m_next_read_states_timestamp + m_config.req_axis_states_period, timestamp);
+	  }
+
+	  // axis errors
+	  if (timestamp > m_next_read_errors_timestamp) {
+	    for(unsigned axis = 0; axis < 2; axis++)
+	    {
+	    	auto& reqs = m_axis_requests[axis];
+	    	reqs.requestRead(AxisRequestId::AxisError);
+	    	reqs.requestRead(AxisRequestId::MotorError);
+	    	reqs.requestRead(AxisRequestId::ControllerError);
+	    	reqs.requestRead(AxisRequestId::EncoderError);
+	    	reqs.requestRead(AxisRequestId::SensorlessEstimatorError);
+	    }
+	    m_next_read_errors_timestamp =
+	        std::max(m_next_read_errors_timestamp + m_config.req_errors_period, timestamp);
+	  }
+
+	  // axis telemetry
+	  if (timestamp > m_next_read_telemetry_timestamp) {
+	  	    for(unsigned axis = 0; axis < 2; axis++)
+	  	    {
+	  	    	auto& reqs = m_axis_requests[axis];
+	  	    	reqs.requestRead(AxisRequestId::PosEstimate);
+	  	    	reqs.requestRead(AxisRequestId::VelEstimate);
+	  	    	reqs.requestRead(AxisRequestId::CurrentIqSetpoint);
+	  	    }
+	  	  m_next_read_telemetry_timestamp =
+	  	        std::max(m_next_read_telemetry_timestamp + m_config.req_telemetry_period, timestamp);
+	  	  }
+
+	  if (timestamp > m_next_write_inputs_timestamp) {
+	  	    for(unsigned axis = 0; axis < 2; axis++)
+	  	    {
+	  	    	auto& reqs = m_axis_requests[axis];
+	  	    	reqs.requestWrite(AxisRequestId::InputVel);
+	  	    	reqs.requestWrite(AxisRequestId::InputTorque);
+	  	    	reqs.requestWrite(AxisRequestId::TorqueLimit);
+	  	    }
+	  	  m_next_write_inputs_timestamp =
+	  	        std::max(m_next_write_inputs_timestamp + m_config.req_set_vel_setpoints_period, timestamp);
+	  	  }
+}
+
+void ODriveClient::requestSynchronization()
+{
+	m_is_synchronized = false;
+	m_req_idx = 0;
+	for(unsigned axis = 0; axis < 2; axis++)
+	{
+		auto& reqs = m_axis_requests[axis];
+		for(unsigned i = 0; i < 21; i++)
+		{
+			reqs.setEndpointState(static_cast<AxisRequestId>(i), EndpointState::ReadRequested);
+		}
+	}
+	auto& reqs = m_odrv_requests;
+	reqs.uptime = 0;
+	for(unsigned i = 0; i < 3; i++)
+	{
+		reqs.setEndpointState(static_cast<ODrvRequestId>(i), EndpointState::ReadRequested);
+	}
+}
+
+void ODriveClient::checkSynchronization() {
+	bool is_synchronized = true;
+	for(unsigned axis = 0; axis < 2; axis++)
+	{
+		auto& reqs = m_axis_requests[axis];
+		for(unsigned i = 0; i < 21; i++)
+		{
+			if(reqs.endpointState(static_cast<AxisRequestId>(i)) != EndpointState::Idle) {
+				is_synchronized = false;
+			}
+		}
+	}
+	auto& reqs = m_odrv_requests;
+	for(unsigned i = 0; i < 3; i++)
+	{
+		if(reqs.endpointState(static_cast<ODrvRequestId>(i)) != EndpointState::Idle) {
+						is_synchronized = false;
+					}
+	}
+	m_is_synchronized = is_synchronized;
+}
 
 
-  if (!m_is_synchronized) {
-    while (m_synchronize_idx < 21 && reqs_left > 0) {
-      if (m_axis_requests[0].read_requested_flags & (1 << m_synchronize_idx)) {
-        queueReadRequest(0, static_cast<AxisRequestId>(m_synchronize_idx), timestamp);
-        reqs_left--;
-      }
-      if (m_axis_requests[1].read_requested_flags & (1 << m_synchronize_idx)) {
-        queueReadRequest(1, static_cast<AxisRequestId>(m_synchronize_idx), timestamp);
-        reqs_left--;
-      }
-      m_synchronize_timestamp = timestamp;
-      m_synchronize_idx++;
-    }
-    if (m_synchronize_idx == 21) {
-      if (timestamp - m_synchronize_timestamp > 100) {
-        m_axis_requests[0].read_requested_flags = m_axis_requests[0].read_pending_flags;
-        m_axis_requests[1].read_requested_flags = m_axis_requests[1].read_pending_flags;
-        m_synchronize_idx = 0;
-      }
+void ODriveClient::updateEndpoints(uint32_t timestamp)
+{
+	int reqs_left = 3;  // maximum number of requests sent per cycle
+	  // one request = 8 bytes + 5 bytes of uart protocol overhead
+	  // at 500kbps, the uart can send 50 bytes per 1 ms cycle
+	  // this allows 3 requests per cycle
 
-      if ((m_axis_requests[0].read_pending_flags & 0x1fffff) == 0 &&
-          (m_axis_requests[1].read_pending_flags & 0x1fffff) == 0) {
-        m_is_synchronized = true;
-        m_synchronize_idx = 0;
-      }
-    }
-  }
+	while (m_req_idx < 22 && reqs_left > 0) {
+	    for (int axis = 0; axis < 2 && reqs_left > 0; axis++) {
+	      auto& reqs = m_axis_requests[axis];
+	      auto req_id =  static_cast<AxisRequestId>(m_req_idx);
+	      auto endpoint_state = reqs.endpointState(req_id);
+	      switch(endpoint_state)
+	      {
+	      case EndpointState::Idle:
+	    	  break;
+	      case EndpointState::ReadRequested:
+	    	  queueReadRequest(axis, req_id, timestamp);
+	    	  reqs_left--;
+	    	  break;
+	      case EndpointState::ReadPending:
+	      {
+	    	  uint8_t latency = (uint8_t)timestamp - reqs.req_timestamps[m_req_idx];
+	    	  if(latency > 20)
+	    	  {
+	    		  queueReadRequest(axis, req_id, timestamp);
+	    		  reqs_left--;
+	    	  }
+	      }
+	      break;
+	      case EndpointState::WriteRequested:
+			writeRequest(axis, req_id, timestamp);
+			reqs_left--;
+			break;
+	      case EndpointState::WritePending:
+	      	      {
+	      	    	  uint8_t latency = (uint8_t)timestamp - reqs.req_timestamps[m_req_idx];
+	      	    	  if(latency > 20)
+	      	    	  {
+	      	    		  writeRequest(axis, req_id, timestamp);
+	      	    		  reqs_left--;
+	      	    	  }
+	      	      }
+	      	      break;
+	      default:
+	    	  break;
+	      }
+	    }
+	    m_req_idx++;
+	  }
+	while (m_req_idx < 26 && reqs_left > 0)
+	{
+		auto& reqs = m_odrv_requests;
+	    auto req_id =  static_cast<ODrvRequestId>(m_req_idx - 22);
+		auto endpoint_state = reqs.endpointState(req_id);
 
-  if (!m_is_synchronized) {
-    return;
-  }
+		switch(endpoint_state)
+		  {
+		  case EndpointState::Idle:
+			  break;
+		  case EndpointState::ReadRequested:
+			  queueReadRequest(req_id, timestamp);
+			  reqs_left--;
+			  break;
+		  case EndpointState::ReadPending:
+			  {
+				  uint8_t latency = (uint8_t)timestamp - reqs.req_timestamps[m_req_idx - 22];
+				  if(latency > 20)
+				  {
+					  m_statistics.timeout_errors++;
+					  queueReadRequest(req_id, timestamp);
+					  reqs_left--;
+				  }
+			  }
+			  break;
+		  default:
+			  break;
+		  }
+		m_req_idx++;
+	}
 
-  // read axis state
-  if (timestamp > m_next_read_states_timestamp) {
-    const uint32_t read_flags = 0x1c0;
-    m_next_read_states_timestamp =
-        std::max(m_next_read_states_timestamp + m_config.req_axis_states_period, timestamp);
-    m_axis_requests[0].read_requested_flags |= read_flags;
-    m_axis_requests[1].read_requested_flags |= read_flags;
-  }
-
-  // read error state
-  if (timestamp > m_next_read_errors_timestamp) {
-    const uint32_t read_flags = 0x3e00;
-    // from axis_error to sensorless_estimator_error
-    m_next_read_errors_timestamp =
-        std::max(m_next_read_errors_timestamp + m_config.req_telemetry_period, timestamp);
-    m_axis_requests[0].read_requested_flags |= read_flags;
-    m_axis_requests[1].read_requested_flags |= read_flags;
-  }
-
-  // send inputs
-  if (timestamp > m_next_write_inputs_timestamp) {
-    const uint32_t write_flags = 0x38;
-    // input_vel, input_torque, torque_limit
-    m_next_write_inputs_timestamp =
-        std::max(m_next_write_inputs_timestamp + m_config.req_set_vel_setpoints_period, timestamp);
-    m_axis_requests[0].write_requested_flags |= write_flags;
-    m_axis_requests[1].write_requested_flags |= write_flags;
-  }
-
-  // read telemetry data
-  if (timestamp > m_next_read_telemetry_timestamp) {
-    const uint32_t write_flags = 0x1c0;
-    // pos_estimate, vel_estimate, current_iq_setpoint
-    m_next_read_telemetry_timestamp =
-        std::max(m_next_read_telemetry_timestamp + m_config.req_telemetry_period, timestamp);
-    m_axis_requests[0].read_requested_flags |= write_flags;
-    m_axis_requests[1].read_requested_flags |= write_flags;
-  }
-
-  while (m_req_idx < 21 && reqs_left > 0) {
-    for (int axis = 0; axis < 2 && reqs_left > 0; axis++) {
-      const auto& reqs = m_axis_requests[axis];
-      if (reqs.write_requested_flags & (1 << m_req_idx)) {
-        writeRequest(axis, static_cast<AxisRequestId>(m_req_idx), timestamp);
-        reqs_left--;
-      }
-      if (reqs.read_requested_flags & (1 << m_req_idx)) {
-        queueReadRequest(0, static_cast<AxisRequestId>(m_req_idx), timestamp);
-        reqs_left--;
-      }
-    }
-    m_synchronize_timestamp = timestamp;
-    m_req_idx++;
-  }
-  if (m_req_idx == 21) {
-    if (timestamp - m_synchronize_timestamp > 30) {
-      m_req_idx = 0;
-    }
-  }
+	if (m_req_idx == 26) {
+		m_req_idx = 0;
+		}
 }
 
 bool ODriveClient::processResponse(uint32_t timestamp, sequence_number_t seq, uint8_t* payload,
@@ -241,29 +369,77 @@ bool ODriveClient::processResponse(uint32_t timestamp, sequence_number_t seq, ui
   req_id = req_id & 0x3f;
   seq = seq & 0x3f;
 
-  if (axis == 1 || axis == 2) {
-    axis = axis - 1;
-    uint8_t latency{0};
-    if (payload_size > 0) {
-      if (m_axis_requests[axis].seq_numbers[req_id] == seq) {
-        m_axis_requests[axis].seq_numbers[req_id] = 0;
-        m_axis_requests[axis].read_pending_flags &=
-            0xffffffff - (1 << static_cast<uint8_t>(req_id));
-        latency = (uint8_t)timestamp - m_axis_requests[axis].req_timestamps[req_id];
-        processReadResponse(axis, (AxisRequestId)req_id, payload);
-      }
-    } else {
-      if (m_axis_requests[axis].write_seq_numbers[req_id] == seq) {
-        m_axis_requests[axis].write_seq_numbers[req_id] = 0;
-        m_axis_requests[axis].write_pending_flags &=
-            0xffffffff - (1 << static_cast<uint8_t>(req_id));
-        latency = (uint8_t)timestamp - m_axis_requests[axis].write_req_timestamps[req_id];
-      }
-      m_statistics.max_latency = std::max<uint16_t>(m_statistics.max_latency, latency);
-    }
+  if(axis == 3)
+  {
+	  auto& reqs = m_odrv_requests;
+	  if(reqs.seq_numbers[req_id] != seq)
+	  {
+	     return false;
+	  }
+	  uint8_t latency{0};
+	  if (payload_size > 0) {
+		// response to read request
+		reqs.setEndpointState((ODrvRequestId)req_id, EndpointState::Idle);
+		latency = (uint8_t)timestamp - reqs.req_timestamps[req_id];
+		processReadResponse((ODrvRequestId)req_id, payload);
+		if(req_id == 2)
+		{
+		   m_last_uptime_ts = timestamp;
+		}
+	  }
+	  m_statistics.max_latency = std::max<uint16_t>(m_statistics.max_latency, latency);
   }
 
+  if (axis == 1 || axis == 2) {
+    axis = axis - 1;
+    auto& reqs = m_axis_requests[axis];
+    // check that sequence number correspond to request
+    if(reqs.seq_numbers[req_id] != seq)
+    {
+    	return false;
+    }
+    uint8_t latency{0};
+    if (payload_size > 0) {
+      // response to read request
+    	reqs.setEndpointState((AxisRequestId)req_id, EndpointState::Idle);
+        latency = (uint8_t)timestamp - m_axis_requests[axis].req_timestamps[req_id];
+        processReadResponse(axis, (AxisRequestId)req_id, payload);
+    } else {
+    	// response to write request
+    	 reqs.setEndpointState((AxisRequestId)req_id, EndpointState::Idle);
+    	 latency = (uint8_t)timestamp - m_axis_requests[axis].req_timestamps[req_id];
+    }
+    m_statistics.max_latency = std::max<uint16_t>(m_statistics.max_latency, latency);
+  }
   return true;
+}
+
+void ODriveClient::queueReadRequest(ODrvRequestId req_id, uint32_t timestamp)
+{
+	  uint8_t req_id_bin = static_cast<uint8_t>(req_id) | ((3) << 6);
+	  auto endpoint_id = c_odrv_endpoints[static_cast<uint8_t>(req_id)];
+
+	  uint16_t seq{0};
+
+	  auto& reqs = m_odrv_requests;
+
+	  switch (req_id) {
+	    case ODrvRequestId::VBus:
+	      seq = queueReadEndpoint<float>(endpoint_id, req_id_bin);
+	      break;
+	    case ODrvRequestId::IBus:
+	      seq = queueReadEndpoint<float>(endpoint_id, req_id_bin);
+	      break;
+	    case ODrvRequestId::Uptime:
+	      seq = queueReadEndpoint<uint32_t>(endpoint_id, req_id_bin);
+	      break;
+	    default:
+	      return;
+	  }
+	  reqs.setEndpointState(req_id, EndpointState::ReadPending);
+	  reqs.seq_numbers[static_cast<uint8_t>(req_id)] = (seq & 0x3f);
+	  reqs.req_timestamps[static_cast<uint8_t>(req_id)] =
+	      static_cast<uint8_t>(timestamp & 0xff);
 }
 
 void ODriveClient::queueReadRequest(int axis, AxisRequestId req_id, uint32_t timestamp) {
@@ -271,6 +447,8 @@ void ODriveClient::queueReadRequest(int axis, AxisRequestId req_id, uint32_t tim
   auto endpoint_id = c_endpoints[static_cast<uint8_t>(req_id)] + c_axis_base[axis];
 
   uint16_t seq{0};
+
+  auto& reqs = m_axis_requests[axis];
 
   switch (req_id) {
     case AxisRequestId::CurrentState:
@@ -339,16 +517,16 @@ void ODriveClient::queueReadRequest(int axis, AxisRequestId req_id, uint32_t tim
     default:
       break;
   }
-  m_axis_requests[axis].read_requested_flags &= 0xffffffff - (1 << static_cast<uint8_t>(req_id));
-  m_axis_requests[axis].read_pending_flags |= (1 << static_cast<uint8_t>(req_id));
-  m_axis_requests[axis].seq_numbers[static_cast<uint8_t>(req_id)] = (seq & 0x3f);
-  m_axis_requests[axis].req_timestamps[static_cast<uint8_t>(req_id)] =
+  reqs.setEndpointState(req_id, EndpointState::ReadPending);
+  reqs.seq_numbers[static_cast<uint8_t>(req_id)] = (seq & 0x3f);
+  reqs.req_timestamps[static_cast<uint8_t>(req_id)] =
       static_cast<uint8_t>(timestamp & 0xff);
 }
 
 void ODriveClient::writeRequest(int axis, AxisRequestId req_id, uint32_t timestamp) {
   uint8_t req_id_bin = static_cast<uint8_t>(req_id) | ((axis + 1) << 6);
   auto endpoint_id = c_endpoints[static_cast<uint8_t>(req_id)] + c_axis_base[axis];
+  auto& reqs = m_axis_requests[axis];
 
   uint16_t seq{0};
 
@@ -371,14 +549,11 @@ void ODriveClient::writeRequest(int axis, AxisRequestId req_id, uint32_t timesta
       seq = writeEndpoint(endpoint_id, m_axis_requests[axis].torque_lim, req_id_bin, true);
       break;
     case AxisRequestId::PosEstimate:
-      seq = queueReadEndpoint<float>(endpoint_id, req_id_bin);
-      break;
+            break;
     case AxisRequestId::VelEstimate:
-      seq = queueReadEndpoint<float>(endpoint_id, req_id_bin);
-      break;
+           break;
     case AxisRequestId::CurrentIqSetpoint:
-      seq = queueReadEndpoint<int32_t>(endpoint_id, req_id_bin);
-      break;
+            break;
     case AxisRequestId::AxisError:
       seq = queueReadEndpoint<int32_t>(endpoint_id, req_id_bin);
       break;
@@ -418,12 +593,31 @@ void ODriveClient::writeRequest(int axis, AxisRequestId req_id, uint32_t timesta
     default:
       break;
   }
+  reqs.setEndpointState(req_id, EndpointState::WritePending);
 
-  m_axis_requests[axis].write_requested_flags &= 0xffffffff - (1 << static_cast<uint8_t>(req_id));
-  m_axis_requests[axis].write_pending_flags |= (1 << static_cast<uint8_t>(req_id));
-  m_axis_requests[axis].write_seq_numbers[static_cast<uint8_t>(req_id)] = seq;
-  m_axis_requests[axis].write_req_timestamps[static_cast<uint8_t>(req_id)] =
+  reqs.seq_numbers[static_cast<uint8_t>(req_id)] = seq;
+  reqs.req_timestamps[static_cast<uint8_t>(req_id)] =
       static_cast<uint8_t>(timestamp & 0xff);
+}
+
+
+void ODriveClient::processReadResponse(ODrvRequestId req_id, uint8_t* payload) {
+  switch (req_id) {
+    case ODrvRequestId::VBus:
+    	std::memcpy(&m_odrv_requests.vbus, payload, sizeof(float));
+      break;
+    case ODrvRequestId::Uptime:
+    { uint32_t uptime = *(uint32_t*)payload;
+    if(uptime < m_odrv_requests.uptime)
+    {
+    	requestSynchronization();
+    }
+      m_odrv_requests.uptime = uptime;
+    }
+      break;
+    default:
+    	break;
+  }
 }
 
 void ODriveClient::processReadResponse(int axis, AxisRequestId req_id, uint8_t* payload) {
@@ -438,13 +632,10 @@ void ODriveClient::processReadResponse(int axis, AxisRequestId req_id, uint8_t* 
       m_axis_states[axis].control_mode = *(int32_t*)payload;
       break;
     case AxisRequestId::InputVel:
-
       break;
     case AxisRequestId::InputTorque:
-
       break;
     case AxisRequestId::TorqueLimit:
-
       break;
     case AxisRequestId::PosEstimate:
       m_telemetry.axis[axis].pos_estimate = *(float*)payload;
@@ -471,10 +662,8 @@ void ODriveClient::processReadResponse(int axis, AxisRequestId req_id, uint8_t* 
       m_errors[axis].sensorless_estimator = *(int32_t*)payload;
       break;
     case AxisRequestId::VelGain:
-
       break;
     case AxisRequestId::VelIntegratorGain:
-
       break;
     case AxisRequestId::EncoderIsReady:
       m_axis_calibration_states[axis].encoder_is_ready = *(bool*)payload;

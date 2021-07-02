@@ -1,29 +1,61 @@
 #include "goldobot/platform/hal_private.hpp"
 
+#include "stm32f3xx_hal.h"
+#include "stm32f3xx_hal_gpio.h"
+
 #include "FreeRTOS.h"
 #include "semphr.h"
 #include "task.h"
+
+#include <atomic>
+
+extern "C" {
+void goldobot_hal_exti_irq_handler();
+}
+
+namespace goldobot {
+namespace hal {
+namespace platform {
+TaskHandle_t g_hal_callback_handler_task_handle;
+}
+}
+}
+
+using namespace goldobot::hal::platform;
+
+void goldobot_hal_exti_irq_handler() {
+	bool is_swi = (EXTI->SWIER & 0x00000001u) != 0 ;
+	__HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_0);
+	if(is_swi)
+	{
+		BaseType_t xHigherPriorityTaskWoken;
+		vTaskNotifyGiveFromISR(g_hal_callback_handler_task_handle, &xHigherPriorityTaskWoken);
+		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+	}
+
+}
 
 namespace goldobot {
 namespace hal {
 namespace platform {
 
-QueueHandle_t g_hal_callback_queue;
-TaskHandle_t g_hal_callback_handler_task_handle;
+constexpr unsigned c_hal_callback_queue_size = 32;
 
-HalCallback g_hal_callbacks_debug[16];
-int g_foo = 0;
+std::atomic<std::int_fast8_t> g_hal_callback_write_head{0};
+std::atomic<std::int_fast8_t> g_hal_callback_read_head{0};
+std::atomic<std::int_fast8_t> g_hal_callback_tail{0};
+
+HalCallback g_hal_callback_queue[c_hal_callback_queue_size];
+
 
 void hal_callback_handler_task_function(void* thisptr) {
   while (true) {
-    HalCallback callback;
-    if (xQueueReceive(g_hal_callback_queue, &callback, portMAX_DELAY) == pdTRUE) {
-      goldobot::hal::gpio_set(31, true);
+    xTaskNotifyWait(0, 0, nullptr, portMAX_DELAY );
 
-      g_hal_callbacks_debug[g_foo++] = callback;
-      if (g_foo == 16) {
-        g_foo = 0;
-      }
+    while(g_hal_callback_tail != g_hal_callback_read_head)
+    {
+    	const auto& callback = g_hal_callback_queue[g_hal_callback_tail];
+
       switch (callback.device_type) {
         case DeviceType::Uart:
           hal_uart_callback(callback.device_index, callback.callback_index);
@@ -34,26 +66,43 @@ void hal_callback_handler_task_function(void* thisptr) {
         default:
           break;
       }
-      goldobot::hal::gpio_set(31, false);
+      auto new_tail = g_hal_callback_tail + 1;
+      if(new_tail == c_hal_callback_queue_size) { new_tail = 0;}
+      g_hal_callback_tail = new_tail;
     }
   }
 }
 
 void hal_callback_handler_task_start() {
-  g_hal_callback_queue = xQueueCreate(16, sizeof(HalCallback));
+	xTaskCreate(hal_callback_handler_task_function, "hal_callback_handler", 128, nullptr,
+              (configMAX_PRIORITIES - 1), &g_hal_callback_handler_task_handle);
 
-  xTaskCreate(hal_callback_handler_task_function, "hal_callback_handler", 128, nullptr,
-              (configMAX_PRIORITIES - 1), nullptr);
+  HAL_NVIC_SetPriority(EXTI0_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY , 0);
+  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+  EXTI->IMR |= GPIO_PIN_0;
 };
 
 void hal_callback_send(const HalCallback& callback) {
-  xQueueSend(g_hal_callback_queue, &callback, portMAX_DELAY);
+	std::int_fast8_t head = g_hal_callback_write_head.load(std::memory_order_relaxed);
+
+	// atomically allocate a slot in the callbacks queue
+	// compare_exchange_weak write the next value of head if it was not modified by a higher priority interrupt
+	// if it was modified, retry with new value
+	while(! g_hal_callback_write_head.compare_exchange_weak(head, head + 1 != c_hal_callback_queue_size ? head + 1 : 0 ,
+            std::memory_order_release,
+            std::memory_order_relaxed)) {};
+	g_hal_callback_queue[head] = callback;
+
+	// atomically advance read head to signal the callback data has been written
+	head = g_hal_callback_read_head.load(std::memory_order_relaxed);
+	while(! g_hal_callback_read_head.compare_exchange_weak(head, head + 1 != c_hal_callback_queue_size ? head + 1 : 0 ,
+            std::memory_order_release,
+            std::memory_order_relaxed)) {};
+	__HAL_GPIO_EXTI_GENERATE_SWIT(GPIO_PIN_0);
 }
 
 void hal_callback_send_from_isr(const HalCallback& callback) {
-  BaseType_t xHigherPriorityTaskWoken;
-  xQueueSendFromISR(g_hal_callback_queue, &callback, &xHigherPriorityTaskWoken);
-  portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+	hal_callback_send(callback);
 }
 
 }  // namespace platform

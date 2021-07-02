@@ -77,6 +77,10 @@ enum class CommMessageType : uint16_t {
 
   PropulsionTaskStatistics = 170,
 
+  PropulsionODriveStatistics = 180,
+  PropulsionODriveAxisStates,
+  PropulsionODriveAxisErrors,
+
   RobotConfigLoadBegin = 200,
   RobotConfigLoadChunk,
   RobotConfigLoadEnd,

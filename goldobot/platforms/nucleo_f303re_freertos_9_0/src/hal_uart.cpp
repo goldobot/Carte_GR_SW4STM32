@@ -64,6 +64,10 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef* huart) {
   }
   io_device->rx_request_next.state = IORequestState::Busy;
   // Execute callback for just finished request
+  if(uart_index == 2)
+  {
+	  int a = 1;
+  }
   hal_callback_send_from_isr(HalCallback{DeviceType::Uart, uart_index, 0});
 }
 
