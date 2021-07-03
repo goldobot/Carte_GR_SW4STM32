@@ -135,6 +135,7 @@ class PropulsionTask : public Task {
 
   void setMotorsEnable(bool enable);
   void setMotorsPwm(float left_pwm, float right_pwm);
+  void setMotorsTorqueLimits(float left, float right);
   void setSimulationMode(bool enable);
 
   void sendTelemetryMessages();
@@ -161,5 +162,6 @@ class PropulsionTask : public Task {
   static unsigned char s_message_queue_buffer[1024];
   static unsigned char s_urgent_message_queue_buffer[1024];
   static unsigned char exec_traj_buff[256];  // > 12 for traj params + 16*8 for points = 134
+  static unsigned char s_scratchpad[512];
 };
 }  // namespace goldobot

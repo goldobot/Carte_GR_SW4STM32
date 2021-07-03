@@ -104,8 +104,12 @@ class PropulsionController {
 
   float leftMotorVelocityInput() const noexcept;
   float rightMotorVelocityInput() const noexcept;
+
   float leftMotorTorqueInput() const noexcept;
   float rightMotorTorqueInput() const noexcept;
+
+  float leftMotorTorqueLimit() const noexcept;
+  float rightMotorTorqueLimit() const noexcept;
 
   void setAccelerationLimits(float accel, float deccel, float angular_accel, float angular_deccel);
   void setTargetSpeed(float speed);

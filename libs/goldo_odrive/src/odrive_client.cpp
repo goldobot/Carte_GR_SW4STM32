@@ -75,7 +75,7 @@ ODriveClient::sequence_number_t ODriveClient::queueReadEndpoint(endpoint_id_t en
   if (m_exchange) {
     m_exchange->pushMessage(m_request_packet_message_type, buff, sizeof(buff));
   }
-  return seq;
+  return (seq & 0x1f);
 }
 
 template <typename T>
@@ -95,7 +95,7 @@ ODriveClient::sequence_number_t ODriveClient::writeEndpoint(endpoint_id_t endpoi
   if (m_exchange) {
     m_exchange->pushMessage(m_request_packet_message_type, buff, sizeof(buff));
   }
-  return seq;
+  return (seq & 0x1f);
 }
 
 void ODriveClient::setOutputExchange(MessageExchange* exchange, CommMessageType message_type) {
@@ -131,6 +131,11 @@ void ODriveClient::setVelocitySetPoint(int axis, float vel_setpoint, float curre
   assert(axis >= 0 && axis < 2);
   m_axis_requests[axis].input_vel = vel_setpoint;
   m_axis_requests[axis].input_torque = current_feedforward;
+}
+
+void ODriveClient::setTorqueLimit(int axis, float torque_lim) {
+  assert(axis >= 0 && axis < 2);
+  m_axis_requests[axis].torque_lim = torque_lim;
 }
 
 void ODriveClient::clearErrors() {
@@ -277,7 +282,7 @@ void ODriveClient::checkSynchronization() {
 
 void ODriveClient::updateAxisEndpoint(int axis, int req_idx, uint32_t timestamp, int& reqs_left){
     auto& reqs = m_axis_requests[axis];
-    auto req_id =  static_cast<AxisRequestId>(m_req_idx);
+    auto req_id =  static_cast<AxisRequestId>(req_idx);
     auto endpoint_state = reqs.endpointState(req_id);
     switch(endpoint_state)
     {
@@ -289,7 +294,7 @@ void ODriveClient::updateAxisEndpoint(int axis, int req_idx, uint32_t timestamp,
   	  break;
     case EndpointState::ReadPending:
     {
-  	  uint8_t latency = (uint8_t)timestamp - reqs.req_timestamps[m_req_idx];
+  	  uint8_t latency = (uint8_t)timestamp - reqs.req_timestamps[req_idx];
   	  if(latency > 30)
   	  {
   		  queueReadRequest(axis, req_id, timestamp);
@@ -303,7 +308,7 @@ void ODriveClient::updateAxisEndpoint(int axis, int req_idx, uint32_t timestamp,
 		break;
     case EndpointState::WritePending:
     	      {
-    	    	  uint8_t latency = (uint8_t)timestamp - reqs.req_timestamps[m_req_idx];
+    	    	  uint8_t latency = (uint8_t)timestamp - reqs.req_timestamps[req_idx];
     	    	  if(latency > 30)
     	    	  {
     	    		  writeRequest(axis, req_id, timestamp);
@@ -318,7 +323,7 @@ void ODriveClient::updateAxisEndpoint(int axis, int req_idx, uint32_t timestamp,
 }
 void ODriveClient::updateEndpoints(uint32_t timestamp)
 {
-	int reqs_left = 2;  // maximum number of requests sent per cycle
+	int reqs_left = 3;  // maximum number of requests sent per cycle
 	  // one request = 8 bytes + 5 bytes of uart protocol overhead
 	  // at 500kbps, the uart can send 50 bytes per 1 ms cycle
 	  // this allows 3 requests per cycle
@@ -378,7 +383,7 @@ bool ODriveClient::processResponse(uint32_t timestamp, sequence_number_t seq, ui
   uint8_t req_id = (seq >> 6) & 0xff;
   int axis = req_id >> 6;
   req_id = req_id & 0x3f;
-  seq = seq & 0x3f;
+  seq = seq & 0x1f;
 
   if(axis == 3)
   {

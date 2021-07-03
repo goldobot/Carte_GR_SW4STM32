@@ -52,6 +52,7 @@ enum class CommMessageType : uint16_t {
   PropulsionClearCommandQueue,
   PropulsionSetSimulationMode,
   PropulsionScopeConfig,
+  PropulsionMotorsTorqueLimitsSet,
 
   PropulsionTelemetry = 120,
   PropulsionTelemetryEx,

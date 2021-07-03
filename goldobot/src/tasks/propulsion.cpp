@@ -18,6 +18,7 @@ unsigned char __attribute__((section(".ccmram")))
 PropulsionTask::s_urgent_message_queue_buffer[1024];
 
 unsigned char PropulsionTask::exec_traj_buff[256];
+unsigned char PropulsionTask::s_scratchpad[512];
 
 PropulsionTask::PropulsionTask()
     : m_message_queue(s_message_queue_buffer, sizeof(s_message_queue_buffer)),
@@ -306,6 +307,14 @@ void PropulsionTask::processUrgentMessage() {
       m_urgent_message_queue.pop_message((unsigned char*)&pwm, 16);
       setMotorsPwm(pwm[0], pwm[1]);
     } break;
+    case CommMessageType::PropulsionMotorsTorqueLimitsSet: {
+          float pwm[2];
+          m_urgent_message_queue.pop_message((unsigned char*)s_scratchpad, 10);
+          memcpy(pwm, s_scratchpad + 2, 8);
+          uint16_t sequence_number = *reinterpret_cast<uint16_t*>(s_scratchpad);
+          setMotorsTorqueLimits(pwm[0], pwm[1]);
+          sendCommandEvent(sequence_number, CommandEvent::End);
+        } break;
       /* case CommMessageType::PropulsionMeasurePoint: {
          float buff[4];
          m_urgent_message_queue.pop_message((unsigned char*)&buff, sizeof(buff));
@@ -451,6 +460,22 @@ void PropulsionTask::setMotorsPwm(float left_pwm, float right_pwm) {
         break;
     }
   }
+}
+
+void PropulsionTask::setMotorsTorqueLimits(float left, float right)
+{
+	if (m_use_simulator) {
+
+	  } else {
+	    switch (m_config.motor_controller_type) {
+	      case MotorControllerType::ODriveUART:
+	        m_odrive_client.setTorqueLimit(0, left);
+	        m_odrive_client.setTorqueLimit(1, right);
+	        break;
+	      default:
+	        break;
+	    }
+	  }
 }
 
 void PropulsionTask::sendCommandEvent(uint16_t sequence_number, CommandEvent event )
