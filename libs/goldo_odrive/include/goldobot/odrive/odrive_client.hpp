@@ -22,7 +22,7 @@ class ODriveClient {
 
   struct Config {
 	uint16_t req_global_data_period{200};
-    uint16_t req_errors_period{200};
+    uint16_t req_errors_period{100};
     uint16_t req_axis_states_period{100};
     uint16_t req_telemetry_period{10};
     uint16_t req_set_vel_setpoints_period{10};
@@ -216,6 +216,7 @@ class ODriveClient {
 
   void requestSynchronization();
   void checkSynchronization();
+  void updateAxisEndpoint(int axis, int req_idx, uint32_t timestamp, int& reqs_left);
   void updateEndpoints(uint32_t timestamp);
 
   MessageExchange* m_exchange{nullptr};

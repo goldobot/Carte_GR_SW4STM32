@@ -164,7 +164,7 @@ void ODriveClient::doStep(uint32_t timestamp) {
 	}
 
 	// check latency on uptime
-	if(timestamp - m_last_uptime_ts > 200)
+	if(timestamp - m_last_uptime_ts > m_config.req_global_data_period * 2)
 	{
 		requestSynchronization();
 	}
@@ -275,54 +275,65 @@ void ODriveClient::checkSynchronization() {
 	m_is_synchronized = is_synchronized;
 }
 
+void ODriveClient::updateAxisEndpoint(int axis, int req_idx, uint32_t timestamp, int& reqs_left){
+    auto& reqs = m_axis_requests[axis];
+    auto req_id =  static_cast<AxisRequestId>(m_req_idx);
+    auto endpoint_state = reqs.endpointState(req_id);
+    switch(endpoint_state)
+    {
+    case EndpointState::Idle:
+  	  break;
+    case EndpointState::ReadRequested:
+  	  queueReadRequest(axis, req_id, timestamp);
+  	  reqs_left--;
+  	  break;
+    case EndpointState::ReadPending:
+    {
+  	  uint8_t latency = (uint8_t)timestamp - reqs.req_timestamps[m_req_idx];
+  	  if(latency > 30)
+  	  {
+  		  queueReadRequest(axis, req_id, timestamp);
+  		  reqs_left--;
+  	  }
+    }
+    break;
+    case EndpointState::WriteRequested:
+		writeRequest(axis, req_id, timestamp);
+		reqs_left--;
+		break;
+    case EndpointState::WritePending:
+    	      {
+    	    	  uint8_t latency = (uint8_t)timestamp - reqs.req_timestamps[m_req_idx];
+    	    	  if(latency > 30)
+    	    	  {
+    	    		  writeRequest(axis, req_id, timestamp);
+    	    		  reqs_left--;
+    	    	  }
+    	      }
+    	      break;
+    default:
+  	  break;
+    }
 
+}
 void ODriveClient::updateEndpoints(uint32_t timestamp)
 {
-	int reqs_left = 3;  // maximum number of requests sent per cycle
+	int reqs_left = 2;  // maximum number of requests sent per cycle
 	  // one request = 8 bytes + 5 bytes of uart protocol overhead
 	  // at 500kbps, the uart can send 50 bytes per 1 ms cycle
 	  // this allows 3 requests per cycle
 
+	// priority to requested_state, then inputs and telemetry
+	for(int req_idx = 1; req_idx < 10 && reqs_left > 0; req_idx++)
+	{
+		for (int axis = 0; axis < 2 && reqs_left > 0; axis++) {
+			updateAxisEndpoint(axis, req_idx, timestamp, reqs_left);
+		}
+	}
+
 	while (m_req_idx < 22 && reqs_left > 0) {
 	    for (int axis = 0; axis < 2 && reqs_left > 0; axis++) {
-	      auto& reqs = m_axis_requests[axis];
-	      auto req_id =  static_cast<AxisRequestId>(m_req_idx);
-	      auto endpoint_state = reqs.endpointState(req_id);
-	      switch(endpoint_state)
-	      {
-	      case EndpointState::Idle:
-	    	  break;
-	      case EndpointState::ReadRequested:
-	    	  queueReadRequest(axis, req_id, timestamp);
-	    	  reqs_left--;
-	    	  break;
-	      case EndpointState::ReadPending:
-	      {
-	    	  uint8_t latency = (uint8_t)timestamp - reqs.req_timestamps[m_req_idx];
-	    	  if(latency > 20)
-	    	  {
-	    		  queueReadRequest(axis, req_id, timestamp);
-	    		  reqs_left--;
-	    	  }
-	      }
-	      break;
-	      case EndpointState::WriteRequested:
-			writeRequest(axis, req_id, timestamp);
-			reqs_left--;
-			break;
-	      case EndpointState::WritePending:
-	      	      {
-	      	    	  uint8_t latency = (uint8_t)timestamp - reqs.req_timestamps[m_req_idx];
-	      	    	  if(latency > 20)
-	      	    	  {
-	      	    		  writeRequest(axis, req_id, timestamp);
-	      	    		  reqs_left--;
-	      	    	  }
-	      	      }
-	      	      break;
-	      default:
-	    	  break;
-	      }
+	    	updateAxisEndpoint(axis, m_req_idx, timestamp, reqs_left);
 	    }
 	    m_req_idx++;
 	  }
@@ -343,7 +354,7 @@ void ODriveClient::updateEndpoints(uint32_t timestamp)
 		  case EndpointState::ReadPending:
 			  {
 				  uint8_t latency = (uint8_t)timestamp - reqs.req_timestamps[m_req_idx - 22];
-				  if(latency > 20)
+				  if(latency > 30)
 				  {
 					  m_statistics.timeout_errors++;
 					  queueReadRequest(req_id, timestamp);

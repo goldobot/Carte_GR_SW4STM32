@@ -23,7 +23,7 @@ volatile DynamixelParseState g_dynamixels_parse_state;
 unsigned char* g_dynamixels_buff;
 size_t g_dynamixels_bytes_received{0};
 
-bool goldo_dynamixels_callback(hal::IORequestTmp* req, hal::IORequestTmpStatus status) {
+bool goldo_dynamixels_callback(hal::IORequest* req, hal::IORequestStatus status) {
   auto& dynamixels_task = *reinterpret_cast<DynamixelsCommTask*>(req->userdata);
   switch (g_dynamixels_parse_state) {
     case DynamixelParseState::Transmit:
@@ -35,13 +35,13 @@ bool goldo_dynamixels_callback(hal::IORequestTmp* req, hal::IORequestTmpStatus s
       g_dynamixels_bytes_received = 0;
       return true;
     case DynamixelParseState::ReceiveHeader:
-      g_dynamixels_bytes_received += status.size;
+      //g_dynamixels_bytes_received += status.size;
       g_dynamixels_parse_state = DynamixelParseState::ReceiveBody;
       req->rx_ptr = g_dynamixels_buff + g_dynamixels_bytes_received;
       req->size = g_dynamixels_buff[3];
       return true;
     case DynamixelParseState::ReceiveBody:
-      g_dynamixels_bytes_received += status.size;
+      //g_dynamixels_bytes_received += status.size;
       return false;
     default:
       break;
@@ -168,7 +168,7 @@ void DynamixelsCommTask::transmitPacket(uint8_t id, DynamixelCommand command, ui
   checksum = ~checksum;
   m_dynamixels_buffer[5 + num_parameters] = checksum;
 
-  hal::IORequestTmp req;
+  hal::IORequest req;
   req.tx_ptr = m_dynamixels_buffer;
   req.size = 6 + num_parameters;
   req.callback = &goldo_dynamixels_callback;
@@ -196,7 +196,7 @@ void DynamixelsCommTask::transmitPacket(uint8_t id, DynamixelCommand command, ui
   g_dynamixels_parse_state = DynamixelParseState::Transmit;
   g_dynamixels_buff = m_dynamixels_buffer;
   g_dynamixels_bytes_received = 0;
-  hal::io_execute(2, req, 1);
+  hal::io_execute(2, &req, 1);
   delay(1);
 
   if (g_dynamixels_has_status) {

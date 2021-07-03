@@ -1,3 +1,4 @@
+
 #include "goldobot/platform/hal_io_device.hpp"
 
 #include "goldobot/platform/hal_i2c.hpp"
@@ -73,84 +74,108 @@ void init_io_device(IODeviceConfig* config) {
   }
 
   // Non blocking io (fifo mode)
-  if (!(device->io_flags & IODeviceFlags::RxBlocking)) {
+  if (config->rx_buffer_size > 0 && !(device->io_flags & IODeviceFlags::RxBlocking)) {
     device->try_start_rx_fifo();
   }
 }
 
-void io_device_rx_complete_callback_fifo(IORequest* req, IODevice* device) {
-  assert(req->state == IORequestState::Complete);
+bool io_device_rx_complete_callback_fifo(IORequest* req, IORequestStatus status) {
+  auto device = reinterpret_cast<IODevice*>(req->userdata);
   device->rx_queue.unmap_push(req->rx_ptr, req->size - req->remaining);
 
-  uint8_t* ptr;
-  auto size = device->rx_queue.map_push_2(&ptr, device->rx_next_head);
-
-  if (size > 0) {
-    device->queue_rx_request(ptr, size, io_device_rx_complete_callback_fifo);
+  if(status == IORequestStatus::Success)
+    {
+	  uint8_t* ptr;
+	  auto size =device-> rx_queue.map_push(&ptr);
+	  if (size > 0) {
+		req->rx_ptr = ptr;
+		req->size = size;
+		return true;
+	  } else
+	  {
+		  device->rx_busy = false;
+		  return false;
+	  }
+    }
+  if(status == IORequestStatus::Error)
+  {
+	  device->rx_busy = false;
+	  return false;
   }
+  return false;
 }
 
-void io_device_tx_complete_callback_fifo(IORequest* req, IODevice* device) {
-  assert(req->state == IORequestState::Complete);
+bool io_device_tx_complete_callback_fifo(IORequest* req, IORequestStatus status) {
+  auto device = reinterpret_cast<IODevice*>(req->userdata);
+
   device->tx_queue.unmap_pop(req->tx_ptr, req->size - req->remaining);
 
-  req->state = IORequestState::Ready;
-  req->tx_ptr = nullptr;
-  req->size = 0;
-  req->remaining = 0;
-
-  uint8_t* ptr;
-  auto size = device->tx_queue.map_pop(&ptr);
-
-  if (size > 0) {
-    req->tx_ptr = ptr;
-    req->size = size;
-    device->tx_functions->start_request(req, device->device_index);
+  if(status == IORequestStatus::Success)
+  {
+	  uint8_t* ptr;
+	  auto size = device->tx_queue.map_pop(&ptr);
+	  if (size > 0) {
+	      req->tx_ptr = ptr;
+	      req->size = size;
+	      return true;
+	    } else
+	    {
+	    	device->tx_busy = false;
+	    	return false;
+	    }
   }
+  if(status == IORequestStatus::Error)
+    {
+	  device->tx_busy = false;
+	  return false;
+    }
+
+  return false;
 }
 
 void IODevice::try_start_rx_fifo() {
-  auto rx_state = rx_request.state.load();
-  if (rx_state == IORequestState::Ready || rx_state == IORequestState::Complete ||
-      rx_request_next.state.load() == IORequestState::Ready) {
-    schedule_callback(0);
-  }
+	if(rx_busy)
+	{
+		return;
+	}
+
+	  uint8_t* ptr;
+	  auto size = rx_queue.map_push(&ptr);
+
+	  if (size > 0) {
+	     rx_request.rx_ptr = ptr;
+	     rx_request.size = size;
+	     rx_request.callback = &io_device_rx_complete_callback_fifo;
+	     rx_request.userdata = this;
+	     rx_busy = true;
+	     if(!rx_functions->start_request(&rx_request, device_index))
+	     {
+	    	 rx_busy = false;
+	     }
+	  }
 }
 
-void IODevice::start_tx_fifo() {
-  uint8_t* ptr;
-  auto size = tx_queue.map_pop(&ptr);
-
-  if (size > 0) {
-    tx_request.tx_ptr = ptr;
-    tx_request.size = size;
-    tx_request.callback = &io_device_tx_complete_callback_fifo;
-    schedule_callback(1);
-  }
-}
-
-void io_device_rx_complete_callback_blocking(IORequest* req, IODevice* device) {
-  assert(req->state == IORequestState::Complete);
+/*
+bool io_device_rx_complete_callback_blocking(IORequest* req, IODevice* device) {
+ // assert(req->state == IORequestState::Complete);
   xSemaphoreGive(device->rx_semaphore);
 }
 
-void io_device_tx_complete_callback_blocking(IORequest* req, IODevice* device) {
-  assert(req->state == IORequestState::Complete);
+bool io_device_tx_complete_callback_blocking(IORequest* req, IODevice* device) {
+ // assert(req->state == IORequestState::Complete);
   xSemaphoreGive(device->tx_semaphore);
-}
+}*/
 
 void io_device_tx_complete_callback_execute(IORequest* req, IODevice* device)
 {
-	int a = 1;
 }
 
 void io_device_rx_complete_callback_execute(IORequest* req, IODevice* device)
 {
-	int a = 1;
 }
 
-void IODevice::execute(IORequestTmp req, uint32_t timeout) {
-	tmp_request = req;
+void IODevice::execute(IORequest* req, uint32_t timeout) {
+	/*
   if (req.rx_ptr != nullptr) {
     assert(rx_request.state != IORequestState::Busy);
     rx_request.state = IORequestState::Ready;
@@ -179,7 +204,7 @@ void IODevice::execute(IORequestTmp req, uint32_t timeout) {
       tx_functions->abort_request(&tx_request, device_index);
       return;
     }
-  }
+  }*/
 }
 
 size_t IODevice::read(uint8_t* buffer, size_t buffer_size, uint32_t timeout) {
@@ -189,29 +214,31 @@ size_t IODevice::read(uint8_t* buffer, size_t buffer_size, uint32_t timeout) {
 
   if (io_flags & IODeviceFlags::RxBlocking) {
     // blocking io
-    rx_request.rx_ptr = buffer;
-    rx_request.size = buffer_size;
-    rx_request.callback = &io_device_rx_complete_callback_blocking;
+   // rx_request.rx_ptr = buffer;
+   // rx_request.size = buffer_size;
+   // rx_request.callback = &io_device_rx_complete_callback_blocking;
     schedule_callback(0);
     while (true) {
       xSemaphoreTake(rx_semaphore, portMAX_DELAY);
-      if (rx_request.state == IORequestState::Complete) {
-        rx_request.state = IORequestState::Ready;
-        return rx_request.size - rx_request.remaining;
-      }
-      if (rx_request.state == IORequestState::Error) {
-        rx_request.state = IORequestState::Ready;
-        return 0;
-      }
+    //  if (rx_request.state == IORequestState::Complete) {
+    //    rx_request.state = IORequestState::Ready;
+    //    return rx_request.size - rx_request.remaining;
+    //  }
+    //  if (rx_request.state == IORequestState::Error) {
+   //    rx_request.state = IORequestState::Ready;
+   //     return 0;
+   //   }
     }
   } else  // non blocking io
   {
-    // Update state of rx request to read received data without waiting for end
-    // of current transfer.
-    schedule_callback(2);
-    auto bytes_read = rx_queue.pop(buffer, buffer_size);
-    try_start_rx_fifo();
-    return bytes_read;
+  if(rx_busy)
+	  {
+		  rx_functions->update_request(nullptr, device_index);
+	  } else
+	  {
+		  try_start_rx_fifo();
+	  }
+  return rx_queue.pop(buffer, buffer_size);
   }
   return 0;
 }
@@ -221,38 +248,33 @@ size_t IODevice::write(const uint8_t* buffer, size_t buffer_size) {
     return 0;
   }
   if (io_flags & IODeviceFlags::TxBlocking) {
-    // blocking io
-    tx_request.tx_ptr = (uint8_t*)buffer;
-    tx_request.size = buffer_size;
-    tx_request.callback = &io_device_tx_complete_callback_blocking;
-    schedule_callback(1);
-    while (true) {
-      xSemaphoreTake(tx_semaphore, portMAX_DELAY);
-      if (tx_request.state == IORequestState::Complete) {
-        tx_request.state = IORequestState::Ready;
-        return tx_request.size - tx_request.remaining;
-      }
-      if (tx_request.state == IORequestState::Error) {
-        tx_request.state = IORequestState::Ready;
-        return 0;
-      }
-    }
+
   } else {
     // non blocking io
-    // Update state of tx request to get an accurate measure of space remaining
-    // in the tx queue.
-    taskENTER_CRITICAL();
-    tx_functions->update_request(&tx_request, device_index);
-    tx_queue.unmap_pop(tx_request.tx_ptr, tx_request.size - tx_request.remaining);
-    taskEXIT_CRITICAL();
+	  if(tx_busy)
+	  {
+		  tx_functions->update_request(nullptr, device_index);
+		  return tx_queue.push(buffer, buffer_size);
+	  } else
+	  {
+		  uint16_t bytes_written = tx_queue.push(buffer, buffer_size);
 
-    uint16_t bytes_written = tx_queue.push(buffer, buffer_size);
+		  uint8_t* ptr;
+		  auto size = tx_queue.map_pop(&ptr);
 
-    // If not currently transmitting, start tx request
-    if (tx_request.state == IORequestState::Ready) {
-      start_tx_fifo();
-    }
-    return bytes_written;
+		  if (size > 0) {
+		     tx_request.tx_ptr = ptr;
+		     tx_request.size = size;
+		     tx_request.callback = &io_device_tx_complete_callback_fifo;
+		     tx_request.userdata = this;
+		     tx_busy = true;
+		     if(!tx_functions->start_request(&tx_request, device_index))
+		     {
+		    	 tx_busy = false;
+		     }
+		  }
+		  return bytes_written;
+	  }
   }
   return 0;
 }
@@ -266,7 +288,7 @@ size_t IODevice::map_read(uint8_t** buffer) {
   } else {
     // Update state of rx request to read received data without waiting for end
     // of current transfer.
-    schedule_callback(2);
+	rx_functions->update_request(nullptr, device_index);
     auto retval = rx_queue.map_pop(buffer);
     return retval;
   }
@@ -281,30 +303,36 @@ void IODevice::unmap_read(uint8_t* buffer, size_t size) {
 
 size_t IODevice::map_write(uint8_t** buffer) {
   if (io_flags & IODeviceFlags::TxBlocking) {
-    // mmapped io only works in fifo mode
+    // mapped io only works in fifo mode
     *buffer = nullptr;
     return 0;
 
   } else {
     // Update state of tx request to get an accurate measure of space remaining
     // in the tx queue.
-    taskENTER_CRITICAL();
-    if (tx_request.state == IORequestState::Busy) {
-      tx_functions->update_request(&tx_request, device_index);
-      tx_queue.unmap_pop(tx_request.tx_ptr, tx_request.size - tx_request.remaining);
+      tx_functions->update_request(nullptr, device_index);
     }
-    taskEXIT_CRITICAL();
     return tx_queue.map_push(buffer);
-  }
 }
 
 void IODevice::unmap_write(uint8_t* buffer, size_t size) {
   tx_queue.unmap_push(buffer, size);
 
-  // If not currently transmitting, start tx request
-  if (tx_request.state == IORequestState::Ready) {
-    start_tx_fifo();
-  }
+  if(!tx_busy)
+  	  {
+  		  uint8_t* ptr;
+  		  auto size = tx_queue.map_pop(&ptr);
+
+  		  if (size > 0) {
+  		     tx_request.tx_ptr = ptr;
+  		     tx_request.size = size;
+  		     tx_request.callback = &io_device_tx_complete_callback_fifo;
+  		     tx_request.userdata = this;
+  		     tx_busy = true;
+  		     tx_functions->start_request(&tx_request, device_index);
+
+  		  }
+  	  }
 }
 
 void IODevice::schedule_callback(uint8_t callback_id) {
@@ -313,19 +341,20 @@ void IODevice::schedule_callback(uint8_t callback_id) {
 }
 
 bool IODevice::queue_rx_request(uint8_t* buffer, size_t size, IORequestCallback callback) {
-  if (rx_request_next.state.load() != IORequestState::Ready || size == 0) {
+  /*if (rx_request_next.state.load() != IORequestState::Ready || size == 0) {
     return false;
   }
   rx_request_next.rx_ptr = buffer;
   rx_request_next.size = size;
   rx_request_next.callback = callback;
   rx_request_next.state.store(IORequestState::Pending);
-  rx_next_head = buffer + size;
+  rx_next_head = buffer + size;*/
   return true;
 }
 
 void hal_iodevice_callback(int id, int callback_id) {
   IODevice* device = &g_io_devices[id];
+  /*
   switch (callback_id) {
     case 0: {
       auto state = device->rx_request.state.load();
@@ -363,7 +392,7 @@ void hal_iodevice_callback(int id, int callback_id) {
         device->tx_functions->update_request(&device->tx_request, device->device_index);
       }
       break;
-  }
+  }*/
 }
 
 }  // namespace platform
@@ -373,9 +402,9 @@ static void check_io_device_id(int id) {
   assert(id >= 0 && (unsigned)id < sizeof(g_io_devices) / sizeof(IODevice));
 }
 
-void io_execute(int id, IORequestTmp request, uint32_t timeout) {
+void io_execute(int id, IORequest* request, uint32_t timeout) {
   check_io_device_id(id);
-  g_io_devices[id].execute(request, timeout);
+  //g_io_devices[id].execute(request, timeout);
 }
 
 size_t io_read(int id, uint8_t* buffer, size_t buffer_size, uint32_t timeout) {
