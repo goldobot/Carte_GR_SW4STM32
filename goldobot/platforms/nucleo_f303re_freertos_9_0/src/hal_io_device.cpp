@@ -175,36 +175,23 @@ void io_device_rx_complete_callback_execute(IORequest* req, IODevice* device)
 }
 
 void IODevice::execute(IORequest* req, uint32_t timeout) {
-	/*
-  if (req.rx_ptr != nullptr) {
-    assert(rx_request.state != IORequestState::Busy);
-    rx_request.state = IORequestState::Ready;
-    rx_request.rx_ptr = req.rx_ptr;
-    rx_request.tx_ptr = nullptr;
-    rx_request.size = req.size;
-    rx_request.callback = &io_device_rx_complete_callback_execute;
-    rx_functions->start_request(&rx_request, device_index);
-  } else {
-    assert(tx_request.state != IORequestState::Busy);
-    tx_request.state = IORequestState::Ready;
-    tx_request.rx_ptr = nullptr;
-    tx_request.tx_ptr = req.tx_ptr;
-    tx_request.size = req.size;
-    tx_request.callback = io_device_tx_complete_callback_execute;
-    tx_functions->start_request(&tx_request, device_index);
+
+  if (req->rx_ptr != nullptr) {
+      rx_functions->start_request(req, device_index);
+  } else if(req->tx_ptr != nullptr) {
+	  tx_functions->start_request(req, device_index);
   }
+
   auto tick_count_timeout = xTaskGetTickCount() + timeout;
   while (true) {
-    // xSemaphoreTake(req_finished_semaphore, 1);
-    if (rx_request.state != IORequestState::Busy && tx_request.state != IORequestState::Busy) {
-      return;
-    }
+    xSemaphoreTake(rx_semaphore, 1);
+
     if (timeout != -1 && xTaskGetTickCount() > tick_count_timeout) {
-      rx_functions->abort_request(&rx_request, device_index);
-      tx_functions->abort_request(&tx_request, device_index);
+      rx_functions->abort_request(nullptr, device_index);
+      tx_functions->abort_request(nullptr, device_index);
       return;
     }
-  }*/
+  }
 }
 
 size_t IODevice::read(uint8_t* buffer, size_t buffer_size, uint32_t timeout) {
@@ -340,59 +327,8 @@ void IODevice::schedule_callback(uint8_t callback_id) {
       HalCallback{DeviceType::IODevice, static_cast<uint8_t>(this - g_io_devices), callback_id});
 }
 
-bool IODevice::queue_rx_request(uint8_t* buffer, size_t size, IORequestCallback callback) {
-  /*if (rx_request_next.state.load() != IORequestState::Ready || size == 0) {
-    return false;
-  }
-  rx_request_next.rx_ptr = buffer;
-  rx_request_next.size = size;
-  rx_request_next.callback = callback;
-  rx_request_next.state.store(IORequestState::Pending);
-  rx_next_head = buffer + size;*/
-  return true;
-}
-
 void hal_iodevice_callback(int id, int callback_id) {
   IODevice* device = &g_io_devices[id];
-  /*
-  switch (callback_id) {
-    case 0: {
-      auto state = device->rx_request.state.load();
-      if (state == IORequestState::Ready || state == IORequestState::Complete) {
-        uint8_t* ptr;
-        auto size = device->rx_queue.map_push_2(&ptr, device->rx_next_head);
-        auto& req = device->rx_request;
-
-        if (size > 0) {
-          device->rx_next_head = ptr + size;
-          req.rx_ptr = ptr;
-          req.size = size;
-          req.callback = &io_device_rx_complete_callback_fifo;
-          device->rx_functions->start_request(&device->rx_request, device->device_index);
-        }
-      };
-      uint8_t* ptr;
-      auto size = device->rx_queue.map_push_2(&ptr, device->rx_next_head);
-      device->queue_rx_request(ptr, size, &io_device_rx_complete_callback_fifo);
-    } break;
-    case 1:
-      if (device->tx_request.state == IORequestState::Ready) {
-        device->tx_functions->start_request(&device->tx_request, device->device_index);
-      }
-      break;
-    case 2:
-      if (device->rx_request.state == IORequestState::Busy) {
-        auto& req = device->rx_request;
-        device->rx_functions->update_request(&req, device->device_index);
-        device->rx_queue.unmap_push(req.rx_ptr, req.size - req.remaining);
-      }
-      break;
-    case 3:
-      if (device->tx_request.state == IORequestState::Busy) {
-        device->tx_functions->update_request(&device->tx_request, device->device_index);
-      }
-      break;
-  }*/
 }
 
 }  // namespace platform
@@ -404,7 +340,7 @@ static void check_io_device_id(int id) {
 
 void io_execute(int id, IORequest* request, uint32_t timeout) {
   check_io_device_id(id);
-  //g_io_devices[id].execute(request, timeout);
+  g_io_devices[id].execute(request, timeout);
 }
 
 size_t io_read(int id, uint8_t* buffer, size_t buffer_size, uint32_t timeout) {

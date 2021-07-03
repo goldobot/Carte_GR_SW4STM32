@@ -25,9 +25,9 @@ size_t g_dynamixels_bytes_received{0};
 
 bool goldo_dynamixels_callback(hal::IORequest* req, hal::IORequestStatus status) {
   auto& dynamixels_task = *reinterpret_cast<DynamixelsCommTask*>(req->userdata);
+
   switch (g_dynamixels_parse_state) {
     case DynamixelParseState::Transmit:
-      goldobot::hal::gpio_set(31, true);
       req->rx_ptr = g_dynamixels_buff;
       req->tx_ptr = nullptr;
       req->size = 4;
@@ -35,18 +35,17 @@ bool goldo_dynamixels_callback(hal::IORequest* req, hal::IORequestStatus status)
       g_dynamixels_bytes_received = 0;
       return true;
     case DynamixelParseState::ReceiveHeader:
-      //g_dynamixels_bytes_received += status.size;
+      g_dynamixels_bytes_received += (req->size - req->remaining);
       g_dynamixels_parse_state = DynamixelParseState::ReceiveBody;
       req->rx_ptr = g_dynamixels_buff + g_dynamixels_bytes_received;
       req->size = g_dynamixels_buff[3];
       return true;
     case DynamixelParseState::ReceiveBody:
-      //g_dynamixels_bytes_received += status.size;
+      g_dynamixels_bytes_received += (req->size - req->remaining);
       return false;
     default:
       break;
   }
-  goldobot::hal::gpio_set(31, false);
   return false;
 }
 
@@ -196,7 +195,7 @@ void DynamixelsCommTask::transmitPacket(uint8_t id, DynamixelCommand command, ui
   g_dynamixels_parse_state = DynamixelParseState::Transmit;
   g_dynamixels_buff = m_dynamixels_buffer;
   g_dynamixels_bytes_received = 0;
-  hal::io_execute(2, &req, 1);
+  hal::io_execute(2, &req, 2);
   delay(1);
 
   if (g_dynamixels_has_status) {
@@ -236,39 +235,3 @@ void DynamixelsCommTask::transmitPacket(uint8_t id, DynamixelCommand command, ui
   }
 }
 
-DynamixelStatusError DynamixelsCommTask::receivePacket() {
-  memset(m_dynamixels_buffer, 0, 255);
-  delay(1);
-  m_dynamixels_receive_size = hal::io_read(2, m_dynamixels_buffer, 256);
-  return DynamixelStatusError::Ok;
-  uint16_t bytes_received = 0;
-  for (unsigned i = 0; i < 10; i++) {
-    // bytes_received = Hal::uart_bytes_received(1);
-
-    // search for magic 0xFF
-    if (bytes_received >= 4 && bytes_received >= m_dynamixels_buffer[3] + 4) {
-      // Hal::uart_receive_abort(1);
-
-      // Check checksum
-      m_dynamixels_receive_id = m_dynamixels_buffer[2];
-      m_dynamixels_receive_num_parameters = m_dynamixels_buffer[3] - 2;
-      m_dynamixels_receive_error = m_dynamixels_buffer[4];
-      m_dynamixels_receive_params = m_dynamixels_buffer + 5;
-
-      uint8_t checksum = 0;
-      for (unsigned i = 2; i < 5 + m_dynamixels_receive_num_parameters; i++) {
-        checksum += m_dynamixels_buffer[i];
-      }
-      checksum = ~checksum;
-
-      if (checksum == m_dynamixels_buffer[5 + m_dynamixels_receive_num_parameters]) {
-        return DynamixelStatusError::Ok;
-      } else {
-        return DynamixelStatusError::ChecksumError;
-      }
-    }
-    delay(1);
-  }
-  // Hal::uart_receive_abort(1);
-  return DynamixelStatusError::TimeoutError;
-}
