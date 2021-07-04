@@ -11,6 +11,7 @@ void goldobot_hal_i2c_er_irq_handler(int ioc_index);
 
 void goldobot_hal_spi_irq_handler(int index);
 void goldobot_hal_exti_irq_handler();
+void goldobot_hal_tim6_irq_handler();
 
 extern TIM_HandleTypeDef htim6;
 
@@ -74,4 +75,7 @@ void EXTI0_IRQHandler(void) { goldobot_hal_exti_irq_handler(); };
 /**
  * @brief This function handles TIM6 global interrupt and DAC1 underrun interrupt.
  */
-void TIM6_DAC_IRQHandler(void) { HAL_TIM_IRQHandler(&htim6); }
+void TIM6_DAC_IRQHandler(void) {
+	HAL_TIM_IRQHandler(&htim6);
+	goldobot_hal_tim6_irq_handler();
+}

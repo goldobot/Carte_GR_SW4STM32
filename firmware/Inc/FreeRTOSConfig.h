@@ -86,6 +86,8 @@
 
 /* USER CODE BEGIN Includes */
 /* Section where include file can be added */
+#include "stm32f3xx.h"
+#include "core_cm4.h"
 /* USER CODE END Includes */
 
 /* Ensure stdint is only used by the compiler, and not the assembler. */
@@ -111,6 +113,7 @@ extern uint32_t SystemCoreClock;
 #define configENABLE_BACKWARD_COMPATIBILITY 0
 #define configUSE_PORT_OPTIMISED_TASK_SELECTION 1
 #define configUSE_TRACE_FACILITY 1
+#define configGENERATE_RUN_TIME_STATS 1
 
 /* Co-routine definitions. */
 #define configUSE_CO_ROUTINES 0
@@ -180,9 +183,14 @@ standard names. */
 void goldo_trace_task_switched_in(void* task);
 void goldo_trace_task_switched_out(void* task);
 void goldo_trace_task_create(void* task);
+
+void goldo_hal_init_cycle_counter();
 //#define traceTASK_CREATE(xTask) goldo_trace_task_create(xTask)
 //#define traceTASK_SWITCHED_OUT() goldo_trace_task_switched_out(pxCurrentTCB);
 //#define traceTASK_SWITCHED_IN() goldo_trace_task_switched_in(pxCurrentTCB);
+
+#define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() goldo_hal_init_cycle_counter()
+#define portGET_RUN_TIME_COUNTER_VALUE() DWT->CYCCNT
 /* USER CODE END Defines */
 
 #endif /* FREERTOS_CONFIG_H */

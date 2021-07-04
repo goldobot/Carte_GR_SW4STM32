@@ -13,6 +13,8 @@
 
 using namespace goldobot;
 
+bool goldo_hal_read_encoders(uint16_t& left, uint16_t& right);
+
 unsigned char __attribute__((section(".ccmram"))) PropulsionTask::s_message_queue_buffer[1024];
 unsigned char __attribute__((section(".ccmram")))
 PropulsionTask::s_urgent_message_queue_buffer[1024];
@@ -59,15 +61,21 @@ void PropulsionTask::doStep() {
     processMessage();
   }
 
+  uint32_t dwt = DWT->CYCCNT;
+  m_cycle_time = dwt - m_last_sample_time;
+  m_last_sample_time = dwt;
   // Update odometry
   if (m_use_simulator) {
     uint16_t left = m_robot_simulator.encoderLeft();
     uint16_t right = m_robot_simulator.encoderRight();
     m_odometry.update(left, right);
   } else {
-    uint16_t left = hal::encoder_get(0);
-    uint16_t right = hal::encoder_get(1);
-    m_odometry.update(left, right);
+	  uint16_t left;
+	  uint16_t right;
+	  while(goldo_hal_read_encoders(left, right))
+	  {
+		  m_odometry.update(left, right);
+	  }
   }
 
   // run propulsion controller
@@ -100,8 +108,8 @@ void PropulsionTask::doStep() {
     m_odrive_client.doStep(hal::get_tick_count());
     auto& telemetry = m_odrive_client.telemetry();
     float torque_constant = 0.04;
-    m_controller.setMotorsVelEstimates(telemetry.axis[0].vel_estimate, telemetry.axis[1].vel_estimate);
-    m_controller.setMotorsTorqueEstimates(telemetry.axis[0].current_iq_setpoint * torque_constant, telemetry.axis[1].current_iq_setpoint * torque_constant);
+    m_controller.setMotorsVelEstimates(-telemetry.axis[0].vel_estimate, telemetry.axis[1].vel_estimate);
+    m_controller.setMotorsTorqueEstimates(-telemetry.axis[0].current_iq_setpoint * torque_constant, telemetry.axis[1].current_iq_setpoint * torque_constant);
 
     if (current_time >= m_next_odrive_status_ts) {
   	    sendODriveStatus();
@@ -570,6 +578,8 @@ float PropulsionTask::scopeGetVariable(ScopeVariable type) {
       return m_odometry.pose().speed;
     case ScopeVariable::PoseYawRate:
       return m_odometry.pose().yaw_rate;
+    case ScopeVariable::PoseAcceleration:
+    	return m_odometry.pose().acceleration;
     case ScopeVariable::TargetX:
       return m_controller.targetPose().position.x;
     case ScopeVariable::TargetY:
@@ -580,6 +590,8 @@ float PropulsionTask::scopeGetVariable(ScopeVariable type) {
       return m_controller.targetPose().speed;
     case ScopeVariable::TargetYawRate:
       return m_controller.targetPose().yaw_rate;
+    case ScopeVariable::TargetAcceleration:
+    	return m_controller.targetPose().acceleration;
     case ScopeVariable::LeftMotorVelocitySetpoint:
       return m_left_vel_setpoint;
     case ScopeVariable::RightMotorVelocitySetpoint:
@@ -604,9 +616,15 @@ float PropulsionTask::scopeGetVariable(ScopeVariable type) {
     case ScopeVariable::ODriveVBus:
       return m_odrive_client.m_odrv_requests.vbus;
     case ScopeVariable::ODriveIBus:
-      return m_odrive_client.m_odrv_requests.vbus;
+      return m_odrive_client.m_odrv_requests.ibus;
+    case ScopeVariable::EncodersLeftCounts:
+      return m_odometry.leftEncoderValue();
+    case ScopeVariable::EncodersRightCounts:
+      return m_odometry.rightEncoderValue();
     case ScopeVariable::BlockingDetectorSpeedEstimate:
     	return m_controller.m_blocking_detector.m_speed_estimate;
+    case ScopeVariable::BlockingDetectorForceEstimate:
+        	return m_controller.m_blocking_detector.m_force_estimate;
     default:
       return 0;
   }

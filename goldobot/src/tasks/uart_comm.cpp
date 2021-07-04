@@ -193,6 +193,10 @@ void UARTCommTask::sendStatistics() {
                                 (unsigned char*)&m_statistics, sizeof(m_statistics));
   memset(&m_statistics, 0, sizeof(m_statistics));
 
+  TaskStatus_t tasks_status[16];
+  unsigned long total_runtime;
+  auto num_tasks = uxTaskGetSystemState(tasks_status, 16, &total_runtime);
+  int a = 0;
   // HeapStats_t heap_stats;
   //       vPortGetHeapStats(&heap_stats);
   //       exchange.pushMessage(CommMessageType::HeapStats, (unsigned char*)&heap_stats,

@@ -18,6 +18,7 @@ public:
 	void update(const PropulsionController& controller);
 	
 	float m_speed_estimate;
+	float m_force_estimate;
 
 	
 	float m_vel_estimates[2];

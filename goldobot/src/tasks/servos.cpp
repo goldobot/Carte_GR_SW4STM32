@@ -35,8 +35,8 @@ void ServosTask::taskFunction() {
   int cnt = 0;
 
   while (1) {
-    while (m_message_queue.message_ready() && m_servo_moving == 0) {
-      processMessage(); // /todo temporary, wait until move is finished to process message
+    while (m_message_queue.message_ready()) {
+      processMessage();
     }
 
     // Recompute servo targets
@@ -227,10 +227,11 @@ void ServosTask::processMessage() {
 	  {
 		  m_servo_enabled = 0;
 	  }
+	  m_message_queue.pop_message(nullptr, 0);
 	  break;
   case CommMessageType::ServoSetEnable:
   	  {
-  		auto msg_size = m_message_queue.pop_message(m_scratchpad, sizeof(m_scratchpad));
+  		m_message_queue.pop_message(m_scratchpad, sizeof(m_scratchpad));
   		int id = m_scratchpad[0];
   		setEnabled(id, m_scratchpad[1] != 0);
   	  }
@@ -253,7 +254,6 @@ void ServosTask::processMessage() {
       }
       if (m_servos_positions[servo_id] < 0) {
         m_servos_positions[servo_id] = pwm;
-        updateServo(servo_id, pwm, m_servos_config->servos[servo_id].max_speed, 0x1023);
       }
       // Send message when servo start moving
       bool is_moving = m_servos_positions[servo_id] >= 0 &&
@@ -270,6 +270,9 @@ void ServosTask::processMessage() {
     {
     	auto msg_size = m_message_queue.pop_message(m_scratchpad, sizeof(m_scratchpad));
     	moveMultiple((msg_size - 4)/3);
+    	// send ack with sequence number
+    	Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::ServoMoveMultiple,
+    	                                                  (unsigned char *)m_scratchpad, 2);
     }
     break;
     case CommMessageType::DynamixelsResponse:
@@ -361,5 +364,4 @@ void ServosTask::moveMultiple(int num_servos)
 		}
 		m_servos_target_positions[id] = target;
 	}
-	m_servo_moving |= 1; // /debug
 }

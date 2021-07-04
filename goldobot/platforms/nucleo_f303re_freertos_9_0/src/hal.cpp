@@ -20,6 +20,19 @@
 #include <algorithm>
 #include <cstring>
 
+extern "C"
+{
+void goldo_hal_init_cycle_counter()
+{
+	CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+	ITM->LAR = 0xC5ACCE55;
+	DWT->CYCCNT = 0;
+	DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+	DWT->CTRL |= DWT_EXCCNT_EXCCNT_Msk;
+};
+}
+
+extern bool g_hal_initialized;
 // Configuration structures
 
 namespace goldobot {
@@ -57,6 +70,7 @@ void configure(uint8_t* config) {
         break;
     }
   }
+  g_hal_initialized = true;
 }
 void init() {
   // Initialize debug cycle counter.

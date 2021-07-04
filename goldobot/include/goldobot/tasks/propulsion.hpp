@@ -17,11 +17,13 @@ enum class ScopeVariable : uint16_t {
   PoseYaw,
   PoseSpeed,
   PoseYawRate,
+  PoseAcceleration,
   TargetX,
   TargetY,
   TargetYaw,
   TargetSpeed,
   TargetYawRate,
+  TargetAcceleration,
   LongiError,
   YawError,
   SpeedError,
@@ -34,7 +36,10 @@ enum class ScopeVariable : uint16_t {
   ODriveAxis1CurrentIqSetpoint,
   ODriveVBus,
   ODriveIBus,
-  BlockingDetectorSpeedEstimate
+  EncodersLeftCounts,
+  EncodersRightCounts,
+  BlockingDetectorSpeedEstimate,
+  BlockingDetectorForceEstimate
 
 };
 
@@ -76,6 +81,10 @@ class PropulsionTask : public Task {
   };
 
  public:
+  uint32_t m_last_sample_time{0};
+  uint32_t m_cycle_time;
+  uint32_t m_cycle_time2;
+
   PropulsionTask();
   const char* name() const override;
 

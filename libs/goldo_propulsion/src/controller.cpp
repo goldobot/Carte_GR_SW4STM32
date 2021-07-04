@@ -133,6 +133,7 @@ void PropulsionController::update() {
   if (m_state != State::Inactive && m_state != State::Error && m_state != State::EmergencyStop) {
     updateMotorsPwm();
   }
+  m_blocking_detector.update(*this);
   // Update time base
   // m_time_base_ms++;
 }
@@ -231,7 +232,6 @@ void PropulsionController::updateTargetYaw() {
 void PropulsionController::updateMotorsPwm() {
   // Execute low level control
   m_low_level_controller.update(m_current_pose, m_target_pose);
-  m_blocking_detector.update(*this);
 }
 
 void PropulsionController::updateReposition() {

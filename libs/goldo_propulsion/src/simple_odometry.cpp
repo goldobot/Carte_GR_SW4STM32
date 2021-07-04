@@ -84,6 +84,8 @@ void SimpleOdometry::update(uint16_t left, uint16_t right) {
   float d_yaw_rate = previous_yaw_rate - m_pose.yaw_rate;
   m_pose.acceleration = m_accel_filter.step(d_speed);
   m_pose.angular_acceleration = m_angular_accel_filter.step(d_yaw_rate);
+
+  m_diff_left = diff_left;
 }
 
 void SimpleOdometry::setPose(const RobotPose& pose) {

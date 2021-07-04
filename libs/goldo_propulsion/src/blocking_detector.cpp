@@ -26,10 +26,10 @@ void BlockingDetector::update(const PropulsionController& controller)
 
 	float speed_estimate = (m_vel_estimates[0] + m_vel_estimates[1]) * 0.5f * inv_speed_factor;
 	float yaw_rate_estimate_estimate = (m_vel_estimates[1] - m_vel_estimates[0]) * inv_speed_factor;
+	float force_estimate = (m_torque_estimates[0] + m_torque_estimates[1]) * 0.5f;
 
-	m_speed_estimate = speed_estimate;
-
-	
+	m_speed_estimate = m_speed_estimate * 0.98f + 0.02f * speed_estimate;
+	m_force_estimate = m_force_estimate * 0.98f + 0.02f * force_estimate;
 }
 	
 	
