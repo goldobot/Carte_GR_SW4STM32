@@ -98,6 +98,10 @@ void PropulsionTask::doStep() {
 
   if (m_config.motor_controller_type == MotorControllerType::ODriveUART) {
     m_odrive_client.doStep(hal::get_tick_count());
+    auto& telemetry = m_odrive_client.telemetry();
+    float torque_constant = 0.04;
+    m_controller.setMotorsVelEstimates(telemetry.axis[0].vel_estimate, telemetry.axis[1].vel_estimate);
+    m_controller.setMotorsTorqueEstimates(telemetry.axis[0].current_iq_setpoint * torque_constant, telemetry.axis[1].current_iq_setpoint * torque_constant);
 
     if (current_time >= m_next_odrive_status_ts) {
   	    sendODriveStatus();
@@ -217,15 +221,6 @@ void PropulsionTask::processUrgentMessage() {
       m_urgent_message_queue.pop_message((unsigned char*)&buff, 16);
       uint16_t seq = *(uint16_t*)buff & 0x3fff;
       m_odrive_client.processResponse(current_time, seq, buff + 2, message_size - 2);
-
-    } break;
-    case CommMessageType::PropulsionCalibrateODrive: {
-      m_urgent_message_queue.pop_message(nullptr, 0);
-      m_odrive_client.startMotorsCalibration();
-    } break;
-    case CommMessageType::PropulsionODriveClearErrors: {
-      m_urgent_message_queue.pop_message(nullptr, 0);
-      m_odrive_client.clearErrors();
     } break;
     case CommMessageType::PropulsionSetPose: {
       float pose[3];
@@ -255,10 +250,14 @@ void PropulsionTask::processUrgentMessage() {
       m_controller.setConfig(config);
     } break;
     case CommMessageType::PropulsionSetTargetSpeed: {
+      uint16_t sequence_number;
       float target_speed;
-      m_urgent_message_queue.pop_message((unsigned char*)exec_traj_buff, 6);
-      memcpy(&target_speed, exec_traj_buff + 2, 4);
-      uint16_t sequence_number = *(uint16_t*)(exec_traj_buff);
+
+      unsigned char* buffs[] = {(unsigned char*)&sequence_number, (unsigned char*)&target_speed};
+      size_t sizes [] = {2,4};
+
+      m_urgent_message_queue.pop_message(buffs, sizes, 2);
+
       m_controller.setTargetSpeed(target_speed);
       sendCommandEvent(sequence_number, CommandEvent::End);
     } break;
@@ -291,7 +290,6 @@ void PropulsionTask::processUrgentMessage() {
       uint8_t enable;
       m_urgent_message_queue.pop_message((unsigned char*)&enable, 1);
       setSimulationMode(enable);
-
     } break;
     case CommMessageType::PropulsionScopeConfig: {
       m_urgent_message_queue.pop_message((unsigned char*)&m_scope_config, sizeof(m_scope_config));
@@ -604,8 +602,11 @@ float PropulsionTask::scopeGetVariable(ScopeVariable type) {
     case ScopeVariable::ODriveAxis1CurrentIqSetpoint:
       return m_odrive_client.telemetry().axis[1].current_iq_setpoint;
     case ScopeVariable::ODriveVBus:
-      return 0;
-
+      return m_odrive_client.m_odrv_requests.vbus;
+    case ScopeVariable::ODriveIBus:
+      return m_odrive_client.m_odrv_requests.vbus;
+    case ScopeVariable::BlockingDetectorSpeedEstimate:
+    	return m_controller.m_blocking_detector.m_speed_estimate;
     default:
       return 0;
   }

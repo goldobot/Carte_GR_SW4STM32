@@ -63,14 +63,10 @@ void UARTCommTask::taskFunction() {
 
     // write serialized data to uart buffer
     {
-      auto space_available = hal::io_write_space_available(0);
-      if (space_available > sizeof(s_scratch_buffer)) {
-        space_available = sizeof(s_scratch_buffer);
-      }
-      size_t dtlen = m_serializer.pop_data((unsigned char*)s_scratch_buffer, space_available);
-      if (dtlen) {
-        hal::io_write(0, s_scratch_buffer, dtlen);
-      }
+    	uint8_t* ptr;
+    	size_t bytes_to_write = hal::io_map_write(0, &ptr);
+        size_t dtlen = m_serializer.pop_data((unsigned char*)ptr, bytes_to_write);
+        hal::io_unmap_write(0, ptr, dtlen);
     }
 
     // write serialized data to ftdi uart buffer
@@ -87,12 +83,10 @@ void UARTCommTask::taskFunction() {
 
     // Parse received data from uart
     {
-      // uint8_t* ptr;
-      size_t bytes_read =
-          hal::io_read(0, (unsigned char*)s_scratch_buffer, sizeof(s_scratch_buffer));
-      m_deserializer.push_data((unsigned char*)s_scratch_buffer, bytes_read);
-      // auto dtlen = m_deserializer.push_data((unsigned char*)ptr, bytes_read);
-      // hal::io_unmap_read(0, ptr, dtlen);
+      uint8_t* ptr;
+      size_t bytes_read = hal::io_map_read(0, &ptr);
+      auto dtlen = m_deserializer.push_data((unsigned char*)ptr, bytes_read);
+      hal::io_unmap_read(0, ptr, dtlen);
     }
 
     // Parse received data from ftdi uart

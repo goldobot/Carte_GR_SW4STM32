@@ -6,6 +6,7 @@
 #include "goldobot/propulsion/controller_config.hpp"
 #include "goldobot/propulsion/low_level_controller.hpp"
 #include "goldobot/propulsion/speed_controller.hpp"
+#include "goldobot/propulsion/blocking_detection.hpp"
 
 #include <cstdint>
 
@@ -96,7 +97,11 @@ class PropulsionController {
   bool commandFinished();
 
   // \brief Return target robot pose
-  RobotPose targetPose() const;
+  const RobotPose& targetPose() const;
+
+  // \brief Return current robot pose
+  const RobotPose& currentPose() const;
+
 
   const LowLevelController& lowLevelController() const { return m_low_level_controller;};
 
@@ -110,6 +115,9 @@ class PropulsionController {
 
   float leftMotorTorqueLimit() const noexcept;
   float rightMotorTorqueLimit() const noexcept;
+
+  void setMotorsVelEstimates(float left, float right);
+  void setMotorsTorqueEstimates(float left, float right);
 
   void setAccelerationLimits(float accel, float deccel, float angular_accel, float angular_deccel);
   void setTargetSpeed(float speed);
@@ -142,6 +150,8 @@ class PropulsionController {
   messages::PropulsionTelemetry getTelemetry() const;
   /*< */
   messages::PropulsionTelemetryEx getTelemetryEx() const;
+
+  propulsion::BlockingDetector m_blocking_detector;
 
  private:
   SimpleOdometry* m_odometry;

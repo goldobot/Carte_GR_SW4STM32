@@ -32,7 +32,10 @@ enum class ScopeVariable : uint16_t {
   ODriveAxis1VelEstimate,
   ODriveAxis0CurrentIqSetpoint,
   ODriveAxis1CurrentIqSetpoint,
-  ODriveVBus
+  ODriveVBus,
+  ODriveIBus,
+  BlockingDetectorSpeedEstimate
+
 };
 
 enum class ScopeVariableEncoding : uint16_t {
@@ -61,7 +64,7 @@ struct ScopeConfig {
 class PropulsionTask : public Task {
  public:
   enum class MotorControllerType : uint8_t { None, Pwm, ODriveUART };
-  enum class CommandEvent : uint8_t { Begin = 0, End, Error, Cancel };
+  enum class CommandEvent : uint8_t { Begin = 0, End, Error, Cancel, Ack };
 
   struct Config {
     MotorControllerType motor_controller_type{MotorControllerType::None};

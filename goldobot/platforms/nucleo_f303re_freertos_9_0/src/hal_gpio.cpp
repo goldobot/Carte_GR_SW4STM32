@@ -259,6 +259,8 @@ void hal_gpio_init(const DeviceConfigGpio* config) {
   LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Alternate = 0;
 
   if (config->dir & 0x04) {
     GPIO_InitStruct.Pull = LL_GPIO_PULL_UP;

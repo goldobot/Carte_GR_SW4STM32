@@ -8,6 +8,7 @@
 namespace goldobot {
 
 class ServosTask : public Task {
+
  public:
   ServosTask();
   const char* name() const override;
@@ -21,7 +22,12 @@ class ServosTask : public Task {
 
   void moveMultiple(int num_servos);
 
+  void checkSynchronization();
+
+  void processDynamixelResponse();
+
   bool isEnabled(int id) const noexcept { return (m_servo_enabled & (1 << id)) != 0;};
+  void setEnabled(int id, bool enabled) noexcept { m_servo_enabled = (m_servo_enabled & (0xffff - (1 << id))) | (enabled ? (1 << id) : 0); };
 
   MessageQueue m_message_queue;
   unsigned char m_message_queue_buffer[128];
@@ -32,10 +38,13 @@ class ServosTask : public Task {
   static constexpr int c_update_period = 20;  // update period in ms
   static constexpr uint32_t c_fpga_servos_base = 0x80008404;
   static const uint32_t c_lift_base[2];
+
   float m_servos_positions[32];
   uint16_t m_servos_speeds[32];
   uint8_t m_servos_torques[32];
   uint16_t m_servos_target_positions[32];
+  uint16_t m_servos_measured_positions[32];
+
   uint32_t m_servo_enabled{0};
   uint32_t m_servo_moving{0};
 

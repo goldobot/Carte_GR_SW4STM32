@@ -93,7 +93,7 @@ class ODriveClient {
   float m_user_endpoints_values[4] = {0, 0, 0, 0};
 
 
- private:
+ //private:
   enum class EndpointState {
 	  Idle,
 	  ReadRequested, // should read endpoint

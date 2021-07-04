@@ -18,6 +18,7 @@ void ServosTask::taskFunction() {
   set_priority(4);
   Robot::instance().mainExchangeIn().subscribe({40, 49, &m_message_queue});
   Robot::instance().exchangeInternal().subscribe({31, 31, &m_message_queue});
+  Robot::instance().exchangeInternal().subscribe({61, 61, &m_message_queue});
 
   // /debug
   m_servo_enabled = 0xffffffff;
@@ -31,6 +32,8 @@ void ServosTask::taskFunction() {
     m_servos_torques[i] = m_servos_config->servos[i].max_torque;
   }
 
+  int cnt = 0;
+
   while (1) {
     while (m_message_queue.message_ready() && m_servo_moving == 0) {
       processMessage(); // /todo temporary, wait until move is finished to process message
@@ -38,11 +41,14 @@ void ServosTask::taskFunction() {
 
     // Recompute servo targets
     float delta_t = c_update_period * 1e-3;
+    auto old_moving = m_servo_moving;
     m_servo_moving = 0;
 
     for (int i = 0; i < m_servos_config->num_servos; i++) {
       // skip uninitialized servos
       if (m_servos_positions[i] < 0) {
+    	setEnabled(i, false);
+    	updateServo(i, static_cast<uint16_t>(m_servos_positions[i]), m_servos_speeds[i], m_servos_torques[i]);
         continue;
       }
 
@@ -69,9 +75,20 @@ void ServosTask::taskFunction() {
       updateServo(i, static_cast<uint16_t>(m_servos_positions[i]), m_servos_speeds[i], m_servos_torques[i]);
     }
 
-    uint8_t watchdog_id = 5;
-    Robot::instance().exchangeInternal().pushMessage(CommMessageType::WatchdogReset, &watchdog_id,
-                                                     1);
+    if(old_moving != m_servo_moving ||cnt == 0)
+    {
+    	Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ServosMoving, (unsigned char*)&m_servo_moving, 4);
+    }
+
+    cnt++;
+
+    if(cnt == 16)
+    {
+    	cnt = 0;
+    }
+
+
+
 
     delay_periodic(c_update_period);
   } /* while(1) */
@@ -80,6 +97,7 @@ void ServosTask::taskFunction() {
 void ServosTask::updateServo(int id, uint16_t pos, uint16_t speed, uint8_t torque) {
   const auto &config = m_servos_config->servos[id];
   bool enabled = isEnabled(id);
+
   // fpga servo
   if (config.type == ServoType::StandardServo) {
 	uint32_t servo_pwm = enabled ? static_cast<uint32_t>(pos) << 2 : 0;
@@ -87,6 +105,7 @@ void ServosTask::updateServo(int id, uint16_t pos, uint16_t speed, uint8_t torqu
     Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaWriteReg,
                                                    (unsigned char *)buff, 8);
   }
+
   if (config.type == ServoType::GoldoLift)
   {
 	  // enable control
@@ -104,6 +123,7 @@ void ServosTask::updateServo(int id, uint16_t pos, uint16_t speed, uint8_t torqu
 															 (unsigned char *)buff, 8);
 	  }
   }
+
   if(config.type == ServoType::DynamixelAX12)
   {
 	  // one pos unit = 0.29 deg
@@ -135,7 +155,17 @@ void ServosTask::updateServo(int id, uint16_t pos, uint16_t speed, uint8_t torqu
 	  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DynamixelsRequest,
 	  	                                                     (unsigned char *)buff, 12);
 	  }
+
+	  //request state
+	  *reinterpret_cast<uint16_t*>(buff + 0) = (36 << 8) | id | 0x8000; // msb=1 => send response to internal exchange
+	  *reinterpret_cast<uint8_t*>(buff + 4) = 0x02; // read
+
+	  *reinterpret_cast<uint8_t*>(buff + 5) = 36; // present position, speed, load
+	  *reinterpret_cast<uint8_t*>(buff + 6) = 6;
+	  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DynamixelsRequest,
+															 (unsigned char *)buff, 7);
   }
+
   if(config.type == ServoType::DynamixelMX28)
    {
  	  // one pos unit = 0.088  deg
@@ -168,6 +198,14 @@ void ServosTask::updateServo(int id, uint16_t pos, uint16_t speed, uint8_t torqu
  	  	                                                     (unsigned char *)buff, 12);
  	  }
 
+ 	 //request state
+	  *reinterpret_cast<uint16_t*>(buff + 0) = (36 << 8) | id | 0x8000; // msb=1 => send response to internal exchange
+	  *reinterpret_cast<uint8_t*>(buff + 4) = 0x02; // read
+
+	  *reinterpret_cast<uint8_t*>(buff + 5) = 36; // present position, speed, load
+	  *reinterpret_cast<uint8_t*>(buff + 6) = 6;
+	  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DynamixelsRequest,
+															 (unsigned char *)buff, 7);
    }
 
 }
@@ -184,6 +222,20 @@ void ServosTask::processMessage() {
   auto message_type = (CommMessageType)m_message_queue.message_type();
 
   switch (message_type) {
+  case CommMessageType::ServoDisableAll:
+	  for(int i = 0; i < m_servos_config->num_servos; i++)
+	  {
+		  m_servo_enabled = 0;
+	  }
+	  break;
+  case CommMessageType::ServoSetEnable:
+  	  {
+  		auto msg_size = m_message_queue.pop_message(m_scratchpad, sizeof(m_scratchpad));
+  		int id = m_scratchpad[0];
+  		setEnabled(id, m_scratchpad[1] != 0);
+  	  }
+  	  break;
+
     case CommMessageType::ServoMove: {
       unsigned char buff[5];
       m_message_queue.pop_message(buff, 5);
@@ -220,10 +272,35 @@ void ServosTask::processMessage() {
     	moveMultiple((msg_size - 4)/3);
     }
     break;
+    case CommMessageType::DynamixelsResponse:
+    {
+    	auto msg_size = m_message_queue.pop_message(m_scratchpad, sizeof(m_scratchpad));
+    	uint16_t seq = *reinterpret_cast<uint16_t*>(m_scratchpad);
+    	if(msg_size == 11)
+    	{
+    		// position, speed, load sread response
+    		int id = seq & 0xff;
+    		uint16_t position = *reinterpret_cast<uint16_t*>(m_scratchpad + 5);
+    		uint16_t speed = *reinterpret_cast<uint16_t*>(m_scratchpad + 7);
+    		uint16_t load = *reinterpret_cast<uint16_t*>(m_scratchpad + 9);
+    		uint8_t error = m_scratchpad[4];
+    		m_servos_measured_positions[id] = position;
+    		if(!isEnabled(id))
+    		{
+    			m_servos_positions[id] = position;
+    		}
+    	}
+    }
+    break;
     default:
       m_message_queue.pop_message(nullptr, 0);
       break;
   };
+}
+
+void ServosTask::checkSynchronization()
+{
+
 }
 
 void ServosTask::moveMultiple(int num_servos)

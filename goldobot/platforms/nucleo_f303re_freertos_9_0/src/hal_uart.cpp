@@ -540,6 +540,8 @@ void hal_usart_init(IODevice* device, const IODeviceConfigUart* config) {
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+    GPIO_InitStruct.Alternate = 0;
     hal_gpio_init_pin(config->txen_pin, GPIO_InitStruct);
   }
 

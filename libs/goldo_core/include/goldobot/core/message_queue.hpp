@@ -23,6 +23,7 @@ class MessageQueue {
 
   bool push_message(CommMessageType message_type, const unsigned char* buffer, size_t size);
   size_t pop_message(unsigned char* buffer, size_t size);
+  bool pop_message(unsigned char** buffers, size_t* sizes, int num_buffers);
 
   size_t available_capacity() const;
 

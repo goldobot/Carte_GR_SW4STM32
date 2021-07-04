@@ -125,47 +125,6 @@ void MainTask::process_message() {
     case CommMessageType::FpgaGpioState:
       m_message_queue.pop_message((unsigned char*)&m_fpga_gpio_state, sizeof(m_fpga_gpio_state));
       break;
-
-      /*
-      case CommMessageType::MainSequenceBeginLoad:
-        m_sequence_engine.beginLoad();
-        m_message_queue.pop_message(nullptr, 0);
-        break;
-
-      case CommMessageType::MainSequenceEndLoad:
-        m_sequence_engine.endLoad();
-        m_message_queue.pop_message(nullptr, 0);
-        break;
-
-      case CommMessageType::MainSequenceLoadData:
-        m_message_queue.pop_message(g_temp_buffer, 32);
-        m_sequence_engine.loadData(g_temp_buffer, msg_size);
-        break;
-      case CommMessageType::MainSequenceStartSequence:
-        uint16_t seq_id;
-        m_message_queue.pop_message((unsigned char*)(&seq_id), 2);
-        m_sequence_engine.startSequence(seq_id);
-        break;
-      case CommMessageType::MainSequenceAbortSequence:
-        m_message_queue.pop_message(nullptr, 0);
-        m_sequence_engine.abortSequence();
-        break;
-      case CommMessageType::PropulsionStateChanged: {
-        uint8_t buff[2];
-        m_message_queue.pop_message((unsigned char*)(&buff), 2);
-        m_sequence_engine.updatePropulsionState((PropulsionState)buff[0]);
-      } break;
-      case CommMessageType::ArmsStateChange: {
-        uint8_t buff[2];
-        m_message_queue.pop_message((unsigned char*)(&buff), 2);
-        m_sequence_engine.updateArmState((ArmState)buff[1]);
-      } break;
-      case CommMessageType::FpgaServoState: {
-        uint8_t buff[2];
-        m_message_queue.pop_message((unsigned char*)(&buff), 2);
-        m_sequence_engine.updateServoState(buff[0], buff[1]);
-      } break;*/
-
     default:
       m_message_queue.pop_message(nullptr, 0);
       break;

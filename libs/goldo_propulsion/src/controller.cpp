@@ -89,7 +89,7 @@ void PropulsionController::update() {
     case State::FollowTrajectory: {
       m_speed_controller.update();
       updateTargetPositions();
-      detectBlocking();
+
       if (m_speed_controller.finished()) {
         m_target_pose = m_final_pose;
         on_stopped_enter();
@@ -153,7 +153,19 @@ float PropulsionController::rightMotorTorqueInput() const noexcept {
   return m_low_level_controller.m_left_motor_torque_input;
 }
 
-RobotPose PropulsionController::targetPose() const { return m_target_pose; }
+void PropulsionController::setMotorsVelEstimates(float left, float right)
+{
+	m_blocking_detector.setVelEstimates(left, right);
+}
+
+void PropulsionController::setMotorsTorqueEstimates(float left, float right)
+{
+	m_blocking_detector.setTorqueEstimates(left, right);
+}
+
+const RobotPose& PropulsionController::targetPose() const { return m_target_pose; }
+
+const RobotPose& PropulsionController::currentPose() const { return m_current_pose; }
 
 void PropulsionController::setTargetPose(const RobotPose& target_pose) {
   m_target_pose = target_pose;
@@ -219,6 +231,7 @@ void PropulsionController::updateTargetYaw() {
 void PropulsionController::updateMotorsPwm() {
   // Execute low level control
   m_low_level_controller.update(m_current_pose, m_target_pose);
+  m_blocking_detector.update(*this);
 }
 
 void PropulsionController::updateReposition() {
@@ -233,11 +246,6 @@ void PropulsionController::updateReposition() {
     // m_command_end_time = m_time_base_ms + 500;
   }
 };
-
-bool PropulsionController::detectBlocking()
-{
-
-}
 
 void PropulsionController::on_stopped_enter() {
   m_state = State::Stopped;

@@ -117,6 +117,48 @@ size_t MessageQueue::pop_message(unsigned char* buffer, size_t size) {
   return size;
 }
 
+bool MessageQueue::pop_message(unsigned char** buffers, size_t* sizes, int num_buffers) {
+  std::unique_lock<detail::LockerMutex> lock(m_mutex);
+
+  if (!m_message_ready) {
+    return false;
+  }
+
+  size_t remaining_size = m_message_size;
+
+  for(int i = 0; i < num_buffers; i++)
+  {
+	  auto ptr = buffers[i];
+	  size_t size = sizes[i];
+	  if(size > remaining_size)
+	  {
+		  size = remaining_size;
+	  }
+	  remaining_size -= size;
+	  sizes[i] = size;
+	  if(size > 0)
+	  {
+		  read_data(m_begin_index, ptr, size);
+		  pop_data(size);
+	  }
+  }
+
+  pop_data(remaining_size);
+
+  if (m_begin_index != m_end_index) {
+    uint16_t buff[2];
+    read_data(m_begin_index, (unsigned char*)buff, 4);
+    pop_data(4);
+    m_message_type = static_cast<CommMessageType>(buff[0]);
+    m_message_size = buff[1];
+  } else {
+    m_message_ready = false;
+    m_message_size = 0;
+    m_message_type = static_cast<CommMessageType>(0);
+  }
+  return true;
+}
+
 size_t MessageQueue::buffer_capacity() const noexcept {
   size_t size = m_end_index >= m_begin_index ? m_end_index - m_begin_index
                                              : m_end_index - m_begin_index + m_buffer_size;
