@@ -11,7 +11,7 @@ extern "C" {
 }
 
 extern "C" {
- void goldobot_hal_tim6_irq_handler();
+void goldobot_hal_tim6_irq_handler();
 }
 
 bool g_hal_initialized = false;
@@ -289,35 +289,29 @@ uint16_t g_encoder_queue_right[16];
 std::atomic<int> g_encoder_queue_head{0};
 std::atomic<int> g_encoder_queue_tail{0};
 
-bool goldo_hal_read_encoders(uint16_t& left, uint16_t& right)
-{
-	auto tail = g_encoder_queue_tail.load();
-	if(tail == g_encoder_queue_head)
-	{
-		return false;
-	}
-	left = g_encoder_queue_left[tail];
-	right = g_encoder_queue_right[tail];
-	tail++;
-	if(tail == 16)
-	{
-		tail = 0;
-	}
-	g_encoder_queue_tail = tail;
-	return true;
+bool goldo_hal_read_encoders(uint16_t& left, uint16_t& right) {
+  auto tail = g_encoder_queue_tail.load();
+  if (tail == g_encoder_queue_head) {
+    return false;
+  }
+  left = g_encoder_queue_left[tail];
+  right = g_encoder_queue_right[tail];
+  tail++;
+  if (tail == 16) {
+    tail = 0;
+  }
+  g_encoder_queue_tail = tail;
+  return true;
 }
-void goldobot_hal_tim6_irq_handler()
-{
-	if(!g_hal_initialized) return;
-	uint16_t left = encoder_get(0);
-	uint16_t right = encoder_get(1);
+void goldobot_hal_tim6_irq_handler() {
+  if (!g_hal_initialized) return;
+  uint16_t left = encoder_get(0);
+  uint16_t right = encoder_get(1);
 
-	g_encoder_queue_left[g_encoder_queue_head] = left;
-	g_encoder_queue_right[g_encoder_queue_head] = right;
+  g_encoder_queue_left[g_encoder_queue_head] = left;
+  g_encoder_queue_right[g_encoder_queue_head] = right;
 
-	auto head = g_encoder_queue_head.load() + 1;
-	if(head == 16) head = 0;
-	g_encoder_queue_head = head;
-
-
+  auto head = g_encoder_queue_head.load() + 1;
+  if (head == 16) head = 0;
+  g_encoder_queue_head = head;
 }

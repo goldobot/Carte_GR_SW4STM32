@@ -336,6 +336,5 @@ FpgaSpiTransactionStatus FpgaTask::goldo_fpga_check_crc(unsigned char *buf5,
 // ajouter desactivation asserv ascenceur sur arret d'urgnece dans la tache fpga
 // eteindre lidar sur arret d'urgence enclenché
 // ajouter variable arret d'urgence au robot state
-// ajouter commande disable servo pour les servos standards et dynamixels qui met le pwm à 0 immediatement
-
-
+// ajouter commande disable servo pour les servos standards et dynamixels qui met le pwm à 0
+// immediatement

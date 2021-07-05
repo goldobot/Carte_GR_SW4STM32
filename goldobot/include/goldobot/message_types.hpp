@@ -35,7 +35,6 @@ enum class CommMessageType : uint16_t {
   ServosMoving,
   ServoDisableAll,
 
-
   ODriveRequestPacket = 50,
   ODriveResponsePacket,
   ODriveTelemetry,

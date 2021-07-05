@@ -154,28 +154,28 @@ void hal_uart_callback(int uart_index, int callback_id);
 
 // event tracing
 
-enum class HalEvent : uint8_t
-{
-	UartIRQEnter,
-	UartIRQExit,
-	UartRxStart,
-	UartRxStartErrorBadReqState,
-	UartRxStartErrorHal,
-	UartRxUpdate,
-	UartRxUpdateErrorBadReqState,
-	//tx
-	UartTxStart,
-	UartTxStartErrorBadReqState,
-	UartTxStartErrorHal,
-	UartTxUpdate,
-	UartTxUpdateErrorBadReqState
+enum class HalEvent : uint8_t {
+  UartIRQEnter,
+  UartIRQExit,
+  UartRxStart,
+  UartRxStartErrorBadReqState,
+  UartRxStartErrorHal,
+  UartRxUpdate,
+  UartRxUpdateErrorBadReqState,
+  // tx
+  UartTxStart,
+  UartTxStartErrorBadReqState,
+  UartTxStartErrorHal,
+  UartTxUpdate,
+  UartTxUpdateErrorBadReqState
 };
 
 void hal_trace_error(HalEvent event_code);
 void hal_trace_event(HalEvent event_code);
-inline void hal_assert(bool condition, HalEvent event_code)
-{
-	if(!condition) {hal_trace_error(event_code);}
+inline void hal_assert(bool condition, HalEvent event_code) {
+  if (!condition) {
+    hal_trace_error(event_code);
+  }
 }
 
 }  // namespace platform

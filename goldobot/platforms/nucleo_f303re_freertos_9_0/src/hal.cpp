@@ -20,15 +20,13 @@
 #include <algorithm>
 #include <cstring>
 
-extern "C"
-{
-void goldo_hal_init_cycle_counter()
-{
-	CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
-	ITM->LAR = 0xC5ACCE55;
-	DWT->CYCCNT = 0;
-	DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
-	DWT->CTRL |= DWT_EXCCNT_EXCCNT_Msk;
+extern "C" {
+void goldo_hal_init_cycle_counter() {
+  CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+  ITM->LAR = 0xC5ACCE55;
+  DWT->CYCCNT = 0;
+  DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+  DWT->CTRL |= DWT_EXCCNT_EXCCNT_Msk;
 };
 }
 
@@ -82,7 +80,7 @@ void init() {
 
   init_io_devices(),
 
-  hal_callback_handler_task_start();
+      hal_callback_handler_task_start();
 
   // init uart
   IODeviceConfigUart uart_config;

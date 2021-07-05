@@ -11,9 +11,7 @@ enum class Status { Error = 0, Ok = 1 };
 
 struct IORequest;
 
-enum class IORequestStatus {
-   Success, Error, Update, Abort, UartIdleDetected
-};
+enum class IORequestStatus { Success, Error, Update, Abort, UartIdleDetected };
 
 typedef bool (*IORequestCallback)(IORequest*, IORequestStatus);
 

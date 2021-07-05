@@ -8,7 +8,6 @@
 namespace goldobot {
 
 class ServosTask : public Task {
-
  public:
   ServosTask();
   const char* name() const override;
@@ -26,8 +25,10 @@ class ServosTask : public Task {
 
   void processDynamixelResponse();
 
-  bool isEnabled(int id) const noexcept { return (m_servo_enabled & (1 << id)) != 0;};
-  void setEnabled(int id, bool enabled) noexcept { m_servo_enabled = (m_servo_enabled & (0xffff - (1 << id))) | (enabled ? (1 << id) : 0); };
+  bool isEnabled(int id) const noexcept { return (m_servo_enabled & (1 << id)) != 0; };
+  void setEnabled(int id, bool enabled) noexcept {
+    m_servo_enabled = (m_servo_enabled & (0xffff - (1 << id))) | (enabled ? (1 << id) : 0);
+  };
 
   MessageQueue m_message_queue;
   unsigned char m_message_queue_buffer[128];
@@ -48,6 +49,6 @@ class ServosTask : public Task {
   uint32_t m_servo_enabled{0};
   uint32_t m_servo_moving{0};
 
-   uint32_t m_next_statistics_ts{10};
+  uint32_t m_next_statistics_ts{10};
 };
 }  // namespace goldobot

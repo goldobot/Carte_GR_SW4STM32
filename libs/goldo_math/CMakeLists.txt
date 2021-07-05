@@ -4,8 +4,10 @@ project(goldo_math LANGUAGES CXX)
 
 add_library(goldo_math STATIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include/goldobot/core/derivative_filter.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/goldobot/core/low_pass_filter.hpp
 
   ${CMAKE_CURRENT_SOURCE_DIR}/src/derivative_filter.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/low_pass_filter.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/math_utils.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/pid_controller.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/trajectory.cpp

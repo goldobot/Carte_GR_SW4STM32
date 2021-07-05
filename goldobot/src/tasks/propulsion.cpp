@@ -70,12 +70,11 @@ void PropulsionTask::doStep() {
     uint16_t right = m_robot_simulator.encoderRight();
     m_odometry.update(left, right);
   } else {
-	  uint16_t left;
-	  uint16_t right;
-	  while(goldo_hal_read_encoders(left, right))
-	  {
-		  m_odometry.update(left, right);
-	  }
+    uint16_t left;
+    uint16_t right;
+    while (goldo_hal_read_encoders(left, right)) {
+      m_odometry.update(left, right);
+    }
   }
 
   // run propulsion controller
@@ -108,13 +107,15 @@ void PropulsionTask::doStep() {
     m_odrive_client.doStep(hal::get_tick_count());
     auto& telemetry = m_odrive_client.telemetry();
     float torque_constant = 0.04;
-    m_controller.setMotorsVelEstimates(-telemetry.axis[0].vel_estimate, telemetry.axis[1].vel_estimate);
-    m_controller.setMotorsTorqueEstimates(-telemetry.axis[0].current_iq_setpoint * torque_constant, telemetry.axis[1].current_iq_setpoint * torque_constant);
+    m_controller.setMotorsVelEstimates(-telemetry.axis[0].vel_estimate,
+                                       telemetry.axis[1].vel_estimate);
+    m_controller.setMotorsTorqueEstimates(-telemetry.axis[0].current_iq_setpoint * torque_constant,
+                                          telemetry.axis[1].current_iq_setpoint * torque_constant);
 
     if (current_time >= m_next_odrive_status_ts) {
-  	    sendODriveStatus();
-  	  m_next_odrive_status_ts =
-  	          std::max(m_next_odrive_status_ts + m_config.odrive_status_period_ms, current_time);
+      sendODriveStatus();
+      m_next_odrive_status_ts =
+          std::max(m_next_odrive_status_ts + m_config.odrive_status_period_ms, current_time);
     }
   }
 
@@ -262,7 +263,7 @@ void PropulsionTask::processUrgentMessage() {
       float target_speed;
 
       unsigned char* buffs[] = {(unsigned char*)&sequence_number, (unsigned char*)&target_speed};
-      size_t sizes [] = {2,4};
+      size_t sizes[] = {2, 4};
 
       m_urgent_message_queue.pop_message(buffs, sizes, 2);
 
@@ -314,13 +315,13 @@ void PropulsionTask::processUrgentMessage() {
       setMotorsPwm(pwm[0], pwm[1]);
     } break;
     case CommMessageType::PropulsionMotorsTorqueLimitsSet: {
-          float pwm[2];
-          m_urgent_message_queue.pop_message((unsigned char*)s_scratchpad, 10);
-          memcpy(pwm, s_scratchpad + 2, 8);
-          uint16_t sequence_number = *reinterpret_cast<uint16_t*>(s_scratchpad);
-          setMotorsTorqueLimits(pwm[0], pwm[1]);
-          sendCommandEvent(sequence_number, CommandEvent::End);
-        } break;
+      float pwm[2];
+      m_urgent_message_queue.pop_message((unsigned char*)s_scratchpad, 10);
+      memcpy(pwm, s_scratchpad + 2, 8);
+      uint16_t sequence_number = *reinterpret_cast<uint16_t*>(s_scratchpad);
+      setMotorsTorqueLimits(pwm[0], pwm[1]);
+      sendCommandEvent(sequence_number, CommandEvent::End);
+    } break;
       /* case CommMessageType::PropulsionMeasurePoint: {
          float buff[4];
          m_urgent_message_queue.pop_message((unsigned char*)&buff, sizeof(buff));
@@ -386,8 +387,8 @@ void PropulsionTask::onMsgExecutePointTo(size_t msg_size) {
 void PropulsionTask::onMsgExecuteTrajectory(size_t msg_size) {
   // todo: send error message if message size is too large
   if (msg_size <= 136) {
-    // message has a header of  8 bytes: uint16 sequence number, padding and float speed. each point is 2
-    // floats
+    // message has a header of  8 bytes: uint16 sequence number, padding and float speed. each point
+    // is 2 floats
     int num_points = (msg_size - 8) / 8;
     float speed = *(float*)(exec_traj_buff + 4);
     Vector2D* points = (Vector2D*)(exec_traj_buff + 8);
@@ -468,30 +469,27 @@ void PropulsionTask::setMotorsPwm(float left_pwm, float right_pwm) {
   }
 }
 
-void PropulsionTask::setMotorsTorqueLimits(float left, float right)
-{
-	if (m_use_simulator) {
-
-	  } else {
-	    switch (m_config.motor_controller_type) {
-	      case MotorControllerType::ODriveUART:
-	        m_odrive_client.setTorqueLimit(0, left);
-	        m_odrive_client.setTorqueLimit(1, right);
-	        break;
-	      default:
-	        break;
-	    }
-	  }
+void PropulsionTask::setMotorsTorqueLimits(float left, float right) {
+  if (m_use_simulator) {
+  } else {
+    switch (m_config.motor_controller_type) {
+      case MotorControllerType::ODriveUART:
+        m_odrive_client.setTorqueLimit(0, left);
+        m_odrive_client.setTorqueLimit(1, right);
+        break;
+      default:
+        break;
+    }
+  }
 }
 
-void PropulsionTask::sendCommandEvent(uint16_t sequence_number, CommandEvent event )
-{
-	  uint8_t buff[4];  // sequence_number, status, error
-	  buff[2] = static_cast<uint8_t>(event);
-	  buff[3] = static_cast<uint8_t>(m_controller.error());
-	  *(uint16_t*)(buff) = sequence_number;
-	  Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::PropulsionCommandEvent, buff,
-	                                                      4);
+void PropulsionTask::sendCommandEvent(uint16_t sequence_number, CommandEvent event) {
+  uint8_t buff[4];  // sequence_number, status, error
+  buff[2] = static_cast<uint8_t>(event);
+  buff[3] = static_cast<uint8_t>(m_controller.error());
+  *(uint16_t*)(buff) = sequence_number;
+  Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::PropulsionCommandEvent, buff,
+                                                      4);
 }
 
 void PropulsionTask::onCommandBegin(uint16_t sequence_number) {
@@ -517,7 +515,6 @@ void PropulsionTask::onCommandEnd() {
                                                       4);
   m_is_executing_command = false;
   if (m_controller.state() == PropulsionController::State::Error) {
-
   }
 }
 
@@ -545,25 +542,27 @@ void PropulsionTask::clearCommandQueue() {
   }
 }
 
-void PropulsionTask::sendODriveStatus()
-{
-	{
-	auto axis_states = m_odrive_client.axisStates();
-	Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionODriveAxisStates, (unsigned char*)&axis_states,
-	                                                      sizeof(axis_states));
-	}
-	{
-		auto axis_errors = m_odrive_client.errors();
-		Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionODriveAxisErrors, (unsigned char*)&axis_errors,
-			                                                      sizeof(axis_errors));
-	}
-	{
-		auto statistics = m_odrive_client.statistics();
-		Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionODriveStatistics, (unsigned char*)&statistics,
-				                                                      sizeof(statistics));
-	}
+void PropulsionTask::sendODriveStatus() {
+  {
+    auto axis_states = m_odrive_client.axisStates();
+    Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionODriveAxisStates,
+                                                    (unsigned char*)&axis_states,
+                                                    sizeof(axis_states));
+  }
+  {
+    auto axis_errors = m_odrive_client.errors();
+    Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionODriveAxisErrors,
+                                                    (unsigned char*)&axis_errors,
+                                                    sizeof(axis_errors));
+  }
+  {
+    auto statistics = m_odrive_client.statistics();
+    Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionODriveStatistics,
+                                                    (unsigned char*)&statistics,
+                                                    sizeof(statistics));
+  }
 
-	//const std::array<AxisCalibrationState, 2>& axisCalibrationStates() const noexcept;
+  // const std::array<AxisCalibrationState, 2>& axisCalibrationStates() const noexcept;
 }
 
 float PropulsionTask::scopeGetVariable(ScopeVariable type) {
@@ -579,7 +578,7 @@ float PropulsionTask::scopeGetVariable(ScopeVariable type) {
     case ScopeVariable::PoseYawRate:
       return m_odometry.pose().yaw_rate;
     case ScopeVariable::PoseAcceleration:
-    	return m_odometry.pose().acceleration;
+      return m_odometry.pose().acceleration;
     case ScopeVariable::TargetX:
       return m_controller.targetPose().position.x;
     case ScopeVariable::TargetY:
@@ -591,7 +590,7 @@ float PropulsionTask::scopeGetVariable(ScopeVariable type) {
     case ScopeVariable::TargetYawRate:
       return m_controller.targetPose().yaw_rate;
     case ScopeVariable::TargetAcceleration:
-    	return m_controller.targetPose().acceleration;
+      return m_controller.targetPose().acceleration;
     case ScopeVariable::LeftMotorVelocitySetpoint:
       return m_left_vel_setpoint;
     case ScopeVariable::RightMotorVelocitySetpoint:
@@ -622,9 +621,9 @@ float PropulsionTask::scopeGetVariable(ScopeVariable type) {
     case ScopeVariable::EncodersRightCounts:
       return m_odometry.rightEncoderValue();
     case ScopeVariable::BlockingDetectorSpeedEstimate:
-    	return m_controller.m_blocking_detector.m_speed_estimate;
+      return m_controller.m_blocking_detector.m_speed_estimate;
     case ScopeVariable::BlockingDetectorForceEstimate:
-        	return m_controller.m_blocking_detector.m_force_estimate;
+      return m_controller.m_blocking_detector.m_force_estimate;
     default:
       return 0;
   }

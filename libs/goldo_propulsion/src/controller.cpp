@@ -70,7 +70,7 @@ void PropulsionController::setAccelerationLimits(float accel, float deccel, floa
 void PropulsionController::setTargetSpeed(float speed) {
   // Todo: recompute parameter ramps with new speed
   if (m_state == State::FollowTrajectory) {
-	  m_speed_controller.setRequestedSpeed(speed);
+    m_speed_controller.setRequestedSpeed(speed);
   }
 }
 
@@ -154,14 +154,12 @@ float PropulsionController::rightMotorTorqueInput() const noexcept {
   return m_low_level_controller.m_left_motor_torque_input;
 }
 
-void PropulsionController::setMotorsVelEstimates(float left, float right)
-{
-	m_blocking_detector.setVelEstimates(left, right);
+void PropulsionController::setMotorsVelEstimates(float left, float right) {
+  m_blocking_detector.setVelEstimates(left, right);
 }
 
-void PropulsionController::setMotorsTorqueEstimates(float left, float right)
-{
-	m_blocking_detector.setTorqueEstimates(left, right);
+void PropulsionController::setMotorsTorqueEstimates(float left, float right) {
+  m_blocking_detector.setTorqueEstimates(left, right);
 }
 
 const RobotPose& PropulsionController::targetPose() const { return m_target_pose; }

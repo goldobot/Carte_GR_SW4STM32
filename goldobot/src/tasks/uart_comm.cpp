@@ -63,10 +63,10 @@ void UARTCommTask::taskFunction() {
 
     // write serialized data to uart buffer
     {
-    	uint8_t* ptr;
-    	size_t bytes_to_write = hal::io_map_write(0, &ptr);
-        size_t dtlen = m_serializer.pop_data((unsigned char*)ptr, bytes_to_write);
-        hal::io_unmap_write(0, ptr, dtlen);
+      uint8_t* ptr;
+      size_t bytes_to_write = hal::io_map_write(0, &ptr);
+      size_t dtlen = m_serializer.pop_data((unsigned char*)ptr, bytes_to_write);
+      hal::io_unmap_write(0, ptr, dtlen);
     }
 
     // write serialized data to ftdi uart buffer

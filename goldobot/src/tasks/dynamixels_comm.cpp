@@ -233,4 +233,3 @@ void DynamixelsCommTask::transmitPacket(uint8_t id, DynamixelCommand command, ui
     }
   }
 }
-

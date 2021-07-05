@@ -25,13 +25,8 @@ namespace goldobot {
 namespace hal {
 namespace platform {
 
-const IRQn_Type c_uart_irq_numbers[5] = {
-		USART1_IRQn,
-		USART2_IRQn,
-		USART3_IRQn,
-		UART4_IRQn,
-		UART5_IRQn
-};
+const IRQn_Type c_uart_irq_numbers[5] = {USART1_IRQn, USART2_IRQn, USART3_IRQn, UART4_IRQn,
+                                         UART5_IRQn};
 
 IORequest* g_uart_rx_io_requests[5];
 IORequest* g_uart_tx_io_requests[5];
@@ -53,51 +48,45 @@ using namespace goldobot::hal;
 
 void goldobot_hal_uart_irq_handler(int uart_index) {
   auto& huart = g_uart_handles[uart_index];
- /* bool idle_detected{false};
-  if (HAL_IS_BIT_SET(huart.Instance->CR1, UART_IT_IDLE) &&
-      HAL_IS_BIT_SET(huart.Instance->ISR, UART_FLAG_IDLE)) {
-    __HAL_UART_CLEAR_FLAG(&huart, USART_ICR_IDLECF);
-    idle_detected = true;
-  }*/
+  /* bool idle_detected{false};
+   if (HAL_IS_BIT_SET(huart.Instance->CR1, UART_IT_IDLE) &&
+       HAL_IS_BIT_SET(huart.Instance->ISR, UART_FLAG_IDLE)) {
+     __HAL_UART_CLEAR_FLAG(&huart, USART_ICR_IDLECF);
+     idle_detected = true;
+   }*/
   HAL_UART_IRQHandler(&g_uart_handles[uart_index]);
   /*if (idle_detected) {
     hal_callback_send_from_isr(HalCallback{DeviceType::Uart, static_cast<uint8_t>(uart_index), 3});
   }*/
 }
 
-void goldbot_uart_chain_request(IODevice* io_device, int uart_index, IORequest* req)
-{
-	if(req == nullptr)
-	  {
-		  // should not happen
-		  return;
-	  }
-	  req->remaining = 0;
-	  if(req->callback)
-   {
-	  bool status = req->callback(req, IORequestStatus::Success);
-	  if(status)
-	  {
-		  if(req->rx_ptr != nullptr)
-		  {
-			  io_device->rx_functions->start_request(req, uart_index);
-			  return;
-		  } else if(req->tx_ptr)
-		  {
-			  io_device->tx_functions->start_request(req, uart_index);
+void goldbot_uart_chain_request(IODevice* io_device, int uart_index, IORequest* req) {
+  if (req == nullptr) {
+    // should not happen
+    return;
+  }
+  req->remaining = 0;
+  if (req->callback) {
+    bool status = req->callback(req, IORequestStatus::Success);
+    if (status) {
+      if (req->rx_ptr != nullptr) {
+        io_device->rx_functions->start_request(req, uart_index);
+        return;
+      } else if (req->tx_ptr) {
+        io_device->tx_functions->start_request(req, uart_index);
 
-			  return;
-		  }
-	  }
-   }
-   hal_callback_send_from_isr(HalCallback{DeviceType::Uart, uart_index, 0});
+        return;
+      }
+    }
+  }
+  hal_callback_send_from_isr(HalCallback{DeviceType::Uart, uart_index, 0});
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef* huart) {
   uint8_t uart_index = get_uart_index(huart);
   auto io_device = g_uart_io_devices[uart_index];
   auto req = g_uart_rx_io_requests[uart_index];
-  g_uart_rx_io_requests[uart_index]= nullptr;
+  g_uart_rx_io_requests[uart_index] = nullptr;
 
   goldbot_uart_chain_request(io_device, uart_index, req);
 }
@@ -126,41 +115,36 @@ void hal_uart_callback(int uart_index, int callback_id) {
   UART_HandleTypeDef* huart = &g_uart_handles[uart_index];
 
   // end of transfer for execute
-  if(callback_id == 0)
-  {
-	  auto io_device = g_uart_io_devices[uart_index];
-	  xSemaphoreGive(io_device->rx_semaphore);
+  if (callback_id == 0) {
+    auto io_device = g_uart_io_devices[uart_index];
+    xSemaphoreGive(io_device->rx_semaphore);
   }
   // uart transfer error
-  if(callback_id == 1)
-  {
-	  // disable uart interrupt
-	  	NVIC_DisableIRQ(irqn);
-	  	__DSB();
-	  	__ISB();
+  if (callback_id == 1) {
+    // disable uart interrupt
+    NVIC_DisableIRQ(irqn);
+    __DSB();
+    __ISB();
 
-	   HAL_UART_Abort(huart);
+    HAL_UART_Abort(huart);
 
-	    {
-	  	  auto req = g_uart_rx_io_requests[uart_index];
-	  	  g_uart_rx_io_requests[uart_index] = nullptr;
+    {
+      auto req = g_uart_rx_io_requests[uart_index];
+      g_uart_rx_io_requests[uart_index] = nullptr;
 
-	  	  if(req && req->callback)
-	  	   {
-	  	    req->callback(req, IORequestStatus::Error);
-	  	   }
-	    }
-	    {
-	   	  	  auto req = g_uart_tx_io_requests[uart_index];
-	   	  	  g_uart_tx_io_requests[uart_index] = nullptr;
+      if (req && req->callback) {
+        req->callback(req, IORequestStatus::Error);
+      }
+    }
+    {
+      auto req = g_uart_tx_io_requests[uart_index];
+      g_uart_tx_io_requests[uart_index] = nullptr;
 
-	   	  	  if(req && req->callback)
-	   	  	   {
-	   	  	    req->callback(req, IORequestStatus::Error);
-	   	  	   }
-	   	 }
+      if (req && req->callback) {
+        req->callback(req, IORequestStatus::Error);
+      }
+    }
   }
-
 }
 
 bool uart_start_rx_request(IORequest* req, uint32_t device_index) {
@@ -168,18 +152,17 @@ bool uart_start_rx_request(IORequest* req, uint32_t device_index) {
   auto uart_handle = &g_uart_handles[device_index];
 
   // disable uart interrupt
-  	NVIC_DisableIRQ(irqn);
-  	__DSB();
-  	__ISB();
+  NVIC_DisableIRQ(irqn);
+  __DSB();
+  __ISB();
 
-  	if(g_uart_rx_io_requests[device_index] != nullptr)
-  	   {
-  	 	  if(req->callback) {
-  	 			req->callback(req, IORequestStatus::Error);
-  	 		}
-  	 	    NVIC_EnableIRQ(irqn);
-  	 		return false;
-  	   }
+  if (g_uart_rx_io_requests[device_index] != nullptr) {
+    if (req->callback) {
+      req->callback(req, IORequestStatus::Error);
+    }
+    NVIC_EnableIRQ(irqn);
+    return false;
+  }
 
   g_uart_rx_io_requests[device_index] = req;
 
@@ -187,33 +170,31 @@ bool uart_start_rx_request(IORequest* req, uint32_t device_index) {
 
   auto status = HAL_UART_Receive_IT(uart_handle, req->rx_ptr, req->size);
 
-  if(status != HAL_OK)
-  {
-	  hal_trace_error(HalEvent::UartRxStartErrorHal);
-	  g_uart_rx_io_requests[device_index] = nullptr;
-	  NVIC_EnableIRQ(irqn);
-	  return false;
+  if (status != HAL_OK) {
+    hal_trace_error(HalEvent::UartRxStartErrorHal);
+    g_uart_rx_io_requests[device_index] = nullptr;
+    NVIC_EnableIRQ(irqn);
+    return false;
   }
   NVIC_EnableIRQ(irqn);
   return true;
 }
 
 bool uart_update_rx_request(IORequest* req, uint32_t device_index) {
-	// get uart handle and irq number
-	auto irqn = c_uart_irq_numbers[device_index];
-	auto uart_handle = &g_uart_handles[device_index];
+  // get uart handle and irq number
+  auto irqn = c_uart_irq_numbers[device_index];
+  auto uart_handle = &g_uart_handles[device_index];
 
-	// disable uart interrupt
-	NVIC_DisableIRQ(irqn);
-	__DSB();
-	__ISB();
+  // disable uart interrupt
+  NVIC_DisableIRQ(irqn);
+  __DSB();
+  __ISB();
 
-	req = g_uart_rx_io_requests[device_index];
-	if(req)
-	{
-		req->remaining = uart_handle->RxXferCount;
-		req->callback(req, IORequestStatus::Update);
-	}
+  req = g_uart_rx_io_requests[device_index];
+  if (req) {
+    req->remaining = uart_handle->RxXferCount;
+    req->callback(req, IORequestStatus::Update);
+  }
 
   // reenable interrupt
   NVIC_EnableIRQ(irqn);
@@ -221,22 +202,21 @@ bool uart_update_rx_request(IORequest* req, uint32_t device_index) {
 }
 
 bool uart_start_tx_request(IORequest* req, uint32_t device_index) {
-	auto irqn = c_uart_irq_numbers[device_index];
+  auto irqn = c_uart_irq_numbers[device_index];
   auto uart_handle = &g_uart_handles[device_index];
 
   // disable uart interrupt
-  	NVIC_DisableIRQ(irqn);
-  	__DSB();
-  	__ISB();
+  NVIC_DisableIRQ(irqn);
+  __DSB();
+  __ISB();
 
-  if(g_uart_tx_io_requests[device_index] != nullptr)
-   {
- 	  if(req->callback) {
- 			req->callback(req, IORequestStatus::Error);
- 		}
- 	    NVIC_EnableIRQ(irqn);
- 		return false;
-   }
+  if (g_uart_tx_io_requests[device_index] != nullptr) {
+    if (req->callback) {
+      req->callback(req, IORequestStatus::Error);
+    }
+    NVIC_EnableIRQ(irqn);
+    return false;
+  }
 
   g_uart_tx_io_requests[device_index] = req;
 
@@ -245,223 +225,212 @@ bool uart_start_tx_request(IORequest* req, uint32_t device_index) {
   hal_gpio_pin_set(g_uart_txen_pins[device_index], true);
   auto status = HAL_UART_Transmit_IT(uart_handle, req->tx_ptr, req->size);
 
-  if(status != HAL_OK)
-  {
-	  hal_gpio_pin_set(g_uart_txen_pins[device_index], false);
-	  g_uart_tx_io_requests[device_index] = nullptr;
-	  hal_trace_error(HalEvent::UartTxStartErrorHal);
-	  if(req->callback) {
-	  			req->callback(req, IORequestStatus::Error);
-	  		}
-	  NVIC_EnableIRQ(irqn);
-	  return false;
+  if (status != HAL_OK) {
+    hal_gpio_pin_set(g_uart_txen_pins[device_index], false);
+    g_uart_tx_io_requests[device_index] = nullptr;
+    hal_trace_error(HalEvent::UartTxStartErrorHal);
+    if (req->callback) {
+      req->callback(req, IORequestStatus::Error);
+    }
+    NVIC_EnableIRQ(irqn);
+    return false;
   }
   NVIC_EnableIRQ(irqn);
   return true;
 }
 
 bool uart_update_tx_request(IORequest* req, uint32_t device_index) {
-	// get uart handle and irq number
-		auto irqn = c_uart_irq_numbers[device_index];
-		auto uart_handle = &g_uart_handles[device_index];
+  // get uart handle and irq number
+  auto irqn = c_uart_irq_numbers[device_index];
+  auto uart_handle = &g_uart_handles[device_index];
 
-		// disable uart interrupt
-		NVIC_DisableIRQ(irqn);
-		__DSB();
-		__ISB();
+  // disable uart interrupt
+  NVIC_DisableIRQ(irqn);
+  __DSB();
+  __ISB();
 
-		req = g_uart_tx_io_requests[device_index];
-		if(req)
-		{
-			req->remaining = uart_handle->TxXferCount;
-			req->callback(req, IORequestStatus::Update);
-		}
-	  // reenable interrupt
-	  NVIC_EnableIRQ(irqn);
-	  return true;
+  req = g_uart_tx_io_requests[device_index];
+  if (req) {
+    req->remaining = uart_handle->TxXferCount;
+    req->callback(req, IORequestStatus::Update);
+  }
+  // reenable interrupt
+  NVIC_EnableIRQ(irqn);
+  return true;
 }
 
 bool uart_start_rx_request_dma(IORequest* req, uint32_t device_index) {
-	auto irqn = c_uart_irq_numbers[device_index];
-	auto uart_handle = &g_uart_handles[device_index];
+  auto irqn = c_uart_irq_numbers[device_index];
+  auto uart_handle = &g_uart_handles[device_index];
 
-	// disable uart interrupt
-	NVIC_DisableIRQ(irqn);
-	__DSB();
-	__ISB();
+  // disable uart interrupt
+  NVIC_DisableIRQ(irqn);
+  __DSB();
+  __ISB();
 
-	// fail if trying to start a request while another one is already in progess
-	if(g_uart_rx_io_requests[device_index])
-	{
-		if(req->callback) {
-			req->callback(req, IORequestStatus::Error);
-		}
-		// reenable interrupt
-		NVIC_EnableIRQ(irqn);
-		return false;
-	}
-	  g_uart_rx_io_requests[device_index] = req;
-
-	  req->remaining = req->size;
-
-  auto status = HAL_UART_Receive_DMA(uart_handle, req->rx_ptr, req->size);
-    if(status != HAL_OK)
-    {
-  	  hal_trace_error(HalEvent::UartRxStartErrorHal);
-  	  g_uart_rx_io_requests[device_index] = nullptr;
-  	if(req->callback) {
-  		req->callback(req, IORequestStatus::Error);
-  	}
-  	// reenable interrupt
-  		  NVIC_EnableIRQ(irqn);
-  	  return false;
+  // fail if trying to start a request while another one is already in progess
+  if (g_uart_rx_io_requests[device_index]) {
+    if (req->callback) {
+      req->callback(req, IORequestStatus::Error);
     }
     // reenable interrupt
-    	  NVIC_EnableIRQ(irqn);
-    return true;
+    NVIC_EnableIRQ(irqn);
+    return false;
+  }
+  g_uart_rx_io_requests[device_index] = req;
 
+  req->remaining = req->size;
+
+  auto status = HAL_UART_Receive_DMA(uart_handle, req->rx_ptr, req->size);
+  if (status != HAL_OK) {
+    hal_trace_error(HalEvent::UartRxStartErrorHal);
+    g_uart_rx_io_requests[device_index] = nullptr;
+    if (req->callback) {
+      req->callback(req, IORequestStatus::Error);
+    }
+    // reenable interrupt
+    NVIC_EnableIRQ(irqn);
+    return false;
+  }
+  // reenable interrupt
+  NVIC_EnableIRQ(irqn);
+  return true;
 }
 
 bool uart_update_rx_request_dma(IORequest* req, uint32_t device_index) {
-	// get uart handle and irq number
-		auto irqn = c_uart_irq_numbers[device_index];
-		auto uart_handle = &g_uart_handles[device_index];
+  // get uart handle and irq number
+  auto irqn = c_uart_irq_numbers[device_index];
+  auto uart_handle = &g_uart_handles[device_index];
 
-		// disable uart interrupt
-		NVIC_DisableIRQ(irqn);
-		__DSB();
-		__ISB();
+  // disable uart interrupt
+  NVIC_DisableIRQ(irqn);
+  __DSB();
+  __ISB();
 
-		req = g_uart_rx_io_requests[device_index];
-		if(req)
-		{
-			req->remaining = uart_handle->hdmarx->Instance->CNDTR;
-			req->callback(req, IORequestStatus::Update);
-		}
+  req = g_uart_rx_io_requests[device_index];
+  if (req) {
+    req->remaining = uart_handle->hdmarx->Instance->CNDTR;
+    req->callback(req, IORequestStatus::Update);
+  }
 
-	  // reenable interrupt
-	  NVIC_EnableIRQ(irqn);
-	  return true;
+  // reenable interrupt
+  NVIC_EnableIRQ(irqn);
+  return true;
 }
 
 bool uart_start_tx_request_dma(IORequest* req, uint32_t device_index) {
   auto irqn = c_uart_irq_numbers[device_index];
   auto uart_handle = &g_uart_handles[device_index];
 
-	// disable uart interrupt
-	NVIC_DisableIRQ(irqn);
-	__DSB();
-	__ISB();
+  // disable uart interrupt
+  NVIC_DisableIRQ(irqn);
+  __DSB();
+  __ISB();
 
-  if(g_uart_tx_io_requests[device_index] != nullptr)
-  {
-	  if(req->callback) {
-			req->callback(req, IORequestStatus::Error);
-		}
-	  // reenable interrupt
-	  	  NVIC_EnableIRQ(irqn);
-		return false;
+  if (g_uart_tx_io_requests[device_index] != nullptr) {
+    if (req->callback) {
+      req->callback(req, IORequestStatus::Error);
+    }
+    // reenable interrupt
+    NVIC_EnableIRQ(irqn);
+    return false;
   }
 
   g_uart_tx_io_requests[device_index] = req;
 
   req->remaining = req->size;
-  //req->state = IORequestState::Busy;
+  // req->state = IORequestState::Busy;
 
   hal_gpio_pin_set(g_uart_txen_pins[device_index], true);
   auto status = HAL_UART_Transmit_DMA(uart_handle, req->tx_ptr, req->size);
-    if(status != HAL_OK)
-    {
-    	 hal_gpio_pin_set(g_uart_txen_pins[device_index], false);
-  	  hal_trace_error(HalEvent::UartTxStartErrorHal);
-  	  g_uart_tx_io_requests[device_index] = nullptr;
-  	if(req->callback) {
-			req->callback(req, IORequestStatus::Error);
-		}
-  	// reenable interrupt
-  		  NVIC_EnableIRQ(irqn);
-  	  return false;
+  if (status != HAL_OK) {
+    hal_gpio_pin_set(g_uart_txen_pins[device_index], false);
+    hal_trace_error(HalEvent::UartTxStartErrorHal);
+    g_uart_tx_io_requests[device_index] = nullptr;
+    if (req->callback) {
+      req->callback(req, IORequestStatus::Error);
     }
     // reenable interrupt
-    	  NVIC_EnableIRQ(irqn);
-    return true;
+    NVIC_EnableIRQ(irqn);
+    return false;
+  }
+  // reenable interrupt
+  NVIC_EnableIRQ(irqn);
+  return true;
 }
 
 bool uart_update_tx_request_dma(IORequest* req, uint32_t device_index) {
-	// get uart handle and irq number
-		auto irqn = c_uart_irq_numbers[device_index];
-		auto uart_handle = &g_uart_handles[device_index];
+  // get uart handle and irq number
+  auto irqn = c_uart_irq_numbers[device_index];
+  auto uart_handle = &g_uart_handles[device_index];
 
-		// disable uart interrupt
-		NVIC_DisableIRQ(irqn);
-		__DSB();
-		__ISB();
+  // disable uart interrupt
+  NVIC_DisableIRQ(irqn);
+  __DSB();
+  __ISB();
 
-		req = g_uart_tx_io_requests[device_index];
-		if(req)
-		{
-			req->remaining = uart_handle->hdmatx->Instance->CNDTR;
-			req->callback(req, IORequestStatus::Update);
-		}
+  req = g_uart_tx_io_requests[device_index];
+  if (req) {
+    req->remaining = uart_handle->hdmatx->Instance->CNDTR;
+    req->callback(req, IORequestStatus::Update);
+  }
 
-	  // reenable interrupt
-	  NVIC_EnableIRQ(irqn);
-	  return true;
+  // reenable interrupt
+  NVIC_EnableIRQ(irqn);
+  return true;
 }
 
-bool uart_rx_abort(IORequest* req, uint32_t device_index)
-{
-	auto irqn = c_uart_irq_numbers[device_index];
-	auto uart_handle = &g_uart_handles[device_index];
+bool uart_rx_abort(IORequest* req, uint32_t device_index) {
+  auto irqn = c_uart_irq_numbers[device_index];
+  auto uart_handle = &g_uart_handles[device_index];
 
-	// disable uart interrupt
-	NVIC_DisableIRQ(irqn);
-	__DSB();
-	__ISB();
+  // disable uart interrupt
+  NVIC_DisableIRQ(irqn);
+  __DSB();
+  __ISB();
 
-	req = g_uart_rx_io_requests[device_index] = req;
-	g_uart_rx_io_requests[device_index] = nullptr;
+  req = g_uart_rx_io_requests[device_index] = req;
+  g_uart_rx_io_requests[device_index] = nullptr;
 
-	HAL_UART_AbortReceive(uart_handle);
+  HAL_UART_AbortReceive(uart_handle);
 
-	if(req && req->callback)
-	{
-		req->callback(req, IORequestStatus::Abort);
-	}
+  if (req && req->callback) {
+    req->callback(req, IORequestStatus::Abort);
+  }
 
-	// reenable interrupt
-	NVIC_EnableIRQ(irqn);
-	return true;
+  // reenable interrupt
+  NVIC_EnableIRQ(irqn);
+  return true;
 }
 
-bool uart_tx_abort(IORequest* req, uint32_t device_index)
-{
-	auto irqn = c_uart_irq_numbers[device_index];
-	auto uart_handle = &g_uart_handles[device_index];
+bool uart_tx_abort(IORequest* req, uint32_t device_index) {
+  auto irqn = c_uart_irq_numbers[device_index];
+  auto uart_handle = &g_uart_handles[device_index];
 
-	// disable uart interrupt
-	NVIC_DisableIRQ(irqn);
-	__DSB();
-	__ISB();
+  // disable uart interrupt
+  NVIC_DisableIRQ(irqn);
+  __DSB();
+  __ISB();
 
-	req = g_uart_tx_io_requests[device_index];
-	g_uart_tx_io_requests[device_index] = nullptr;
+  req = g_uart_tx_io_requests[device_index];
+  g_uart_tx_io_requests[device_index] = nullptr;
 
-	HAL_UART_AbortTransmit(uart_handle);
+  HAL_UART_AbortTransmit(uart_handle);
 
-	if(req && req->callback)
-	{
-		req->callback(req, IORequestStatus::Abort);
-	}
+  if (req && req->callback) {
+    req->callback(req, IORequestStatus::Abort);
+  }
 
-	// reenable interrupt
-	NVIC_EnableIRQ(irqn);
-	return true;
+  // reenable interrupt
+  NVIC_EnableIRQ(irqn);
+  return true;
 }
 
-IODeviceFunctions g_uart_device_rx_functions = {&uart_start_rx_request, &uart_update_rx_request, &uart_rx_abort};
+IODeviceFunctions g_uart_device_rx_functions = {&uart_start_rx_request, &uart_update_rx_request,
+                                                &uart_rx_abort};
 
-IODeviceFunctions g_uart_device_tx_functions = {&uart_start_tx_request, &uart_update_tx_request, &uart_tx_abort};
+IODeviceFunctions g_uart_device_tx_functions = {&uart_start_tx_request, &uart_update_tx_request,
+                                                &uart_tx_abort};
 
 IODeviceFunctions g_uart_device_rx_functions_dma = {&uart_start_rx_request_dma,
                                                     &uart_update_rx_request_dma, &uart_rx_abort};

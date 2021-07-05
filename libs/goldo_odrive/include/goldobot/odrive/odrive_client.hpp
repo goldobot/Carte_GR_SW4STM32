@@ -12,16 +12,15 @@ class ODriveClient {
   using endpoint_id_t = uint16_t;
   using sequence_number_t = uint16_t;
 
-  struct Statistics
-  {
-	  uint16_t max_latency{0};
-	  uint16_t timeout_errors{0};
-	  uint32_t uptime;
-	  bool is_synchronized;
+  struct Statistics {
+    uint16_t max_latency{0};
+    uint16_t timeout_errors{0};
+    uint32_t uptime;
+    bool is_synchronized;
   };
 
   struct Config {
-	uint16_t req_global_data_period{200};
+    uint16_t req_global_data_period{200};
     uint16_t req_errors_period{100};
     uint16_t req_axis_states_period{100};
     uint16_t req_telemetry_period{10};
@@ -63,7 +62,6 @@ class ODriveClient {
     bool encoder_is_ready{0};
   };
 
-
  public:
   ODriveClient();
   // Set the exchange on which to queue ODrive packets
@@ -89,54 +87,52 @@ class ODriveClient {
 
   Statistics m_statistics;
 
-  uint16_t m_user_endpoints[4] = {0,0,0,0};
+  uint16_t m_user_endpoints[4] = {0, 0, 0, 0};
   float m_user_endpoints_values[4] = {0, 0, 0, 0};
 
-
- //private:
+  // private:
   enum class EndpointState {
-	  Idle,
-	  ReadRequested, // should read endpoint
-	  ReadPending, // read command sent, waiting for response
-	  WriteRequested, // should write endpoint
-	  WritePending // write command, waiting for response
+    Idle,
+    ReadRequested,   // should read endpoint
+    ReadPending,     // read command sent, waiting for response
+    WriteRequested,  // should write endpoint
+    WritePending     // write command, waiting for response
   };
   enum class AxisRequestId {
-      CurrentState = 0,  // state control
-      RequestedState,
-      ControlMode,
-      InputVel,  // inputs
-      InputTorque,
-      TorqueLimit,
-      PosEstimate,  // telemetry
-      VelEstimate,
-      CurrentIqSetpoint,
-      AxisError,  // errors
-      MotorError,
-      ControllerError,
-      EncoderError,
-      SensorlessEstimatorError,
-      VelGain,  // controller configuration
-      VelIntegratorGain,
-      EncoderIsReady,  // readiness status
-      MotorIsArmed,
-      MotorIsCalibrated,
-      FetThermistorTemperature,  // temperature readings
-      MotorThermistorTemperature,
-      ClearErrors
-    };
+    CurrentState = 0,  // state control
+    RequestedState,
+    ControlMode,
+    InputVel,  // inputs
+    InputTorque,
+    TorqueLimit,
+    PosEstimate,  // telemetry
+    VelEstimate,
+    CurrentIqSetpoint,
+    AxisError,  // errors
+    MotorError,
+    ControllerError,
+    EncoderError,
+    SensorlessEstimatorError,
+    VelGain,  // controller configuration
+    VelIntegratorGain,
+    EncoderIsReady,  // readiness status
+    MotorIsArmed,
+    MotorIsCalibrated,
+    FetThermistorTemperature,  // temperature readings
+    MotorThermistorTemperature,
+    ClearErrors
+  };
 
-    enum class ODrvRequestId: uint8_t
-    {
-  	  VBus = 0,
-  	  IBus,
-  	  Uptime,
-  	  RebootODrive,
-  	  UserEndpoint0,
-  	  UserEndpoint1,
-  	  UserEndpoint2,
-  	  UserEndpoint3
-    };
+  enum class ODrvRequestId : uint8_t {
+    VBus = 0,
+    IBus,
+    Uptime,
+    RebootODrive,
+    UserEndpoint0,
+    UserEndpoint1,
+    UserEndpoint2,
+    UserEndpoint3
+  };
 
   struct AxisPendingRequests {
     float input_vel{0};
@@ -151,45 +147,61 @@ class ODriveClient {
     uint32_t endpoint_states[3];
 
     inline EndpointState endpointState(AxisRequestId req_id) {
-    	int word_idx = static_cast<unsigned>(req_id)/8;
-    	int shift = (static_cast<unsigned>(req_id) % 8) * 4;
-    	return static_cast<EndpointState>((endpoint_states[word_idx] >> shift) & 0xf);
+      int word_idx = static_cast<unsigned>(req_id) / 8;
+      int shift = (static_cast<unsigned>(req_id) % 8) * 4;
+      return static_cast<EndpointState>((endpoint_states[word_idx] >> shift) & 0xf);
     }
 
-    inline void setEndpointState(AxisRequestId req_id, EndpointState state)
-    {
-    	int word_idx = static_cast<unsigned>(req_id)/8;
-    	int shift = (static_cast<unsigned>(req_id) % 8) * 4;
+    inline void setEndpointState(AxisRequestId req_id, EndpointState state) {
+      int word_idx = static_cast<unsigned>(req_id) / 8;
+      int shift = (static_cast<unsigned>(req_id) % 8) * 4;
 
-    	endpoint_states[word_idx] = (endpoint_states[word_idx] &  ~(0xf << shift)) | (static_cast<unsigned>(state) << shift);
+      endpoint_states[word_idx] =
+          (endpoint_states[word_idx] & ~(0xf << shift)) | (static_cast<unsigned>(state) << shift);
     }
-    inline void requestRead(AxisRequestId req_id) {if(endpointState(req_id) == EndpointState::Idle) {setEndpointState(req_id, EndpointState::ReadRequested);}};
-    inline void requestWrite(AxisRequestId req_id) {if(endpointState(req_id) == EndpointState::Idle) {setEndpointState(req_id, EndpointState::WriteRequested);}};
+    inline void requestRead(AxisRequestId req_id) {
+      if (endpointState(req_id) == EndpointState::Idle) {
+        setEndpointState(req_id, EndpointState::ReadRequested);
+      }
+    };
+    inline void requestWrite(AxisRequestId req_id) {
+      if (endpointState(req_id) == EndpointState::Idle) {
+        setEndpointState(req_id, EndpointState::WriteRequested);
+      }
+    };
   };
 
   struct ODrvPendingRequests {
-	  float vbus{0};
-	  float ibus{0};
-	  uint32_t uptime{0};
-	  uint8_t seq_numbers[3];
-	  uint8_t req_timestamps[3];
-	  uint32_t endpoint_states[1];
+    float vbus{0};
+    float ibus{0};
+    uint32_t uptime{0};
+    uint8_t seq_numbers[3];
+    uint8_t req_timestamps[3];
+    uint32_t endpoint_states[1];
 
-	    inline EndpointState endpointState(ODrvRequestId req_id) {
-	    	int word_idx = static_cast<unsigned>(req_id)/8;
-	    	int shift = (static_cast<unsigned>(req_id) % 8) * 4;
-	    	return static_cast<EndpointState>((endpoint_states[word_idx] >> shift) & 0xf);
-	    }
+    inline EndpointState endpointState(ODrvRequestId req_id) {
+      int word_idx = static_cast<unsigned>(req_id) / 8;
+      int shift = (static_cast<unsigned>(req_id) % 8) * 4;
+      return static_cast<EndpointState>((endpoint_states[word_idx] >> shift) & 0xf);
+    }
 
-	    inline void setEndpointState(ODrvRequestId req_id, EndpointState state)
-	    {
-	    	int word_idx = static_cast<unsigned>(req_id)/8;
-	    	int shift = (static_cast<unsigned>(req_id) % 8) * 4;
+    inline void setEndpointState(ODrvRequestId req_id, EndpointState state) {
+      int word_idx = static_cast<unsigned>(req_id) / 8;
+      int shift = (static_cast<unsigned>(req_id) % 8) * 4;
 
-	    	endpoint_states[word_idx] = (endpoint_states[word_idx] &  ~(0xf << shift)) | (static_cast<unsigned>(state) << shift);
-	    }
-	    inline void requestRead(ODrvRequestId req_id) {if(endpointState(req_id) == EndpointState::Idle) {setEndpointState(req_id, EndpointState::ReadRequested);}};
-	    inline void requestWrite(ODrvRequestId req_id) {if(endpointState(req_id) == EndpointState::Idle) {setEndpointState(req_id, EndpointState::WriteRequested);}};
+      endpoint_states[word_idx] =
+          (endpoint_states[word_idx] & ~(0xf << shift)) | (static_cast<unsigned>(state) << shift);
+    }
+    inline void requestRead(ODrvRequestId req_id) {
+      if (endpointState(req_id) == EndpointState::Idle) {
+        setEndpointState(req_id, EndpointState::ReadRequested);
+      }
+    };
+    inline void requestWrite(ODrvRequestId req_id) {
+      if (endpointState(req_id) == EndpointState::Idle) {
+        setEndpointState(req_id, EndpointState::WriteRequested);
+      }
+    };
   };
 
   // req_id two most important bits are 0 for global data, 01 for axis 0, 10 for axis1
@@ -230,7 +242,6 @@ class ODriveClient {
   AxisPendingRequests m_axis_requests[2];
   ODrvPendingRequests m_odrv_requests;
 
-
   Config m_config;
   // when desynchronized (after a timeout or on emergency stop button pushed), read all values from
   // the odrive
@@ -254,7 +265,7 @@ class ODriveClient {
 
   // endpoint ids are relative to axis for axis specific endpoints
   static const uint16_t c_endpoints[22];
- // global endpoints
+  // global endpoints
   static const uint16_t c_odrv_endpoints[4];
 
   // torque_constant in NM/A to convert between torque and motor current

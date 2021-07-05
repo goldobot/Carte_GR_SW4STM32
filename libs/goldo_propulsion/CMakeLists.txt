@@ -8,13 +8,14 @@ add_library(goldo_propulsion STATIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include/goldobot/propulsion/low_level_controller.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/goldobot/propulsion/odometry_config.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/goldobot/propulsion/simple_odometry.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/goldobot/propulsion/speed_controller.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/goldobot/propulsion/speed_controller.hpp
 
   ${CMAKE_CURRENT_SOURCE_DIR}/src/controller.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/low_level_controller.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/robot_simulator.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/simple_odometry.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/speed_controller.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/speed_controller.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/blocking_detector.cpp
   )
 
 target_include_directories(goldo_propulsion PUBLIC

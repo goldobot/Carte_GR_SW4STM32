@@ -6,7 +6,7 @@
 #include "goldobot/propulsion/controller_config.hpp"
 #include "goldobot/propulsion/low_level_controller.hpp"
 #include "goldobot/propulsion/speed_controller.hpp"
-#include "goldobot/propulsion/blocking_detection.hpp"
+#include "goldobot/propulsion/blocking_detector.hpp"
 
 #include <cstdint>
 
