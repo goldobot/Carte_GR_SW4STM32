@@ -61,9 +61,6 @@ void PropulsionTask::doStep() {
     processMessage();
   }
 
-  uint32_t dwt = DWT->CYCCNT;
-  m_cycle_time = dwt - m_last_sample_time;
-  m_last_sample_time = dwt;
   // Update odometry
   if (m_use_simulator) {
     uint16_t left = m_robot_simulator.encoderLeft();
@@ -195,17 +192,6 @@ void PropulsionTask::processMessage() {
     case CommMessageType::PropulsionExecuteReposition:
       onMsgExecuteReposition(msg_size);
       break;
-      // case CommMessageType::PropulsionEnterManualControl:
-      //  m_controller.enterManualControl();
-      //  break;
-      // case CommMessageType::PropulsionExitManualControl:
-      //  m_controller.exitManualControl();
-      //  break;
-      // case CommMessageType::PropulsionSetControlLevels: {
-      //  uint8_t buff[2];
-      // m_message_queue.pop_message((unsigned char*)buff, 2);
-      // m_controller.setControlLevels(buff[0], buff[1]);
-      // } break;
     case CommMessageType::PropulsionSetTargetPose:
       onMsgExecuteSetTargetPose(msg_size);
       break;
@@ -215,6 +201,7 @@ void PropulsionTask::processMessage() {
     default:
       break;
   }
+  sendCommandEvent(sequence_number, CommandEvent::Ack);
   onCommandBegin(sequence_number);
 }
 
@@ -223,6 +210,7 @@ void PropulsionTask::processUrgentMessage() {
   auto message_size = m_urgent_message_queue.message_size();
 
   uint32_t current_time = hal::get_tick_count();
+  uint16_t sequence_number{0};
 
   switch (message_type) {
     case CommMessageType::ODriveResponsePacket: {
@@ -233,8 +221,10 @@ void PropulsionTask::processUrgentMessage() {
     } break;
     case CommMessageType::PropulsionSetPose: {
       float pose[3];
+      auto sequence_number = readCommand(m_urgent_message_queue, &pose, 12);
       m_urgent_message_queue.pop_message((unsigned char*)&pose, 12);
       m_controller.resetPose(pose[0], pose[1], pose[2]);
+      sendCommandEvent(sequence_number, CommandEvent::Ack);
     } break;
     case CommMessageType::OdometryConfigGet: {
       auto config = m_odometry.config();
@@ -259,29 +249,26 @@ void PropulsionTask::processUrgentMessage() {
       m_controller.setConfig(config);
     } break;
     case CommMessageType::PropulsionSetTargetSpeed: {
-      uint16_t sequence_number;
       float target_speed;
-
-      unsigned char* buffs[] = {(unsigned char*)&sequence_number, (unsigned char*)&target_speed};
-      size_t sizes[] = {2, 4};
-
-      m_urgent_message_queue.pop_message(buffs, sizes, 2);
-
+      sequence_number = readCommand(m_urgent_message_queue, &target_speed, 4);
       m_controller.setTargetSpeed(target_speed);
-      sendCommandEvent(sequence_number, CommandEvent::End);
+      sendCommandEvent(sequence_number, CommandEvent::Ack);
     } break;
     case CommMessageType::PropulsionSetAccelerationLimits: {
       float params[4];
-      m_urgent_message_queue.pop_message((unsigned char*)&params, sizeof(params));
+      sequence_number = readCommand(m_urgent_message_queue, params, 16);
       m_controller.setAccelerationLimits(params[0], params[1], params[2], params[3]);
+      sendCommandEvent(sequence_number, CommandEvent::Ack);
     } break;
     case CommMessageType::PropulsionEmergencyStop:
+      sequence_number = readCommand(m_urgent_message_queue, nullptr, 0);
       m_controller.emergencyStop();
-      m_urgent_message_queue.pop_message(nullptr, 0);
+      sendCommandEvent(sequence_number, CommandEvent::Ack);
       break;
     case CommMessageType::PropulsionClearError:
+      sequence_number = readCommand(m_urgent_message_queue, nullptr, 0);
       m_controller.clearError();
-      m_urgent_message_queue.pop_message(nullptr, 0);
+      sendCommandEvent(sequence_number, CommandEvent::Ack);
       break;
     case CommMessageType::PropulsionClearCommandQueue:
       m_urgent_message_queue.pop_message(nullptr, 0);
@@ -289,8 +276,9 @@ void PropulsionTask::processUrgentMessage() {
       break;
     case CommMessageType::PropulsionEnableSet: {
       uint8_t enabled;
-      m_urgent_message_queue.pop_message((unsigned char*)&enabled, 1);
+      sequence_number = readCommand(m_urgent_message_queue, &enabled, 1);
       m_controller.setEnable(enabled);
+      sendCommandEvent(sequence_number, CommandEvent::Ack);
       if (!enabled) {
         clearCommandQueue();
       }
@@ -322,14 +310,6 @@ void PropulsionTask::processUrgentMessage() {
       setMotorsTorqueLimits(pwm[0], pwm[1]);
       sendCommandEvent(sequence_number, CommandEvent::End);
     } break;
-      /* case CommMessageType::PropulsionMeasurePoint: {
-         float buff[4];
-         m_urgent_message_queue.pop_message((unsigned char*)&buff, sizeof(buff));
-         m_odometry.measurePerpendicularPoint(buff[0], buff[1], *(Vector2D*)(buff + 2));
-         auto pose = m_odometry.pose();
-         // Set controller to new pose
-         m_controller.resetPose(pose.position.x, pose.position.y, pose.yaw);
-       } break;*/
     default:
       m_urgent_message_queue.pop_message(nullptr, 0);
       break;
@@ -338,9 +318,10 @@ void PropulsionTask::processUrgentMessage() {
 
 // Command messages
 void PropulsionTask::onMsgExecuteReposition(size_t msg_size) {
-  float speed = *(float*)(exec_traj_buff + 2);
-  float accel = *(float*)(exec_traj_buff + 6);
-  m_controller.executeRepositioning(speed, accel);
+  float params[2]; //distance, speed
+  std::memcpy(params, exec_traj_buff + 2, 8);
+
+  m_controller.executeRepositioning(params[0], params[1]);
 }
 
 void PropulsionTask::onMsgExecuteSetTargetPose(size_t msg_size) {
@@ -481,6 +462,16 @@ void PropulsionTask::setMotorsTorqueLimits(float left, float right) {
         break;
     }
   }
+}
+
+uint16_t PropulsionTask::readCommand(MessageQueue& queue, void* buff, size_t& size)
+{
+	uint16_t sequence_number;
+    unsigned char* buffs[] = {(unsigned char*)&sequence_number, (unsigned char*)buff};
+    size_t sizes[] = {2, size};
+    queue.pop_message(buffs, sizes, 2);
+    size = sizes[1];
+    return sequence_number;
 }
 
 void PropulsionTask::sendCommandEvent(uint16_t sequence_number, CommandEvent event) {

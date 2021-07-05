@@ -54,9 +54,21 @@ void PropulsionController::clearError() {
 bool PropulsionController::commandFinished() { return m_command_finished; }
 
 void PropulsionController::emergencyStop() {
-  if (m_state == State::FollowTrajectory || m_state == State::Rotate) {
-    m_state = State::EmergencyStop;
-  }
+	  switch(m_state)
+	  {
+	  case State::FollowTrajectory:
+		  m_speed_controller.setAccelerationLimits(2,2);
+		  m_speed_controller.setRequestedSpeed(0);
+		  m_emergency_stop = true;
+		  return;
+	  case State::Rotate:
+		  m_speed_controller.setAccelerationLimits(2,2);
+		  m_speed_controller.setRequestedSpeed(0);
+		  m_emergency_stop = true;
+		  return;
+	  default:
+		  return;
+	  }
 }
 
 void PropulsionController::setAccelerationLimits(float accel, float deccel, float angular_accel,
@@ -68,9 +80,19 @@ void PropulsionController::setAccelerationLimits(float accel, float deccel, floa
 }
 
 void PropulsionController::setTargetSpeed(float speed) {
-  // Todo: recompute parameter ramps with new speed
-  if (m_state == State::FollowTrajectory) {
-    m_speed_controller.setRequestedSpeed(speed);
+  if(m_emergency_stop) {
+	  return;
+  }
+  switch(m_state)
+  {
+  case State::FollowTrajectory:
+	  m_speed_controller.setRequestedSpeed(speed);
+	  return;
+  case State::Rotate:
+	  m_speed_controller.setRequestedSpeed(speed);
+	  return;
+  default:
+	  return;
   }
 }
 
@@ -89,18 +111,23 @@ void PropulsionController::update() {
     case State::FollowTrajectory: {
       m_speed_controller.update();
       updateTargetPositions();
-
       if (m_speed_controller.finished()) {
-        m_target_pose = m_final_pose;
-        on_stopped_enter();
+    	on_command_finished();
+      }
+      if(m_emergency_stop && fabsf(m_speed_controller.speed()) < 1e-3f)
+      {
+    	  on_command_finished();
       }
     } break;
     case State::Rotate: {
       m_speed_controller.update();
       updateTargetYaw();
       if (m_speed_controller.finished()) {
-        m_target_pose = m_final_pose;
-        on_stopped_enter();
+    	  on_command_finished();
+      }
+      if(m_emergency_stop && fabsf(m_speed_controller.speed()) < 1e-3f)
+      {
+    	  on_command_finished();
       }
     } break;
     case State::Reposition: {
@@ -114,15 +141,6 @@ void PropulsionController::update() {
     } break;
     case State::ManualControl:
       break;
-    case State::EmergencyStop: {
-      m_low_level_controller.reset();
-#if 1 /* FIXME : DEBUG : GOLDO (why this?!..) */
-      if (fabsf(m_current_pose.speed) < 0.01 && fabsf(m_current_pose.yaw_rate) < 0.1) {
-        m_state = State::Error;
-        m_error = Error::EmergencyStop;
-      }
-#endif
-    } break;
     case State::Error:
       m_low_level_controller.reset();
       break;
@@ -257,6 +275,22 @@ void PropulsionController::on_stopped_enter() {
   m_low_level_controller.m_motor_velocity_limit = m_config.static_pwm_limit;
   m_command_finished = true;
   m_state_changed = true;
+  m_emergency_stop = false;
+}
+
+void PropulsionController::on_command_finished()
+{
+	if(m_emergency_stop)
+	{
+		m_state = State::Error;
+		m_error = Error::EmergencyStop;
+		m_low_level_controller.reset();
+	} else
+	{
+		m_target_pose = m_final_pose;
+		on_stopped_enter();
+	}
+
 }
 
 void PropulsionController::on_reposition_exit() {
@@ -376,17 +410,35 @@ bool PropulsionController::executeRotation(float delta_yaw, float yaw_rate) {
   return true;
 }
 
-bool PropulsionController::executeRepositioning(float speed, float accel) {
+bool PropulsionController::executeRepositioning(float distance, float speed) {
   if (m_state != State::Stopped) {
     return false;
   }
-  m_target_pose.speed = speed;
-  m_direction = speed >= 0 ? Direction::Forward : Direction::Backward;
+
+  // compute target point
+  Vector2D target;
+
+  float ux = cos(m_target_pose.yaw);
+  float uy = sin(m_target_pose.yaw);
+
+  target.x = m_target_pose.position.x + ux * distance;
+  target.y = m_target_pose.position.y + uy * distance;
+
+  Vector2D traj[2];
+  traj[0] = m_target_pose.position;
+  traj[1] = target;
+
+  m_trajectory_buffer.push_segment(traj, 2);
+  initMoveCommand(speed, m_accel, m_deccel);
 
   m_reposition_hit = false;
-
   m_state = State::Reposition;
   m_state_changed = true;
+
+  m_low_level_controller.setPidConfig(m_config.pid_configs[0]);
+  m_low_level_controller.m_longi_control_level = 2;
+  m_low_level_controller.m_yaw_control_level = 2;
+
   return true;
 }
 

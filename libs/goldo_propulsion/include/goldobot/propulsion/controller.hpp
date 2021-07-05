@@ -165,6 +165,7 @@ class PropulsionController {
   Error m_error{Error::None};
   bool m_command_finished{false};
   bool m_state_changed{false};
+  bool m_emergency_stop{false};
 
   float m_accel{1};
   float m_deccel{1};
@@ -198,6 +199,7 @@ class PropulsionController {
   bool detectBlocking();
   void check_tracking_error();
   void on_stopped_enter();
+  void on_command_finished();
   void on_reposition_exit();
 
   // Initialize speed parameters for move command

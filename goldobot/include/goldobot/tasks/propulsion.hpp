@@ -153,6 +153,9 @@ class PropulsionTask : public Task {
   void sendTelemetryMessages();
   void sendODriveStatus();
 
+  uint16_t readCommand(MessageQueue& queue, void* buff, const size_t& size) { size_t size_ = size; return readCommand(queue, buff, size_);}
+  uint16_t readCommand(MessageQueue& queue, void* buff, size_t& size);
+
   void sendCommandEvent(uint16_t sequence_number, CommandEvent event);
   void onCommandBegin(uint16_t sequence_number);
   void onCommandEnd();
