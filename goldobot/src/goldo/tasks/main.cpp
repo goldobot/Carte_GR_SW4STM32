@@ -44,7 +44,7 @@ const char* MainTask::name() const
 int MainTask::remainingMatchTime()
 {
   int elapsed_time = (xTaskGetTickCount() - m_start_of_match_time)/1000;
-  int match_duration = 98;
+  int match_duration = 99;
   return elapsed_time < match_duration ? match_duration - elapsed_time : 0;
 }
 
@@ -141,11 +141,13 @@ void MainTask::taskFunction()
     case MatchState::Match:
       {
         Robot::instance().setRemainingMatchTime(remainingMatchTime());
-        if(remainingMatchTime() == 0 || m_sequence_engine.state() == SequenceState::Idle)
+        if(remainingMatchTime() == 0)
         {
           Robot::instance().setMatchState(MatchState::Idle);
           m_sequence_engine.abortSequence();
-          m_sequence_engine.startSequence(4);
+          uint8_t b = false;
+          Robot::instance().mainExchangeIn().pushMessage(CommMessageType::PropulsionSetEnable, (unsigned char*)&b, 1);
+          Hal::set_motors_enable(0);
         }
       }
       break;
