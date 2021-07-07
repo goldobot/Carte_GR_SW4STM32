@@ -24,6 +24,7 @@ class ServosTask : public Task {
   void checkSynchronization();
 
   void processDynamixelResponse();
+  void onFpgaReadRegStatus();
 
   bool isEnabled(int id) const noexcept { return (m_servo_enabled & (1 << id)) != 0; };
   void setEnabled(int id, bool enabled) noexcept {
@@ -48,6 +49,10 @@ class ServosTask : public Task {
 
   uint32_t m_servo_enabled{0};
   uint32_t m_servo_moving{0};
+
+  bool m_lift_initialized[2] = {false, false};
+  bool m_lift_homed[2] = {false, false};
+  uint8_t m_lift_servo_id[2] = {0,0};
 
   uint32_t m_next_statistics_ts{10};
 };

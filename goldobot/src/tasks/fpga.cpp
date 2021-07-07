@@ -238,6 +238,16 @@ void FpgaTask::process_message() {
       Robot::instance().mainExchangeOut().pushMessage(CommMessageType::FpgaReadRegStatus,
                                                       (unsigned char *)buff, 8);
     } break;
+    case CommMessageType::FpgaReadRegInternal: {
+      unsigned int apb_data = 0xdeadbeef;
+      unsigned char buff[8];
+      m_message_queue.pop_message(buff, 4);
+      uint32_t apb_addr = *(uint32_t *)(buff);
+      goldo_fpga_master_spi_read_word(apb_addr, &apb_data);
+      std::memcpy(buff + 4, (unsigned char *)&apb_data, 4);
+      Robot::instance().exchangeInternal().pushMessage(CommMessageType::FpgaReadRegStatus,
+                                                      (unsigned char *)buff, 8);
+    } break;
 
     case CommMessageType::FpgaWriteReg: {
       unsigned char buff[8];

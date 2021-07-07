@@ -39,7 +39,9 @@ enum class ScopeVariable : uint16_t {
   EncodersLeftCounts,
   EncodersRightCounts,
   BlockingDetectorSpeedEstimate,
-  BlockingDetectorForceEstimate
+  BlockingDetectorForceEstimate,
+  BlockingDetectorSlipSpeedLeft,
+  BlockingDetectorSlipSpeedRight
 
 };
 

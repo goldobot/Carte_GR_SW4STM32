@@ -176,9 +176,14 @@ void UARTCommTask::process_message(uint16_t message_type) {
 }
 
 void UARTCommTask::sendHeartbeat(uint32_t timestamp) {
-  Robot::instance().mainExchangeOutPrio().pushMessage(
-      CommMessageType::Heartbeat, (unsigned char*)&timestamp, sizeof(timestamp));
+	m_out_prio_queue.push_message(CommMessageType::Heartbeat, (unsigned char*)&timestamp, sizeof(timestamp));
 }
+
+struct TaskStats {
+	char task_name[16];
+	uint32_t runtime_counter;
+};
+
 
 void UARTCommTask::sendStatistics() {
   m_statistics.serializer = m_serializer.statistics();
@@ -193,12 +198,21 @@ void UARTCommTask::sendStatistics() {
                                 (unsigned char*)&m_statistics, sizeof(m_statistics));
   memset(&m_statistics, 0, sizeof(m_statistics));
 
+  /*
   TaskStatus_t tasks_status[16];
   unsigned long total_runtime;
   auto num_tasks = uxTaskGetSystemState(tasks_status, 16, &total_runtime);
-  int a = 0;
-  // HeapStats_t heap_stats;
-  //       vPortGetHeapStats(&heap_stats);
-  //       exchange.pushMessage(CommMessageType::HeapStats, (unsigned char*)&heap_stats,
-  //                            sizeof(heap_stats));
+  TaskStats tasks_stats[16];
+  for(unsigned i = 0; i < num_tasks; i++)
+  {
+	  strncpy(tasks_stats[i].task_name, tasks_status[i].pcTaskName, 16);
+	  tasks_stats[i].runtime_counter = tasks_status[i].ulRunTimeCounter;
+  }
+  //m_out_prio_queue.push_message(CommMessageType::TaskStats, (unsigned char*)&tasks_stats,
+  //					  sizeof(TaskStats) * num_tasks);
+*/
+  //HeapStats_t heap_stats;
+  //vPortGetHeapStats(&heap_stats);
+ // m_out_prio_queue.push_message(CommMessageType::HeapStats, (unsigned char*)&heap_stats,
+	//				  sizeof(heap_stats));
 }

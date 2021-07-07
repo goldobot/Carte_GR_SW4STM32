@@ -10,6 +10,7 @@ enum class CommMessageType : uint16_t {
   HeapStats,
   Reset,
   GetNucleoFirmwareVersion,
+  TaskStats,
 
   MatchTimer = 10,
   MatchTimerStart,
@@ -27,6 +28,7 @@ enum class CommMessageType : uint16_t {
   FpgaWriteReg,
   SensorsState,
   FpgaGpioState,
+  FpgaReadRegInternal,
 
   ServoMove = 40,
   ServoMoveMultiple,
@@ -34,6 +36,8 @@ enum class CommMessageType : uint16_t {
   ServoState,
   ServosMoving,
   ServoDisableAll,
+  ServoSetLiftEnable,
+  ServoGetState,
 
   ODriveRequestPacket = 50,
   ODriveResponsePacket,

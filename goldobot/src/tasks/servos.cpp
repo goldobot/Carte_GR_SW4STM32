@@ -104,19 +104,30 @@ void ServosTask::updateServo(int id, uint16_t pos, uint16_t speed, uint8_t torqu
   }
 
   if (config.type == ServoType::GoldoLift) {
-    // enable control
-    uint32_t reg_val_e = enabled ? 0x10000001 : 0x10000001;
-    uint32_t buff[2] = {c_lift_base[config.id], reg_val_e};
-    Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaWriteReg,
-                                                   (unsigned char *)buff, 8);
+	  m_lift_servo_id[config.id] = id;
 
-    if (enabled) {
-      // lift goto_target
-      uint32_t reg_val_p = 0x70000000 | (0x0fffffff & static_cast<uint32_t>(pos));
-      buff[1] = reg_val_p;
-      Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaWriteReg,
-                                                     (unsigned char *)buff, 8);
-    }
+	  if(m_lift_homed[config.id])
+	  {
+    	  // enable control
+		  uint32_t reg_val_e = enabled ? 0x10000001 : 0x10000001;
+		  uint32_t buff[2] = {c_lift_base[config.id], reg_val_e};
+		  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaWriteReg,
+														 (unsigned char *)buff, 8);
+		  if (enabled) {
+		        // lift goto_target
+		        uint32_t reg_val_p = 0x70000000 | (0x0fffffff & static_cast<uint32_t>(pos));
+		        buff[1] = reg_val_p;
+		        Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaWriteReg,
+		                                                       (unsigned char *)buff, 8);
+		      }
+	  }
+	  // read status and position
+	  uint32_t buff[1] = {c_lift_base[config.id] + 4};
+	  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaReadRegInternal,
+													 (unsigned char *)buff, 4);
+	  buff[0] = c_lift_base[config.id] + 8;
+	  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaReadRegInternal,
+	  													 (unsigned char *)buff, 4);
   }
 
   if (config.type == ServoType::DynamixelAX12) {
@@ -267,15 +278,32 @@ void ServosTask::processMessage() {
         // position, speed, load sread response
         int id = seq & 0xff;
         uint16_t position = *reinterpret_cast<uint16_t *>(m_scratchpad + 5);
-        uint16_t speed = *reinterpret_cast<uint16_t *>(m_scratchpad + 7);
-        uint16_t load = *reinterpret_cast<uint16_t *>(m_scratchpad + 9);
-        uint8_t error = m_scratchpad[4];
+        //uint16_t speed = *reinterpret_cast<uint16_t *>(m_scratchpad + 7);
+        //uint16_t load = *reinterpret_cast<uint16_t *>(m_scratchpad + 9);
+        //uint8_t error = m_scratchpad[4];
         m_servos_measured_positions[id] = position;
         if (!isEnabled(id)) {
           m_servos_positions[id] = position;
         }
       }
     } break;
+    case CommMessageType::FpgaReadRegStatus:
+    	m_message_queue.pop_message(m_scratchpad, 8);
+    	onFpgaReadRegStatus();
+    	break;
+    case CommMessageType::ServoSetLiftEnable:
+    {
+    	uint8_t enable;
+        m_message_queue.pop_message(&enable, 1);
+        m_lift_initialized[0] = enable != 0;
+        m_lift_initialized[1] = enable != 0;
+    }
+        break;
+    case CommMessageType::ServoGetState:
+	{
+
+	}
+	break;
     default:
       m_message_queue.pop_message(nullptr, 0);
       break;
@@ -335,4 +363,26 @@ void ServosTask::moveMultiple(int num_servos) {
     }
     m_servos_target_positions[id] = target;
   }
+}
+
+void ServosTask::onFpgaReadRegStatus()
+{
+	uint32_t apb_address = *reinterpret_cast<uint32_t*>(m_scratchpad);
+	uint32_t apb_value = *reinterpret_cast<uint32_t*>(m_scratchpad + 4);
+	for(int i= 0; i < 2; i++)
+	{
+		if(apb_address == c_lift_base[i] + 4)
+		{
+			m_lift_homed[i] = apb_value & 0x1;
+			if (apb_value & 0x01000000)
+			{
+				// todo: check with goldo, hould indicate homing is done
+			}
+		}
+		if(apb_address == c_lift_base[i] + 8)
+		{
+			auto id_ = m_lift_servo_id[i];
+			m_servos_measured_positions[id_] = apb_value & 0xffff;
+		}
+	}
 }

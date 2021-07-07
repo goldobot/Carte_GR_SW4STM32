@@ -11,6 +11,7 @@ class LowPassFilter {
   void setConfig(float period, float frequency);
   void reset(float value);
   float step(float value);
+  float value() const noexcept {return m_value;};
 
  private:
   float m_coeffs[2]{0, 0};

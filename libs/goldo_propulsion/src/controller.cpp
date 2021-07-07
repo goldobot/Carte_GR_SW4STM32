@@ -172,6 +172,14 @@ float PropulsionController::rightMotorTorqueInput() const noexcept {
   return m_low_level_controller.m_left_motor_torque_input;
 }
 
+float PropulsionController::leftMotorTorqueLimit() const noexcept {
+  return m_low_level_controller.m_left_motor_torque_lim;
+}
+
+float PropulsionController::rightMotorTorqueLimit() const noexcept {
+  return m_low_level_controller.m_left_motor_torque_lim;
+}
+
 void PropulsionController::setMotorsVelEstimates(float left, float right) {
   m_blocking_detector.setVelEstimates(left, right);
 }
@@ -263,11 +271,44 @@ void PropulsionController::updateReposition() {
   }
 };
 
+void PropulsionController::check_tracking_error()
+{
+	bool error = false;
+	if(m_state == State::FollowTrajectory || m_state == State::Rotate)
+	{
+		if(fabsf(m_low_level_controller.m_lateral_error) >= 0.2f)
+		{
+			error = true;
+		}
+		if(fabsf(m_low_level_controller.m_longi_error) >= 0.3f)
+		{
+			error = true;
+		}
+		if(fabsf(m_low_level_controller.m_yaw_error) >= 0.5f)
+		{
+			error = true;
+		}
+		if(error)
+		{
+			m_command_finished = true;
+		}
+	}
+	if(error == true)
+	{
+		m_state = State::Error;
+		m_error = Error::TrackingError;
+
+	}
+
+}
+
 void PropulsionController::on_stopped_enter() {
   m_state = State::Stopped;
   m_low_level_controller.setPidConfig(m_config.pid_configs[0]);
   m_low_level_controller.m_longi_control_level = 2;
   m_low_level_controller.m_yaw_control_level = 2;
+  m_low_level_controller.m_left_motor_torque_lim = 0.4; // 10 amps
+  m_low_level_controller.m_right_motor_torque_lim = 0.4; // 10 amps
 
   m_target_pose.speed = 0;
   m_target_pose.yaw_rate = 0;
@@ -284,6 +325,7 @@ void PropulsionController::on_command_finished()
 	{
 		m_state = State::Error;
 		m_error = Error::EmergencyStop;
+		m_command_finished = true;
 		m_low_level_controller.reset();
 	} else
 	{
@@ -332,6 +374,8 @@ void PropulsionController::initMoveCommand(float speed, float accel, float decce
   }
 
   m_low_level_controller.m_motor_velocity_limit = m_config.cruise_pwm_limit;
+  m_low_level_controller.m_left_motor_torque_lim = 0.4; // 10 amps
+  m_low_level_controller.m_right_motor_torque_lim = 0.4; // 10 amps
 }
 
 bool PropulsionController::resetPose(float x, float y, float yaw) {

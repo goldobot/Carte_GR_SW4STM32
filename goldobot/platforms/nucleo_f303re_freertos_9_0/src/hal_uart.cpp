@@ -47,7 +47,7 @@ using namespace goldobot::hal::platform;
 using namespace goldobot::hal;
 
 void goldobot_hal_uart_irq_handler(int uart_index) {
-  auto& huart = g_uart_handles[uart_index];
+  //auto& huart = g_uart_handles[uart_index];
   /* bool idle_detected{false};
    if (HAL_IS_BIT_SET(huart.Instance->CR1, UART_IT_IDLE) &&
        HAL_IS_BIT_SET(huart.Instance->ISR, UART_FLAG_IDLE)) {

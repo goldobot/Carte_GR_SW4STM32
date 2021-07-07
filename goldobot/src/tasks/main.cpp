@@ -59,6 +59,7 @@ void MainTask::taskFunction() {
                                                       (unsigned char*)nullptr, 0);
       Robot::instance().exchangeInternal().pushMessage(CommMessageType::MatchEnd,
                                                        (unsigned char*)nullptr, 0);
+      m_match_timer_running = false;
     }
 
     m_cnt++;

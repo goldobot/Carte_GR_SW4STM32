@@ -103,45 +103,15 @@ size_t IODeviceQueue::map_push(uint8_t** buffer) {
   if (tail > head) {
     retval = tail - head - 1;
   } else if (tail == m_buffer) {
-    // Read data up to end of the buffer
     retval = m_buffer_end - head - 1;
   } else {
     retval = m_buffer_end - head;
   }
-  return retval;
-}
-
-size_t IODeviceQueue::map_push_2(uint8_t** buffer, uint8_t* head) {
-  if (head == nullptr) {
-    head = m_head;
+  auto size_left = m_buffer_end - (head + retval);
+  if(size_left != 0 && size_left < 8)
+  {
+	  retval = retval > 8 ? retval - (8 - size_left) : 0;
   }
-  if (head == m_buffer_end) {
-    head = m_buffer;
-  }
-
-  auto tail = m_tail;
-  if (tail == m_buffer) {
-    tail = m_buffer_end;
-  }
-
-  auto buffer_size = m_buffer_end - m_buffer;
-  auto last_quarter = m_buffer + buffer_size * 3 / 4;
-
-  *buffer = head;
-  size_t retval = 0;
-
-  if (tail > head) {
-    if (tail >= last_quarter) {
-      tail = last_quarter;
-    }
-    retval = tail - head - 1;
-    if (retval < buffer_size / 4) {
-      retval = 0;
-    }
-  } else {
-    retval = m_buffer_end - head;
-  }
-
   return retval;
 }
 

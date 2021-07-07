@@ -19,6 +19,8 @@ void LowLevelController::reset() {
   m_right_motor_velocity_input = 0;
   m_left_motor_torque_input = 0;
   m_right_motor_torque_input = 0;
+  m_left_motor_torque_lim = 0;
+  m_right_motor_torque_lim = 0;
 }
 
 void LowLevelController::setConfig(const PropulsionLowLevelControllerConfig& config) {

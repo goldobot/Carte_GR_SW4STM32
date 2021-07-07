@@ -18,7 +18,9 @@ MessageQueue::MessageQueue(unsigned char* buffer, size_t size)
 bool MessageQueue::push_message(CommMessageType message_type, const unsigned char* buffer,
                                 size_t msg_size) {
   std::unique_lock<detail::LockerMutex> lock(m_mutex);
+
   // Reject message if buffer is full
+  auto available_cap = available_capacity();
   if (msg_size > available_capacity()) {
     return false;
   }
@@ -41,12 +43,19 @@ bool MessageQueue::push_message(CommMessageType message_type, const unsigned cha
 }
 
 void MessageQueue::push_data(const unsigned char* buffer, size_t size) {
-  for (unsigned i = 0; i < size; i++) {
-    m_buffer[m_end_index] = buffer[i];
-    m_end_index++;
-    if (m_end_index == m_buffer_size) {
-      m_end_index = 0;
-    }
+
+  size_t idx = m_end_index;
+  size_t idx_end = m_end_index + size;
+
+  if (idx_end < m_buffer_size) {
+    std::memcpy(m_buffer + idx, buffer, size);
+    m_end_index = idx_end;
+  } else {
+	auto s1 = m_buffer_size - idx;
+	auto s2 = idx_end - m_buffer_size;
+    std::memcpy(m_buffer + idx, buffer, s1);
+    std::memcpy(m_buffer, buffer + s1, s2);
+    m_end_index = s2;
   }
   m_statistics.bytes_pushed += size;
 }
@@ -67,23 +76,26 @@ MessageQueue::Statistics MessageQueue::statistics() {
 }
 
 void MessageQueue::read_data(size_t start_index, unsigned char* buffer, size_t size) {
-  size_t i = 0;
   size_t idx = start_index;
   size_t idx_end = start_index + size;
 
   if (idx_end < m_buffer_size) {
     std::memcpy(buffer, &m_buffer[idx], size);
   } else {
-    std::memcpy(buffer, &m_buffer[idx], m_buffer_size - idx);
-    std::memcpy(buffer + m_buffer_size - idx, m_buffer, idx_end - m_buffer_size);
+	size_t s1 = m_buffer_size - idx;
+	size_t s2 = idx_end - m_buffer_size;
+
+    std::memcpy(buffer, &m_buffer[idx], s1);
+    std::memcpy(buffer + m_buffer_size - idx, m_buffer, s2);
   }
 }
 
 void MessageQueue::pop_data(size_t size) {
-  m_begin_index += size;
-  if (m_begin_index >= m_buffer_size) {
-    m_begin_index -= m_buffer_size;
+  size_t index = m_begin_index + size;
+  while (index >= m_buffer_size) {
+	  index -= m_buffer_size;
   }
+  m_begin_index = index;
 }
 
 size_t MessageQueue::pop_message(unsigned char* buffer, size_t size) {
@@ -102,18 +114,7 @@ size_t MessageQueue::pop_message(unsigned char* buffer, size_t size) {
   }
 
   pop_data(m_message_size);
-
-  if (m_begin_index != m_end_index) {
-    uint16_t buff[2];
-    read_data(m_begin_index, (unsigned char*)buff, 4);
-    pop_data(4);
-    m_message_type = static_cast<CommMessageType>(buff[0]);
-    m_message_size = buff[1];
-  } else {
-    m_message_ready = false;
-    m_message_size = 0;
-    m_message_type = static_cast<CommMessageType>(0);
-  }
+  load_next_message();
   return size;
 }
 
@@ -142,12 +143,17 @@ bool MessageQueue::pop_message(unsigned char** buffers, size_t* sizes, int num_b
 		  pop_data(size);
 	  }
   }
-
   pop_data(remaining_size);
+  load_next_message();
+  return true;
+}
 
+void MessageQueue::load_next_message()
+{
   if (m_begin_index != m_end_index) {
     uint16_t buff[2];
     read_data(m_begin_index, (unsigned char*)buff, 4);
+
     pop_data(4);
     m_message_type = static_cast<CommMessageType>(buff[0]);
     m_message_size = buff[1];
@@ -156,7 +162,6 @@ bool MessageQueue::pop_message(unsigned char** buffers, size_t* sizes, int num_b
     m_message_size = 0;
     m_message_type = static_cast<CommMessageType>(0);
   }
-  return true;
 }
 
 size_t MessageQueue::buffer_capacity() const noexcept {
@@ -167,7 +172,6 @@ size_t MessageQueue::buffer_capacity() const noexcept {
 
 size_t MessageQueue::available_capacity() const {
   auto buff_capacity = buffer_capacity();
-  size_t retval = buff_capacity > 4 ? buff_capacity - 4 : 0;
-  return retval;
+  return buff_capacity > 4 ? buff_capacity - 4 : 0;
 }
 }  // namespace goldobot

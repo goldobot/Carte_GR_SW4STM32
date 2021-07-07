@@ -98,16 +98,20 @@ void PropulsionTask::doStep() {
 
   if (m_controller.state() != PropulsionController::State::Inactive) {
     setMotorsPwm(m_controller.leftMotorVelocityInput(), m_controller.rightMotorVelocityInput());
+    setMotorsTorqueLimits(m_controller.leftMotorTorqueLimit(), m_controller.rightMotorTorqueLimit());
   }
 
   if (m_config.motor_controller_type == MotorControllerType::ODriveUART) {
     m_odrive_client.doStep(hal::get_tick_count());
-    auto& telemetry = m_odrive_client.telemetry();
-    float torque_constant = 0.04;
-    m_controller.setMotorsVelEstimates(-telemetry.axis[0].vel_estimate,
-                                       telemetry.axis[1].vel_estimate);
-    m_controller.setMotorsTorqueEstimates(-telemetry.axis[0].current_iq_setpoint * torque_constant,
-                                          telemetry.axis[1].current_iq_setpoint * torque_constant);
+    if(!m_use_simulator)
+    {
+    	auto& telemetry = m_odrive_client.telemetry();
+		float torque_constant = 0.04;
+		m_controller.setMotorsVelEstimates(-telemetry.axis[0].vel_estimate,
+										   telemetry.axis[1].vel_estimate);
+		m_controller.setMotorsTorqueEstimates(-telemetry.axis[0].current_iq_setpoint * torque_constant,
+											  telemetry.axis[1].current_iq_setpoint * torque_constant);
+    }
 
     if (current_time >= m_next_odrive_status_ts) {
       sendODriveStatus();
@@ -222,7 +226,6 @@ void PropulsionTask::processUrgentMessage() {
     case CommMessageType::PropulsionSetPose: {
       float pose[3];
       auto sequence_number = readCommand(m_urgent_message_queue, &pose, 12);
-      m_urgent_message_queue.pop_message((unsigned char*)&pose, 12);
       m_controller.resetPose(pose[0], pose[1], pose[2]);
       sendCommandEvent(sequence_number, CommandEvent::Ack);
     } break;
@@ -476,22 +479,16 @@ uint16_t PropulsionTask::readCommand(MessageQueue& queue, void* buff, size_t& si
 
 void PropulsionTask::sendCommandEvent(uint16_t sequence_number, CommandEvent event) {
   uint8_t buff[4];  // sequence_number, status, error
+  *(uint16_t*)(buff) = sequence_number;
   buff[2] = static_cast<uint8_t>(event);
   buff[3] = static_cast<uint8_t>(m_controller.error());
-  *(uint16_t*)(buff) = sequence_number;
   Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::PropulsionCommandEvent, buff,
                                                       4);
 }
 
 void PropulsionTask::onCommandBegin(uint16_t sequence_number) {
   m_current_command_sequence_number = sequence_number;
-
-  uint8_t buff[4];  // sequence_number, status, error
-  buff[2] = static_cast<uint8_t>(CommandEvent::Begin);
-  buff[3] = static_cast<uint8_t>(m_controller.error());
-  *(uint16_t*)(buff) = m_current_command_sequence_number;
-  Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::PropulsionCommandEvent, buff,
-                                                      4);
+  sendCommandEvent(sequence_number, CommandEvent::Begin);
   m_is_executing_command = true;
 }
 
@@ -615,6 +612,10 @@ float PropulsionTask::scopeGetVariable(ScopeVariable type) {
       return m_controller.m_blocking_detector.m_speed_estimate;
     case ScopeVariable::BlockingDetectorForceEstimate:
       return m_controller.m_blocking_detector.m_force_estimate;
+    case ScopeVariable::BlockingDetectorSlipSpeedLeft:
+      return m_controller.m_blocking_detector.m_slip_speeds[0].value();
+    case ScopeVariable::BlockingDetectorSlipSpeedRight:
+      return m_controller.m_blocking_detector.m_slip_speeds[1].value();
     default:
       return 0;
   }

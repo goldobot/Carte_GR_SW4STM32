@@ -117,11 +117,6 @@ void CommDeserializer::do_parse() {
         size_t idx = m_begin_index;
         unsigned j = 0;
         while (j < sizeof(magic)) {
-          if (idx == m_end_index) {
-            int a = size();
-            int b = sizeof(magic) - 1;
-            int c = 1;
-          }
           if (m_buffer[idx] == magic[j]) {
             j++;
             idx++;
