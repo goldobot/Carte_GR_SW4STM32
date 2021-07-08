@@ -16,6 +16,7 @@ using namespace goldobot;
 bool goldo_hal_read_encoders(uint16_t& left, uint16_t& right);
 
 unsigned char __attribute__((section(".ccmram"))) PropulsionTask::s_message_queue_buffer[1024];
+unsigned char __attribute__((section(".ccmram"))) PropulsionTask::s_odrive_message_queue_buffer[256];
 unsigned char __attribute__((section(".ccmram")))
 PropulsionTask::s_urgent_message_queue_buffer[1024];
 
@@ -25,6 +26,7 @@ unsigned char PropulsionTask::s_scratchpad[512];
 PropulsionTask::PropulsionTask()
     : m_message_queue(s_message_queue_buffer, sizeof(s_message_queue_buffer)),
       m_urgent_message_queue(s_urgent_message_queue_buffer, sizeof(s_urgent_message_queue_buffer)),
+	  m_odrive_message_queue(s_odrive_message_queue_buffer, sizeof(s_odrive_message_queue_buffer)),
       m_controller(&m_odometry)
 
 {}
@@ -50,12 +52,13 @@ void PropulsionTask::doStep() {
   uint32_t cyccnt_begin = DWT->CYCCNT;
   auto current_time = hal::get_tick_count();
 
-  // Process urgent messages
+  // Process messages
   while (m_urgent_message_queue.message_ready()) {
     processUrgentMessage();
   }
-
-  // Process command messages
+  while (m_odrive_message_queue.message_ready()) {
+    processODriveMessage();
+  }
   while (m_message_queue.message_ready() &&
          m_controller.state() == PropulsionController::State::Stopped) {
     processMessage();
@@ -124,12 +127,18 @@ void PropulsionTask::doStep() {
     m_robot_simulator.doStep();
   }
 
+  // send task statistics every second
+  if (current_time >= m_next_statistics_ts) {
+    sendStatistics();
+    m_next_statistics_ts = std::max(m_next_statistics_ts + 1000, current_time);
+  }
+
   sendTelemetryMessages();
   updateScope();
 
   uint32_t cyccnt_end = DWT->CYCCNT;
   uint32_t cycles_count = cyccnt_end - cyccnt_begin;
-  m_cycles_max = std::max(m_cycles_max, cycles_count);
+  m_statistics.max_cycles = std::max(m_statistics.max_cycles, cycles_count);
 }
 
 void PropulsionTask::sendTelemetryMessages() {
@@ -164,6 +173,19 @@ void PropulsionTask::sendTelemetryMessages() {
   }
 }
 
+void PropulsionTask::sendStatistics() {
+  uint32_t current_time = hal::get_tick_count();
+
+  m_statistics.odrive_queue = m_odrive_message_queue.statistics();
+  m_statistics.queue = m_message_queue.statistics();
+  m_statistics.urgent_queue = m_urgent_message_queue.statistics();
+
+    Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionTaskStatistics,
+                                                    (unsigned char*)&m_statistics, sizeof(m_statistics));
+    m_statistics = Statistics();
+
+}
+
 void PropulsionTask::processMessage() {
   auto message_type = (CommMessageType)m_message_queue.message_type();
   auto msg_size = m_message_queue.message_size();
@@ -187,6 +209,9 @@ void PropulsionTask::processMessage() {
     case CommMessageType::PropulsionExecutePointTo:
       onMsgExecutePointTo(msg_size);
       break;
+    case CommMessageType::PropulsionExecutePointToBack:
+         onMsgExecutePointToBack(msg_size);
+         break;
     case CommMessageType::PropulsionExecuteFaceDirection:
       onMsgExecuteFaceDirection(msg_size);
       break;
@@ -209,6 +234,23 @@ void PropulsionTask::processMessage() {
   onCommandBegin(sequence_number);
 }
 
+
+void PropulsionTask::processODriveMessage() {
+  auto message_type = (CommMessageType)m_odrive_message_queue.message_type();
+
+  uint32_t current_time = hal::get_tick_count();
+
+  switch (message_type) {
+      case CommMessageType::ODriveResponsePacket: {
+        uint8_t buff[16];
+        auto message_size = m_odrive_message_queue.pop_message((unsigned char*)&buff, 16);
+        uint16_t seq = *(uint16_t*)buff & 0x3fff;
+        m_odrive_client.processResponse(current_time, seq, buff + 2, message_size - 2);
+      } break;
+      default:
+    	  break;
+  }
+}
 void PropulsionTask::processUrgentMessage() {
   auto message_type = (CommMessageType)m_urgent_message_queue.message_type();
   auto message_size = m_urgent_message_queue.message_size();
@@ -217,12 +259,6 @@ void PropulsionTask::processUrgentMessage() {
   uint16_t sequence_number{0};
 
   switch (message_type) {
-    case CommMessageType::ODriveResponsePacket: {
-      uint8_t buff[6];
-      m_urgent_message_queue.pop_message((unsigned char*)&buff, 16);
-      uint16_t seq = *(uint16_t*)buff & 0x3fff;
-      m_odrive_client.processResponse(current_time, seq, buff + 2, message_size - 2);
-    } break;
     case CommMessageType::PropulsionSetPose: {
       float pose[3];
       auto sequence_number = readCommand(m_urgent_message_queue, &pose, 12);
@@ -368,6 +404,12 @@ void PropulsionTask::onMsgExecutePointTo(size_t msg_size) {
   m_controller.executePointTo(point, yaw_rate);
 }
 
+void PropulsionTask::onMsgExecutePointToBack(size_t msg_size) {
+  Vector2D point = *(Vector2D*)(exec_traj_buff + 2);
+  float yaw_rate = *(float*)(exec_traj_buff + 10);
+  m_controller.executePointToBack(point, yaw_rate);
+}
+
 void PropulsionTask::onMsgExecuteTrajectory(size_t msg_size) {
   // todo: send error message if message size is too large
   if (msg_size <= 136) {
@@ -493,14 +535,12 @@ void PropulsionTask::onCommandBegin(uint16_t sequence_number) {
 }
 
 void PropulsionTask::onCommandEnd() {
-  uint8_t buff[4];  // sequence_number, status, error
-  buff[2] = static_cast<uint8_t>(m_controller.state() != PropulsionController::State::Error
-                                     ? CommandEvent::End
-                                     : CommandEvent::Error);
-  buff[3] = static_cast<uint8_t>(m_controller.error());
-  *(uint16_t*)(buff) = m_current_command_sequence_number;
-  Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::PropulsionCommandEvent, buff,
-                                                      4);
+  auto event = m_controller.state() != PropulsionController::State::Error
+          ? CommandEvent::End
+          : CommandEvent::Error;
+
+  sendCommandEvent(m_current_command_sequence_number, event);
+
   m_is_executing_command = false;
   if (m_controller.state() == PropulsionController::State::Error) {
   }
@@ -508,13 +548,7 @@ void PropulsionTask::onCommandEnd() {
 
 void PropulsionTask::onCommandCancel(uint16_t sequence_number) {
   m_current_command_sequence_number = sequence_number;
-
-  uint8_t buff[4];  // sequence_number, status, error
-  buff[2] = static_cast<uint8_t>(CommandEvent::Cancel);
-  buff[3] = static_cast<uint8_t>(m_controller.error());
-  *(uint16_t*)(buff) = m_current_command_sequence_number;
-  Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::PropulsionCommandEvent, buff,
-                                                      4);
+  sendCommandEvent(m_current_command_sequence_number, CommandEvent::Cancel);
   m_is_executing_command = false;
 }
 
@@ -736,7 +770,7 @@ void PropulsionTask::taskFunction() {
   Robot::instance().mainExchangeIn().subscribe({210, 219, &m_urgent_message_queue});
 
   // orive responses
-  Robot::instance().exchangeInternal().subscribe({51, 51, &m_urgent_message_queue});
+  Robot::instance().exchangeInternal().subscribe({51, 51, &m_odrive_message_queue});
 
   // Set task to high
   set_priority(4);

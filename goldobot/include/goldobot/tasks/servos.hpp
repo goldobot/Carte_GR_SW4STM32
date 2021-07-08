@@ -15,6 +15,8 @@ class ServosTask : public Task {
 
  private:
   void processMessage();
+  void processMessageCommand();
+
   void updateServo(int id, uint16_t pos, uint16_t speed, uint8_t torque);
 
   void publishServoState(int id, bool state);
@@ -28,16 +30,18 @@ class ServosTask : public Task {
 
   bool isEnabled(int id) const noexcept { return (m_servo_enabled & (1 << id)) != 0; };
   void setEnabled(int id, bool enabled) noexcept {
-    m_servo_enabled = (m_servo_enabled & (0xffff - (1 << id))) | (enabled ? (1 << id) : 0);
+    m_servo_enabled = ((m_servo_enabled & (0xffff - (1 << id)))) | (enabled ? (1 << id) : 0);
   };
 
   MessageQueue m_message_queue;
-  unsigned char m_message_queue_buffer[128];
+  MessageQueue m_message_queue_commands;
+  unsigned char m_message_queue_buffer[256];
+  unsigned char m_message_queue_commands_buffer[256];
   uint8_t m_scratchpad[128];
 
   ServosConfig* m_servos_config{nullptr};
   static constexpr int c_max_num_servos = 32;
-  static constexpr int c_update_period = 20;  // update period in ms
+  static constexpr int c_update_period = 30;  // update period in ms
   static constexpr uint32_t c_fpga_servos_base = 0x80008404;
   static const uint32_t c_lift_base[2];
 

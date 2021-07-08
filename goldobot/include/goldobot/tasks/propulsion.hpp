@@ -82,10 +82,14 @@ class PropulsionTask : public Task {
     uint16_t odrive_status_period_ms{500};
   };
 
+  struct Statistics {
+      uint32_t max_cycles{0};
+      MessageQueue::Statistics queue;
+      MessageQueue::Statistics urgent_queue;
+      MessageQueue::Statistics odrive_queue;
+    };
+
  public:
-  uint32_t m_last_sample_time{0};
-  uint32_t m_cycle_time;
-  uint32_t m_cycle_time2;
 
   PropulsionTask();
   const char* name() const override;
@@ -101,6 +105,7 @@ class PropulsionTask : public Task {
  private:
   MessageQueue m_message_queue;
   MessageQueue m_urgent_message_queue;
+  MessageQueue m_odrive_message_queue;
 
   SimpleOdometry m_odometry;
   PropulsionController m_controller;
@@ -120,14 +125,16 @@ class PropulsionTask : public Task {
   uint32_t m_next_telemetry_ex_ts{0};
   uint32_t m_next_pose_ts{0};
   uint32_t m_next_odrive_status_ts{0};
+  uint32_t m_next_statistics_ts{0};
+
+  Statistics m_statistics;
 
   uint16_t m_current_command_sequence_number{0};
   bool m_is_executing_command{false};
 
-  uint32_t m_cycles_max{0};
-
   void doStep();
   void processMessage();
+  void processODriveMessage();
   void processUrgentMessage();
   void taskFunction() override;
 
@@ -135,6 +142,7 @@ class PropulsionTask : public Task {
   void onMsgExecuteRotation(size_t msg_size);
   void onMsgExecuteFaceDirection(size_t msg_size);
   void onMsgExecutePointTo(size_t msg_size);
+  void onMsgExecutePointToBack(size_t msg_size);
   void onMsgExecuteMoveTo(size_t msg_size);
   void onMsgExecuteTrajectory(size_t msg_size);
   void onMsgExecuteReposition(size_t msg_size);
@@ -154,6 +162,7 @@ class PropulsionTask : public Task {
 
   void sendTelemetryMessages();
   void sendODriveStatus();
+  void sendStatistics();
 
   uint16_t readCommand(MessageQueue& queue, void* buff, const size_t& size) { size_t size_ = size; return readCommand(queue, buff, size_);}
   uint16_t readCommand(MessageQueue& queue, void* buff, size_t& size);
@@ -178,6 +187,7 @@ class PropulsionTask : public Task {
 
   static unsigned char s_message_queue_buffer[1024];
   static unsigned char s_urgent_message_queue_buffer[1024];
+  static unsigned char s_odrive_message_queue_buffer[256];
   static unsigned char exec_traj_buff[256];  // > 12 for traj params + 16*8 for points = 134
   static unsigned char s_scratchpad[512];
 };

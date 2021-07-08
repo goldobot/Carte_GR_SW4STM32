@@ -10,18 +10,16 @@ using namespace goldobot;
 const uint32_t ServosTask::c_lift_base[2] = {0x80008500, 0x80008510};
 
 ServosTask::ServosTask()
-    : m_message_queue(m_message_queue_buffer, sizeof(m_message_queue_buffer)) {}
+    : m_message_queue(m_message_queue_buffer, sizeof(m_message_queue_buffer)),
+	  m_message_queue_commands(m_message_queue_commands_buffer, sizeof(m_message_queue_commands_buffer)){}
 
 const char *ServosTask::name() const { return "servos"; }
 
 void ServosTask::taskFunction() {
   set_priority(4);
-  Robot::instance().mainExchangeIn().subscribe({40, 49, &m_message_queue});
+  Robot::instance().mainExchangeIn().subscribe({40, 49, &m_message_queue_commands});
   Robot::instance().exchangeInternal().subscribe({31, 31, &m_message_queue});
   Robot::instance().exchangeInternal().subscribe({61, 61, &m_message_queue});
-
-  // /debug
-  m_servo_enabled = 0xffffffff;
 
   m_servos_config = Robot::instance().servosConfig();
 
@@ -37,6 +35,9 @@ void ServosTask::taskFunction() {
     while (m_message_queue.message_ready()) {
       processMessage();
     }
+    while (m_message_queue_commands.message_ready()) {
+      processMessageCommand();
+    }
 
     // Recompute servo targets
     float delta_t = c_update_period * 1e-3;
@@ -46,7 +47,6 @@ void ServosTask::taskFunction() {
     for (int i = 0; i < m_servos_config->num_servos; i++) {
       // skip uninitialized servos
       if (m_servos_positions[i] < 0) {
-        setEnabled(i, false);
         updateServo(i, static_cast<uint16_t>(m_servos_positions[i]), m_servos_speeds[i],
                     m_servos_torques[i]);
         continue;
@@ -54,19 +54,21 @@ void ServosTask::taskFunction() {
 
       bool was_moving = false;
 
-      auto position = m_servos_positions[i];
-      auto target_position = m_servos_target_positions[i];
+      if(isEnabled(i)) {
+        auto position = m_servos_positions[i];
+        auto target_position = m_servos_target_positions[i];
 
-      if (position > target_position) {
-        m_servos_positions[i] =
-            std::max<float>(target_position, position - m_servos_speeds[i] * delta_t);
-        was_moving = true;
-      }
+        if (position > target_position) {
+          m_servos_positions[i] =
+              std::max<float>(target_position, position - m_servos_speeds[i] * delta_t);
+          was_moving = true;
+        }
 
-      if (position < target_position) {
-        m_servos_positions[i] =
-            std::min<float>(target_position, position + m_servos_speeds[i] * delta_t);
-        was_moving = true;
+        if (position < target_position) {
+          m_servos_positions[i] =
+              std::min<float>(target_position, position + m_servos_speeds[i] * delta_t);
+          was_moving = true;
+        }
       }
       m_servo_moving |= was_moving ? (1 << i) : 0;
       if (was_moving && m_servos_positions[i] == m_servos_target_positions[i]) {
@@ -225,21 +227,56 @@ void ServosTask::processMessage() {
   auto message_type = (CommMessageType)m_message_queue.message_type();
 
   switch (message_type) {
+    case CommMessageType::DynamixelsResponse: {
+      auto msg_size = m_message_queue.pop_message(m_scratchpad, sizeof(m_scratchpad));
+      uint16_t seq = *reinterpret_cast<uint16_t *>(m_scratchpad);
+      if (msg_size == 11) {
+        // position, speed, load sread response
+        int id = seq & 0xff;
+        uint16_t position = *reinterpret_cast<uint16_t *>(m_scratchpad + 5);
+        //uint16_t speed = *reinterpret_cast<uint16_t *>(m_scratchpad + 7);
+        //uint16_t load = *reinterpret_cast<uint16_t *>(m_scratchpad + 9);
+        //uint8_t error = m_scratchpad[4];
+        m_servos_measured_positions[id] = position;
+        if(m_servos_positions[id] < 0)
+        {
+        	m_servos_positions[id] = position;
+        	m_servos_target_positions[id] = position;
+        }
+        if (!isEnabled(id)) {
+          m_servos_positions[id] = position;
+        }
+      }
+    } break;
+    case CommMessageType::FpgaReadRegStatus:
+    	m_message_queue.pop_message(m_scratchpad, 8);
+    	onFpgaReadRegStatus();
+    	break;
+    default:
+      m_message_queue.pop_message(nullptr, 0);
+      break;
+  };
+}
+
+void ServosTask::processMessageCommand() {
+  auto message_type = (CommMessageType)m_message_queue_commands.message_type();
+
+  switch (message_type) {
     case CommMessageType::ServoDisableAll:
       for (int i = 0; i < m_servos_config->num_servos; i++) {
         m_servo_enabled = 0;
       }
-      m_message_queue.pop_message(nullptr, 0);
+      m_message_queue_commands.pop_message(nullptr, 0);
       break;
     case CommMessageType::ServoSetEnable: {
-      m_message_queue.pop_message(m_scratchpad, sizeof(m_scratchpad));
+    	m_message_queue_commands.pop_message(m_scratchpad, sizeof(m_scratchpad));
       int id = m_scratchpad[0];
       setEnabled(id, m_scratchpad[1] != 0);
     } break;
 
     case CommMessageType::ServoMove: {
       unsigned char buff[5];
-      m_message_queue.pop_message(buff, 5);
+      m_message_queue_commands.pop_message(buff, 5);
       int servo_id = buff[0];
       int pwm = *(uint16_t *)(buff + 1);
       int target_speed = *(uint16_t *)(buff + 3);
@@ -253,6 +290,7 @@ void ServosTask::processMessage() {
       if (m_servos_positions[servo_id] < 0) {
         m_servos_positions[servo_id] = pwm;
       }
+
       // Send message when servo start moving
       bool is_moving = m_servos_positions[servo_id] >= 0 &&
                        m_servos_target_positions[servo_id] != m_servos_positions[servo_id];
@@ -265,47 +303,37 @@ void ServosTask::processMessage() {
           (m_servos_config->servos[servo_id].max_speed * target_speed) / 100;
     } break;
     case CommMessageType::ServoMoveMultiple: {
-      auto msg_size = m_message_queue.pop_message(m_scratchpad, sizeof(m_scratchpad));
+      auto msg_size = m_message_queue_commands.pop_message(m_scratchpad, sizeof(m_scratchpad));
       moveMultiple((msg_size - 4) / 3);
       // send ack with sequence number
       Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::ServoMoveMultiple,
                                                           (unsigned char *)m_scratchpad, 2);
     } break;
-    case CommMessageType::DynamixelsResponse: {
-      auto msg_size = m_message_queue.pop_message(m_scratchpad, sizeof(m_scratchpad));
-      uint16_t seq = *reinterpret_cast<uint16_t *>(m_scratchpad);
-      if (msg_size == 11) {
-        // position, speed, load sread response
-        int id = seq & 0xff;
-        uint16_t position = *reinterpret_cast<uint16_t *>(m_scratchpad + 5);
-        //uint16_t speed = *reinterpret_cast<uint16_t *>(m_scratchpad + 7);
-        //uint16_t load = *reinterpret_cast<uint16_t *>(m_scratchpad + 9);
-        //uint8_t error = m_scratchpad[4];
-        m_servos_measured_positions[id] = position;
-        if (!isEnabled(id)) {
-          m_servos_positions[id] = position;
-        }
-      }
-    } break;
-    case CommMessageType::FpgaReadRegStatus:
-    	m_message_queue.pop_message(m_scratchpad, 8);
-    	onFpgaReadRegStatus();
-    	break;
     case CommMessageType::ServoSetLiftEnable:
     {
-    	uint8_t enable;
-        m_message_queue.pop_message(&enable, 1);
-        m_lift_initialized[0] = enable != 0;
-        m_lift_initialized[1] = enable != 0;
+    	uint8_t buff[2];
+    	m_message_queue_commands.pop_message(buff, 2);
+        m_lift_initialized[buff[0]] = buff[1] != 0;
     }
         break;
+    case CommMessageType::ServoLiftDoHoming:
+    {
+    	m_message_queue_commands.pop_message(m_scratchpad, 3);
+    	uint16_t sequence_number = *(uint16_t*)m_scratchpad;
+    	uint8_t id_ = m_scratchpad[1];
+
+		uint32_t buff[2] = {c_lift_base[id_], 0x50000000 };
+		Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaWriteReg,
+		  										 (unsigned char *)buff, 8);
+    }
+    break;
     case CommMessageType::ServoGetState:
 	{
 
 	}
 	break;
     default:
-      m_message_queue.pop_message(nullptr, 0);
+      m_message_queue_commands.pop_message(nullptr, 0);
       break;
   };
 }

@@ -18,16 +18,16 @@
 
 using namespace goldobot;
 
-unsigned char __attribute__((section(".ccmram"))) UARTCommTask::s_serialize_buffer[512];
-unsigned char __attribute__((section(".ccmram"))) UARTCommTask::s_deserialize_buffer[512];
+unsigned char __attribute__((section(".ccmram"))) UARTCommTask::s_serialize_buffer[1024];
+unsigned char __attribute__((section(".ccmram"))) UARTCommTask::s_deserialize_buffer[1024];
 
 unsigned char __attribute__((section(".ccmram"))) UARTCommTask::s_serialize_ftdi_buffer[512];
 unsigned char __attribute__((section(".ccmram"))) UARTCommTask::s_deserialize_ftdi_buffer[512];
 
-unsigned char __attribute__((section(".ccmram"))) UARTCommTask::s_out_buffer[512];
+unsigned char __attribute__((section(".ccmram"))) UARTCommTask::s_out_buffer[1024];
 unsigned char __attribute__((section(".ccmram"))) UARTCommTask::s_out_prio_buffer[1024];
 unsigned char __attribute__((section(".ccmram"))) UARTCommTask::s_out_ftdi_buffer[512];
-unsigned char __attribute__((section(".ccmram"))) UARTCommTask::s_scratch_buffer[512];
+unsigned char __attribute__((section(".ccmram"))) UARTCommTask::s_scratch_buffer[1024];
 
 UARTCommTask::UARTCommTask()
     : m_serializer(s_serialize_buffer, sizeof(s_serialize_buffer)),

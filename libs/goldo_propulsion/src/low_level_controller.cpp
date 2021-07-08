@@ -47,6 +47,7 @@ void LowLevelController::update(const RobotPose& current_pose, const RobotPose& 
   m_lateral_error = -diff_x * uy + diff_y * ux;
   m_yaw_error = angleDiff(target_pose.yaw, current_pose.yaw);
   m_speed_error = target_pose.speed - current_pose.speed;
+  m_yaw_rate_error = target_pose.yaw_rate - current_pose.yaw_rate;
 
   // Compute translation and speed command
   // Two nested PID controllers are used

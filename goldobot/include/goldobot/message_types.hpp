@@ -38,6 +38,8 @@ enum class CommMessageType : uint16_t {
   ServoDisableAll,
   ServoSetLiftEnable,
   ServoGetState,
+  ServoLiftDoHoming,
+
 
   ODriveRequestPacket = 50,
   ODriveResponsePacket,
@@ -82,8 +84,7 @@ enum class CommMessageType : uint16_t {
   PropulsionExitManualControl,
   PropulsionCalibrateODrive,
   PropulsionODriveClearErrors,
-
-  PropulsionTaskStatistics = 170,
+  PropulsionExecutePointToBack,
 
   PropulsionODriveStatistics = 180,
   PropulsionODriveAxisStates,
@@ -106,6 +107,7 @@ enum class CommMessageType : uint16_t {
   WatchdogStatus,
 
   UartCommTaskStatistics = 300,
+  PropulsionTaskStatistics = 302
 };
 
 // task ids for watchdog

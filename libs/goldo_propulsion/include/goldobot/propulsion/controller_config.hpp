@@ -24,5 +24,8 @@ struct PropulsionControllerConfig {
   float static_pwm_limit;
   float cruise_pwm_limit;
   float reposition_pwm_limit;
+  float static_torque_limit;
+  float cruise_torque_limit;
+  float reposition_torque_limit;
 };
 }  // namespace goldobot

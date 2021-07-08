@@ -45,7 +45,6 @@ class LowLevelController {
   float m_right_motor_torque_input{0};
 
   float m_motor_velocity_limit{100.0f};
-  float m_motor_torque_limit{1.0f};
 
   float m_left_motor_torque_lim{0};
   float m_right_motor_torque_lim{0};

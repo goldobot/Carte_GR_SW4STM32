@@ -39,15 +39,15 @@ class UARTCommTask : public Task {
   uint32_t m_next_heartbeat_timestamp{0};
   uint32_t m_next_statistics_timestamp{0};
 
-  static unsigned char s_scratch_buffer[512];
+  static unsigned char s_scratch_buffer[1024];
 
-  static unsigned char s_serialize_buffer[512];
-  static unsigned char s_deserialize_buffer[512];
+  static unsigned char s_serialize_buffer[1024];
+  static unsigned char s_deserialize_buffer[1024];
 
   static unsigned char s_serialize_ftdi_buffer[512];
   static unsigned char s_deserialize_ftdi_buffer[512];
 
-  static unsigned char s_out_buffer[512];
+  static unsigned char s_out_buffer[1024];
   static unsigned char s_out_prio_buffer[1024];
   static unsigned char s_out_ftdi_buffer[512];
 

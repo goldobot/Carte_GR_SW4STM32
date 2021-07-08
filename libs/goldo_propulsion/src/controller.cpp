@@ -111,6 +111,7 @@ void PropulsionController::update() {
     case State::FollowTrajectory: {
       m_speed_controller.update();
       updateTargetPositions();
+      check_tracking_error();
       if (m_speed_controller.finished()) {
     	on_command_finished();
       }
@@ -122,6 +123,7 @@ void PropulsionController::update() {
     case State::Rotate: {
       m_speed_controller.update();
       updateTargetYaw();
+      check_tracking_error();
       if (m_speed_controller.finished()) {
     	  on_command_finished();
       }
@@ -131,13 +133,8 @@ void PropulsionController::update() {
       }
     } break;
     case State::Reposition: {
-      m_low_level_controller.m_motor_velocity_limit = m_config.reposition_pwm_limit;
+      m_speed_controller.update();
       updateReposition();
-      // Check position error
-      // if (m_time_base_ms >= m_command_end_time) {
-      //  on_reposition_exit();
-      //  on_stopped_enter();
-      // }
     } break;
     case State::ManualControl:
       break;
@@ -153,7 +150,7 @@ void PropulsionController::update() {
   }
   m_blocking_detector.update(*this);
   // Update time base
-  // m_time_base_ms++;
+  m_time_base_ms++;
 }
 
 float PropulsionController::leftMotorVelocityInput() const noexcept {
@@ -169,7 +166,7 @@ float PropulsionController::leftMotorTorqueInput() const noexcept {
 }
 
 float PropulsionController::rightMotorTorqueInput() const noexcept {
-  return m_low_level_controller.m_left_motor_torque_input;
+  return m_low_level_controller.m_right_motor_torque_input;
 }
 
 float PropulsionController::leftMotorTorqueLimit() const noexcept {
@@ -177,7 +174,7 @@ float PropulsionController::leftMotorTorqueLimit() const noexcept {
 }
 
 float PropulsionController::rightMotorTorqueLimit() const noexcept {
-  return m_low_level_controller.m_left_motor_torque_lim;
+  return m_low_level_controller.m_right_motor_torque_lim;
 }
 
 void PropulsionController::setMotorsVelEstimates(float left, float right) {
@@ -251,6 +248,7 @@ void PropulsionController::updateTargetYaw() {
   float parameter = m_speed_controller.parameter();
   float speed = m_speed_controller.speed();
   m_target_pose.yaw = clampAngle(m_begin_yaw + parameter * m_rotation_direction);
+  m_target_pose.yaw_rate = speed * m_rotation_direction;
 }
 
 void PropulsionController::updateMotorsPwm() {
@@ -259,16 +257,44 @@ void PropulsionController::updateMotorsPwm() {
 }
 
 void PropulsionController::updateReposition() {
-  float ux = cosf(m_target_pose.yaw);
-  float uy = sinf(m_target_pose.yaw);
+	  float parameter = m_speed_controller.parameter();
+	  float speed = m_speed_controller.speed();
+	  parameter = std::min(parameter, m_trajectory_buffer.max_parameter());
 
-  m_target_pose.position.x += ux * m_target_pose.speed * 1e-3;
-  m_target_pose.position.y += uy * m_target_pose.speed * 1e-3;
+	  // Compute target position
+	  float sign = m_direction == Direction::Forward ? 1 : -1;
+	  auto target_point = m_trajectory_buffer.compute_point(parameter);
+	  m_target_pose.position = target_point.position;
+	  m_target_pose.speed = speed * sign;
+	  m_target_pose.yaw = atan2f(target_point.tangent.y, target_point.tangent.x) + (m_direction == Direction::Forward ? 0 : c_pi);
+	  m_target_pose.yaw_rate = 0;
 
+
+  // detect slipping
+  float slip_speed_treshold = 0.15f;
+  if(fabsf(m_blocking_detector.m_slip_speeds[0].value()) > slip_speed_treshold)
+  {
+	  m_low_level_controller.m_left_motor_torque_lim = m_config.reposition_torque_limit;
+  }
+  if(fabsf(m_blocking_detector.m_slip_speeds[1].value()) > slip_speed_treshold)
+  {
+	  m_low_level_controller.m_right_motor_torque_lim = m_config.reposition_torque_limit;
+  }
   if (fabs(m_low_level_controller.m_longi_error) > 0.05 && !m_reposition_hit) {
     m_reposition_hit = true;
-    // m_command_end_time = m_time_base_ms + 500;
+    m_reposition_end_ts = m_time_base_ms + 200;
   }
+
+  if(m_speed_controller.finished() && ! m_reposition_hit)
+  {
+	  on_reposition_exit();
+  }
+
+  if(m_reposition_hit && m_time_base_ms >= m_reposition_end_ts)
+  {
+	  on_reposition_exit();
+  }
+
 };
 
 void PropulsionController::check_tracking_error()
@@ -297,7 +323,6 @@ void PropulsionController::check_tracking_error()
 	{
 		m_state = State::Error;
 		m_error = Error::TrackingError;
-
 	}
 
 }
@@ -307,8 +332,8 @@ void PropulsionController::on_stopped_enter() {
   m_low_level_controller.setPidConfig(m_config.pid_configs[0]);
   m_low_level_controller.m_longi_control_level = 2;
   m_low_level_controller.m_yaw_control_level = 2;
-  m_low_level_controller.m_left_motor_torque_lim = 0.4; // 10 amps
-  m_low_level_controller.m_right_motor_torque_lim = 0.4; // 10 amps
+  m_low_level_controller.m_left_motor_torque_lim = m_config.static_torque_limit;
+  m_low_level_controller.m_right_motor_torque_lim = m_config.static_torque_limit;
 
   m_target_pose.speed = 0;
   m_target_pose.yaw_rate = 0;
@@ -344,6 +369,7 @@ void PropulsionController::on_reposition_exit() {
     m_target_pose.yaw_rate = 0;
     m_low_level_controller.reset();
   }
+  on_stopped_enter();
 }
 
 void PropulsionController::initMoveCommand(float speed, float accel, float deccel) {
@@ -374,8 +400,8 @@ void PropulsionController::initMoveCommand(float speed, float accel, float decce
   }
 
   m_low_level_controller.m_motor_velocity_limit = m_config.cruise_pwm_limit;
-  m_low_level_controller.m_left_motor_torque_lim = 0.4; // 10 amps
-  m_low_level_controller.m_right_motor_torque_lim = 0.4; // 10 amps
+  m_low_level_controller.m_left_motor_torque_lim = m_config.cruise_torque_limit;
+  m_low_level_controller.m_right_motor_torque_lim = m_config.cruise_torque_limit;
 }
 
 bool PropulsionController::resetPose(float x, float y, float yaw) {
@@ -409,6 +435,13 @@ bool PropulsionController::executePointTo(Vector2D point, float speed) {
   float diff_x = (point.x - m_current_pose.position.x);
   float diff_y = (point.y - m_current_pose.position.y);
   float target_yaw = atan2f(diff_y, diff_x);
+  return executeRotation(angleDiff(target_yaw, m_target_pose.yaw), speed);
+};
+
+bool PropulsionController::executePointToBack(Vector2D point, float speed) {
+  float diff_x = (point.x - m_current_pose.position.x);
+  float diff_y = (point.y - m_current_pose.position.y);
+  float target_yaw = atan2f(diff_y, diff_x) + c_pi;
   return executeRotation(angleDiff(target_yaw, m_target_pose.yaw), speed);
 };
 

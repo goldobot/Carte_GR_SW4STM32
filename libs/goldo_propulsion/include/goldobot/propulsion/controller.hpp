@@ -128,6 +128,7 @@ class PropulsionController {
   bool executeTrajectory(Vector2D* points, int num_points, float speed);
   bool executeRepositioning(float speed, float accel);
   bool executePointTo(Vector2D target, float yaw_rate);
+  bool executePointToBack(Vector2D target, float yaw_rate);
   bool executeMoveTo(Vector2D target, float speed);
   bool executeRotation(float delta_yaw, float yaw_rate);
 
@@ -176,6 +177,7 @@ class PropulsionController {
   TrajectoryBuffer m_trajectory_buffer;
   float m_begin_yaw;              // yaw at beginning of current PointTo command
   float m_rotation_direction{1};  // sign of delta yaw
+  float m_direction_sign{0}; //direction of rotation or trajectory
   SpeedController m_speed_controller;
 
   Direction m_direction;
@@ -185,6 +187,7 @@ class PropulsionController {
   Vector2D m_lookahead_position;
 
   bool m_reposition_hit;
+  uint32_t m_reposition_end_ts{0};
 
   //! \brief compute motors pwm values when the robot is static. Use PID controllers on yaw and
   //! longitudinal position
