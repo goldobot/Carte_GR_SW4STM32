@@ -43,6 +43,7 @@ uint16_t encoder_get(int encoder_id);
 uint16_t encoder_set(int encoder_id, uint16_t value);
 
 void io_execute(int id, IORequest* request, uint32_t timeout = -1);
+void io_reset(int id);
 
 size_t io_read(int id, uint8_t* buffer, size_t size, uint32_t timeout = -1);
 size_t io_write(int id, const uint8_t* buffer, size_t size);

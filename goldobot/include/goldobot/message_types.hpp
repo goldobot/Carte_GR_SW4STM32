@@ -39,6 +39,7 @@ enum class CommMessageType : uint16_t {
   ServoSetLiftEnable,
   ServoGetState,
   ServoLiftDoHoming,
+  ServoSetMaxTorque,
 
 
   ODriveRequestPacket = 50,
@@ -107,6 +108,7 @@ enum class CommMessageType : uint16_t {
   WatchdogStatus,
 
   UartCommTaskStatistics = 300,
+  ODriveCommTaskStatistics = 301,
   PropulsionTaskStatistics = 302
 };
 

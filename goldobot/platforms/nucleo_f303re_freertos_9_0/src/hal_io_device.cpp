@@ -177,6 +177,15 @@ void IODevice::execute(IORequest* req, uint32_t timeout) {
   }
 }
 
+
+void IODevice::reset() {
+	rx_functions->abort_request(nullptr, device_index);
+	tx_functions->abort_request(nullptr, device_index);
+	tx_busy = false;
+	rx_busy = false;
+    try_start_rx_fifo();
+}
+
 size_t IODevice::read(uint8_t* buffer, size_t buffer_size, uint32_t timeout) {
   if (buffer_size == 0) {
     return 0;
@@ -316,6 +325,10 @@ void io_execute(int id, IORequest* request, uint32_t timeout) {
   g_io_devices[id].execute(request, timeout);
 }
 
+void io_reset(int id) {
+  check_io_device_id(id);
+  g_io_devices[id].reset();
+}
 size_t io_read(int id, uint8_t* buffer, size_t buffer_size, uint32_t timeout) {
   check_io_device_id(id);
   return g_io_devices[id].read(buffer, buffer_size, timeout);

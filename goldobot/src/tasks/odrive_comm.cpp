@@ -11,6 +11,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <cassert>
 
 using namespace goldobot;
 
@@ -36,6 +37,14 @@ void ODriveCommTask::taskFunction() {
       // Send serialized data
       uint8_t* ptr;
       size_t space_available = hal::io_map_write(1, &ptr);
+
+      if(space_available == 0)
+      {
+    	  m_no_write_cnt++;
+      } else
+      {
+    	  m_no_write_cnt = 0;
+      }
       size_t dtlen = m_stream_writer.popData(ptr, space_available);
       hal::io_unmap_write(1, ptr, dtlen);
     }
@@ -45,6 +54,21 @@ void ODriveCommTask::taskFunction() {
       size_t bytes_available = hal::io_map_read(1, &ptr);
       size_t dtlen = m_stream_parser.pushData((unsigned char*)ptr, bytes_available);
       hal::io_unmap_read(1, ptr, dtlen);
+
+      if(bytes_available==0)
+      {
+    	  m_no_read_cnt++;
+      } else
+      {
+    	  m_no_read_cnt=0;
+      }
+    }
+    // try to reset communication when it crashes
+    if(m_no_read_cnt > 100 || m_no_write_cnt > 100)
+    {
+    	m_no_read_cnt = 0;
+    	m_no_write_cnt = 0;
+    	hal::io_reset(1);
     }
 
     if (m_stream_parser.packetReady()) {
@@ -63,14 +87,12 @@ void ODriveCommTask::taskFunction() {
     // Process messages
     while (processMessage()) {
     }
+    auto current_time = hal::get_tick_count();
 
-    m_cnt++;
-    if (m_cnt == 100) {
-      uint8_t watchdog_id = 3;
-      Robot::instance().exchangeInternal().pushMessage(CommMessageType::WatchdogReset, &watchdog_id,
-                                                       1);
-      m_cnt = 0;
-    };
+    if (current_time >= m_next_statistics_ts) {
+      sendStatistics();
+      m_next_statistics_ts = std::max(m_next_statistics_ts + 1000, current_time);
+    }
 
     // Wait for next tick
     delay_periodic(1);
@@ -92,14 +114,21 @@ bool ODriveCommTask::processMessage() {
       };
       m_message_queue.pop_message(s_scratchpad, 128);
       m_stream_writer.pushPacket((unsigned char*)s_scratchpad, packet_size);
-      m_requests_sent += 1;
-      m_bytes_sent += packet_size;
-      m_comm_stats.tx_highwater =
-          std::max<uint16_t>(m_comm_stats.tx_highwater, m_stream_writer.size());
     } break;
     default:
       m_message_queue.pop_message(nullptr, 0);
       break;
   }
   return true;
+}
+
+void ODriveCommTask::sendStatistics() {
+
+  ODriveCommStats statistics;
+  statistics.writer = m_stream_writer.statistics();
+  statistics.parser = m_stream_parser.statistics();
+  statistics.queue = m_message_queue.statistics();
+
+  Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ODriveCommTaskStatistics,
+                                                    (unsigned char*)&statistics, sizeof(statistics));
 }

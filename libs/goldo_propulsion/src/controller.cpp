@@ -280,7 +280,7 @@ void PropulsionController::updateReposition() {
   {
 	  m_low_level_controller.m_right_motor_torque_lim = m_config.reposition_torque_limit;
   }
-  if (fabs(m_low_level_controller.m_longi_error) > 0.05 && !m_reposition_hit) {
+  if (fabs(m_low_level_controller.m_longi_error) > 0.03 && !m_reposition_hit) {
     m_reposition_hit = true;
     m_reposition_end_ts = m_time_base_ms + 200;
   }
@@ -361,14 +361,12 @@ void PropulsionController::on_command_finished()
 }
 
 void PropulsionController::on_reposition_exit() {
-  if (m_reposition_hit) {
-    auto pose = m_odometry->pose();
-    m_target_pose.position = pose.position;
-    m_target_pose.yaw = pose.yaw;
-    m_target_pose.speed = 0;
-    m_target_pose.yaw_rate = 0;
-    m_low_level_controller.reset();
-  }
+  auto pose = m_odometry->pose();
+  m_target_pose.position = pose.position;
+  m_target_pose.yaw = pose.yaw;
+  m_target_pose.speed = 0;
+  m_target_pose.yaw_rate = 0;
+  m_low_level_controller.reset();
   on_stopped_enter();
 }
 

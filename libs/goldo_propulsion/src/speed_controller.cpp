@@ -2,6 +2,7 @@
 #include "goldobot/core/math_utils.hpp"
 
 #include <algorithm>
+#include <limits>
 
 namespace goldobot {
 
@@ -79,6 +80,16 @@ bool SpeedController::finished() const noexcept { return m_parameter == m_max_pa
 
 void SpeedController::recompute() {
   m_time = 0;
+  if(m_max_parameter - m_parameter < std::numeric_limits<float>::epsilon())
+  {
+	  m_num_points = 1;
+	  m_t[0] = 0;
+	  m_c0[0] = m_parameter;
+	  m_c1[0] = 0;
+	  m_c2[0] = 0;
+	  m_c3[0] = 0;
+	  return;;
+  }
 
   // trapezoidal profile in 3 phases
   // phase 1: from current speed to target_speed

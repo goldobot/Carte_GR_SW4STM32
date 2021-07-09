@@ -5,6 +5,7 @@ namespace hal {
 namespace platform {
 
 DMA_HandleTypeDef g_dma_handles[12];
+bool g_dma_used[12];
 
 DMA_Channel_TypeDef* g_dma_channels[12] = {
     DMA1_Channel1, DMA1_Channel2, DMA1_Channel3, DMA1_Channel4, DMA1_Channel5, DMA1_Channel6,
@@ -58,6 +59,8 @@ DMA_HandleTypeDef* hal_dma_init_device(DeviceId device, int signal, const DMA_In
     auto dma_ref = &g_dma_references[i];
     if (dma_ref->device == device && dma_ref->signal == signal) {
       int dma_index = dma_ref->dma_index;
+      assert(!g_dma_used[dma_index]);
+
       IRQn_Type irq_n = g_dma_irq_numbers[dma_index];
       HAL_NVIC_SetPriority(irq_n, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY, 0);
       HAL_NVIC_EnableIRQ(irq_n);
@@ -66,6 +69,8 @@ DMA_HandleTypeDef* hal_dma_init_device(DeviceId device, int signal, const DMA_In
       handle->Instance = g_dma_channels[dma_index];
       handle->Init = init;
       HAL_DMA_Init(handle);
+
+      g_dma_used[dma_index] = true;
       return handle;
     }
   }

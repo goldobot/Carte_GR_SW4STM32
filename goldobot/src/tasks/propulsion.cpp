@@ -195,6 +195,7 @@ void PropulsionTask::processMessage() {
 
   m_message_queue.pop_message(exec_traj_buff, msg_size);
   uint16_t sequence_number = *(uint16_t*)exec_traj_buff;
+  bool immediate = false;
 
   switch (message_type) {
     case CommMessageType::PropulsionExecuteTrajectory:
@@ -226,12 +227,15 @@ void PropulsionTask::processMessage() {
       break;
     case CommMessageType::PropulsionMeasureNormal:
       onMsgExecuteMeasureNormal(msg_size);
+      immediate = true;
       break;
     default:
       break;
   }
   sendCommandEvent(sequence_number, CommandEvent::Ack);
-  onCommandBegin(sequence_number);
+  if(!immediate) {
+	  onCommandBegin(sequence_number);
+  }
 }
 
 
@@ -431,14 +435,6 @@ void PropulsionTask::measureNormal(float angle, float distance) {
   Vector2D normal{cosf(angle), sinf(angle)};
   // Check if front or back is touching the border
   float dot = normal.x * cos(pose.yaw) + normal.y * sin(pose.yaw);
-  if (dot > 0) {
-    // border normal is aligned with robot yaw
-    // means the robot back is touching the border
-    distance = distance + Robot::instance().robotGeometry().back_length;
-  } else {
-    // touched on the front
-    distance = distance + Robot::instance().robotGeometry().front_length;
-  }
   // Project current position on line and adjust yaw
   m_odometry.measureLineNormal(normal, distance);
   pose = m_odometry.pose();

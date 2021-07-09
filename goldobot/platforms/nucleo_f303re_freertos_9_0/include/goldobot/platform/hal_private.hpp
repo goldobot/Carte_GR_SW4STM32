@@ -1,6 +1,7 @@
 #pragma once
 #include "goldobot/hal.hpp"
 
+#include "stm32f3xx_hal.h"
 #include "FreeRTOS.h"
 #include "semphr.h"
 
@@ -9,6 +10,26 @@
 namespace goldobot {
 namespace hal {
 namespace platform {
+
+class IRQLock
+{
+  public:
+	IRQLock(IRQn_Type irqn) : m_irqn(irqn) {
+		NVIC_DisableIRQ(m_irqn);
+		__DSB();
+	    __ISB();
+	}
+	~IRQLock() {
+		if(m_locked) {
+		NVIC_EnableIRQ(m_irqn);
+		}
+	}
+
+  private:
+
+	IRQn_Type m_irqn;
+	bool m_locked{true};
+};
 
 enum class DeviceType : uint8_t {
   None = 0,

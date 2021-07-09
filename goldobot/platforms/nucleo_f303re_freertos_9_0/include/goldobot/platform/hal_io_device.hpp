@@ -30,6 +30,8 @@ class IODevice {
  public:
   void execute(IORequest* request, uint32_t timeout);
 
+  void reset();
+
   size_t read(uint8_t* buffer, size_t buffer_size, uint32_t timeout);
   size_t write(const uint8_t* buffer, size_t buffer_size);
 

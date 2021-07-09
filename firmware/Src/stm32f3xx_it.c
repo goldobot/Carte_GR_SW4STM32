@@ -40,6 +40,16 @@ void DMA1_Channel6_IRQHandler(void) { goldobot_hal_dma_irq_handler(5); }
 
 void DMA1_Channel7_IRQHandler(void) { goldobot_hal_dma_irq_handler(6); }
 
+void DMA2_Channel1_IRQHandler(void) { goldobot_hal_dma_irq_handler(7); }
+
+void DMA2_Channel2_IRQHandler(void) { goldobot_hal_dma_irq_handler(8); }
+
+void DMA2_Channel3_IRQHandler(void) { goldobot_hal_dma_irq_handler(9); }
+
+void DMA2_Channel4_IRQHandler(void) { goldobot_hal_dma_irq_handler(10); }
+
+void DMA2_Channel5_IRQHandler(void) { goldobot_hal_dma_irq_handler(11); }
+
 void USART1_IRQHandler(void) { goldobot_hal_uart_irq_handler(0); }
 
 void USART2_IRQHandler(void) { goldobot_hal_uart_irq_handler(1); }

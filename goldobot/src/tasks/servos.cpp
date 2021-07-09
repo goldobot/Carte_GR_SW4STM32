@@ -108,7 +108,7 @@ void ServosTask::updateServo(int id, uint16_t pos, uint16_t speed, uint8_t torqu
   if (config.type == ServoType::GoldoLift) {
 	  m_lift_servo_id[config.id] = id;
 
-	  if(m_lift_homed[config.id])
+	  if(m_lift_initialized[config.id] && m_lift_homed[config.id])
 	  {
     	  // enable control
 		  uint32_t reg_val_e = enabled ? 0x10000001 : 0x10000001;
@@ -121,6 +121,9 @@ void ServosTask::updateServo(int id, uint16_t pos, uint16_t speed, uint8_t torqu
 		        buff[1] = reg_val_p;
 		        Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaWriteReg,
 		                                                       (unsigned char *)buff, 8);
+		        // set speed
+		        uint16_t lift_speed = (speed / 100) + 1;
+		        buff[1] = 0x90000000 | speed | ((m_lift_bltrig & 0xfff) << 16);
 		      }
 	  }
 	  // read status and position
@@ -311,16 +314,17 @@ void ServosTask::processMessageCommand() {
     } break;
     case CommMessageType::ServoSetLiftEnable:
     {
-    	uint8_t buff[2];
-    	m_message_queue_commands.pop_message(buff, 2);
-        m_lift_initialized[buff[0]] = buff[1] != 0;
+    	m_message_queue_commands.pop_message(m_scratchpad, 4);
+    	uint16_t sequence_number = *(uint16_t*)m_scratchpad;
+    	uint8_t id_ = m_scratchpad[2];
+        m_lift_initialized[id_] = m_scratchpad[3] != 0;
     }
         break;
     case CommMessageType::ServoLiftDoHoming:
     {
     	m_message_queue_commands.pop_message(m_scratchpad, 3);
     	uint16_t sequence_number = *(uint16_t*)m_scratchpad;
-    	uint8_t id_ = m_scratchpad[1];
+    	uint8_t id_ = m_scratchpad[2];
 
 		uint32_t buff[2] = {c_lift_base[id_], 0x50000000 };
 		Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaWriteReg,
@@ -329,7 +333,21 @@ void ServosTask::processMessageCommand() {
     break;
     case CommMessageType::ServoGetState:
 	{
-
+		m_message_queue_commands.pop_message(m_scratchpad, 3);
+		uint16_t sequence_number = *(uint16_t*)m_scratchpad;
+		uint8_t id_ = m_scratchpad[2];
+		*(uint16_t*)(m_scratchpad + 3) = m_servos_measured_positions[id_];
+		Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ServoGetState,
+				  										 (unsigned char *)m_scratchpad, 5);
+	}
+    case CommMessageType::ServoSetMaxTorque:
+	{
+		/*m_message_queue_commands.pop_message(m_scratchpad, 3);
+		uint16_t sequence_number = *(uint16_t*)m_scratchpad;
+		uint8_t id_ = m_scratchpad[2];
+		*(uint16_t*)(m_scratchpad + 3) = m_servos_measured_positions[id_];
+		Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ServoGetState,
+														 (unsigned char *)m_scratchpad, 5);*/
 	}
 	break;
     default:
@@ -401,11 +419,7 @@ void ServosTask::onFpgaReadRegStatus()
 	{
 		if(apb_address == c_lift_base[i] + 4)
 		{
-			m_lift_homed[i] = apb_value & 0x1;
-			if (apb_value & 0x01000000)
-			{
-				// todo: check with goldo, hould indicate homing is done
-			}
+			m_lift_homed[i] = (apb_value & 0x1) != 0;
 		}
 		if(apb_address == c_lift_base[i] + 8)
 		{
