@@ -13,14 +13,12 @@ void PropulsionController::setEnable(bool enable) {
     m_current_pose = m_odometry->pose();
     m_target_pose = m_current_pose;
     m_low_level_controller.reset();
-    on_stopped_enter();
-    m_state_changed = true;
+    setState(State::Stopped);
   }
   if (!enable && m_state != State::Inactive) {
     m_error = Error::None;
-    m_state = State::Inactive;
     m_low_level_controller.reset();
-    m_state_changed = true;
+    setState(State::Inactive);
   }
 }
 
@@ -44,11 +42,14 @@ void PropulsionController::setConfig(const PropulsionControllerConfig& config) {
 }
 
 void PropulsionController::clearError() {
+	if(m_state != State::Error) {
+		return;
+	}
   m_state = State::Stopped;
   m_error = Error::None;
   m_target_pose = m_current_pose;
   m_low_level_controller.reset();
-  on_stopped_enter();
+  setState(State::Stopped);
 }
 
 bool PropulsionController::commandFinished() { return m_command_finished; }
@@ -170,10 +171,12 @@ float PropulsionController::rightMotorTorqueInput() const noexcept {
 }
 
 float PropulsionController::leftMotorTorqueLimit() const noexcept {
+  return 0.4f;
   return m_low_level_controller.m_left_motor_torque_lim;
 }
 
 float PropulsionController::rightMotorTorqueLimit() const noexcept {
+  return 0.4f;
   return m_low_level_controller.m_right_motor_torque_lim;
 }
 
@@ -328,22 +331,41 @@ void PropulsionController::check_tracking_error()
 }
 
 void PropulsionController::on_stopped_enter() {
-  m_state = State::Stopped;
   m_low_level_controller.setPidConfig(m_config.pid_configs[0]);
   m_low_level_controller.m_longi_control_level = 2;
   m_low_level_controller.m_yaw_control_level = 2;
+
   m_low_level_controller.m_left_motor_torque_lim = m_config.static_torque_limit;
   m_low_level_controller.m_right_motor_torque_lim = m_config.static_torque_limit;
 
   m_target_pose.speed = 0;
   m_target_pose.yaw_rate = 0;
+  m_target_pose.acceleration = 0;
+  m_target_pose.angular_acceleration = 0;
 
   m_low_level_controller.m_motor_velocity_limit = m_config.static_pwm_limit;
   m_command_finished = true;
-  m_state_changed = true;
   m_emergency_stop = false;
 }
 
+void PropulsionController::setState(State state)
+{
+	if(state == m_state)
+	{
+		return;
+	}
+
+	switch(state)
+		{
+		case State::Stopped:
+			on_stopped_enter();
+			break;
+		default:
+			break;
+		};
+	m_state_changed = true;
+    m_state = state;
+}
 void PropulsionController::on_command_finished()
 {
 	if(m_emergency_stop)
@@ -355,7 +377,7 @@ void PropulsionController::on_command_finished()
 	} else
 	{
 		m_target_pose = m_final_pose;
-		on_stopped_enter();
+		setState(State::Stopped);
 	}
 
 }
@@ -366,8 +388,7 @@ void PropulsionController::on_reposition_exit() {
   m_target_pose.yaw = pose.yaw;
   m_target_pose.speed = 0;
   m_target_pose.yaw_rate = 0;
-  m_low_level_controller.reset();
-  on_stopped_enter();
+  setState(State::Stopped);
 }
 
 void PropulsionController::initMoveCommand(float speed, float accel, float deccel) {
@@ -479,6 +500,9 @@ bool PropulsionController::executeRotation(float delta_yaw, float yaw_rate) {
   m_low_level_controller.m_longi_control_level = 2;
   m_low_level_controller.m_yaw_control_level = 2;
 
+  m_low_level_controller.m_left_motor_torque_lim = m_config.static_torque_limit;
+  m_low_level_controller.m_right_motor_torque_lim = m_config.static_torque_limit;
+
   m_state = State::Rotate;
   m_state_changed = true;
   m_command_finished = false;
@@ -534,7 +558,7 @@ void PropulsionController::enterManualControl() {
 void PropulsionController::exitManualControl() {
   m_current_pose = m_odometry->pose();
   m_target_pose = m_current_pose;
-  on_stopped_enter();
+  setState(State::Stopped);
 }
 
 messages::PropulsionTelemetry PropulsionController::getTelemetry() const {

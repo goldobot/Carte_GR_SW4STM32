@@ -33,9 +33,6 @@ void SpeedController::update() {
 
     auto t = m_time;
     auto index = m_index;
-    if (m_t[index] > t) {
-      index = 0;
-    }
 
     while (index + 1 < m_num_points && t > m_t[index + 1]) {
       index++;
@@ -80,15 +77,17 @@ bool SpeedController::finished() const noexcept { return m_parameter == m_max_pa
 
 void SpeedController::recompute() {
   m_time = 0;
+  m_index = 0;
+
   if(m_max_parameter - m_parameter < std::numeric_limits<float>::epsilon())
   {
 	  m_num_points = 1;
 	  m_t[0] = 0;
 	  m_c0[0] = m_parameter;
-	  m_c1[0] = 0;
+	  m_c1[0] = m_requested_speed;
 	  m_c2[0] = 0;
 	  m_c3[0] = 0;
-	  return;;
+	  return;
   }
 
   // trapezoidal profile in 3 phases

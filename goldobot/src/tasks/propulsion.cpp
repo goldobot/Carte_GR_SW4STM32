@@ -211,8 +211,8 @@ void PropulsionTask::processMessage() {
       onMsgExecutePointTo(msg_size);
       break;
     case CommMessageType::PropulsionExecutePointToBack:
-         onMsgExecutePointToBack(msg_size);
-         break;
+      onMsgExecutePointToBack(msg_size);
+      break;
     case CommMessageType::PropulsionExecuteFaceDirection:
       onMsgExecuteFaceDirection(msg_size);
       break;

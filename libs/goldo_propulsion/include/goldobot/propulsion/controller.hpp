@@ -201,6 +201,8 @@ class PropulsionController {
   void updateReposition();
   bool detectBlocking();
   void check_tracking_error();
+
+  void setState(State state);
   void on_stopped_enter();
   void on_command_finished();
   void on_reposition_exit();

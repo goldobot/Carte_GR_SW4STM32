@@ -48,7 +48,7 @@ class SpeedController {
   // temporary
   float m_time{0};
   float m_period{1e-3f};
-  int m_index = 0;
+  int m_index{0};
 
   // polynomial parameters
   float m_c0[8];
@@ -56,6 +56,6 @@ class SpeedController {
   float m_c2[8];
   float m_c3[8];
   float m_t[8];
-  unsigned m_num_points;
+  unsigned m_num_points{0};
 };
 }  // namespace goldobot
