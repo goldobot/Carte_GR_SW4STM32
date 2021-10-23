@@ -16,7 +16,8 @@ using namespace goldobot;
 bool goldo_hal_read_encoders(uint16_t& left, uint16_t& right);
 
 unsigned char __attribute__((section(".ccmram"))) PropulsionTask::s_message_queue_buffer[1024];
-unsigned char __attribute__((section(".ccmram"))) PropulsionTask::s_odrive_message_queue_buffer[256];
+unsigned char __attribute__((section(".ccmram")))
+PropulsionTask::s_odrive_message_queue_buffer[256];
 unsigned char __attribute__((section(".ccmram")))
 PropulsionTask::s_urgent_message_queue_buffer[1024];
 
@@ -26,7 +27,7 @@ unsigned char PropulsionTask::s_scratchpad[512];
 PropulsionTask::PropulsionTask()
     : m_message_queue(s_message_queue_buffer, sizeof(s_message_queue_buffer)),
       m_urgent_message_queue(s_urgent_message_queue_buffer, sizeof(s_urgent_message_queue_buffer)),
-	  m_odrive_message_queue(s_odrive_message_queue_buffer, sizeof(s_odrive_message_queue_buffer)),
+      m_odrive_message_queue(s_odrive_message_queue_buffer, sizeof(s_odrive_message_queue_buffer)),
       m_controller(&m_odometry)
 
 {}
@@ -69,11 +70,13 @@ void PropulsionTask::doStep() {
     uint16_t left = m_robot_simulator.encoderLeft();
     uint16_t right = m_robot_simulator.encoderRight();
     m_odometry.update(left, right);
+    updateOdometryStream(left, right);
   } else {
     uint16_t left;
     uint16_t right;
     while (goldo_hal_read_encoders(left, right)) {
       m_odometry.update(left, right);
+      updateOdometryStream(left, right);
     }
   }
 
@@ -101,19 +104,20 @@ void PropulsionTask::doStep() {
 
   if (m_controller.state() != PropulsionController::State::Inactive) {
     setMotorsPwm(m_controller.leftMotorVelocityInput(), m_controller.rightMotorVelocityInput());
-    setMotorsTorqueLimits(m_controller.leftMotorTorqueLimit(), m_controller.rightMotorTorqueLimit());
+    setMotorsTorqueLimits(m_controller.leftMotorTorqueLimit(),
+                          m_controller.rightMotorTorqueLimit());
   }
 
   if (m_config.motor_controller_type == MotorControllerType::ODriveUART) {
     m_odrive_client.doStep(hal::get_tick_count());
-    if(!m_use_simulator)
-    {
-    	auto& telemetry = m_odrive_client.telemetry();
-		float torque_constant = 0.04;
-		m_controller.setMotorsVelEstimates(-telemetry.axis[0].vel_estimate,
-										   telemetry.axis[1].vel_estimate);
-		m_controller.setMotorsTorqueEstimates(-telemetry.axis[0].current_iq_setpoint * torque_constant,
-											  telemetry.axis[1].current_iq_setpoint * torque_constant);
+    if (!m_use_simulator) {
+      auto& telemetry = m_odrive_client.telemetry();
+      float torque_constant = 0.04;
+      m_controller.setMotorsVelEstimates(-telemetry.axis[0].vel_estimate,
+                                         telemetry.axis[1].vel_estimate);
+      m_controller.setMotorsTorqueEstimates(
+          -telemetry.axis[0].current_iq_setpoint * torque_constant,
+          telemetry.axis[1].current_iq_setpoint * torque_constant);
     }
 
     if (current_time >= m_next_odrive_status_ts) {
@@ -180,10 +184,10 @@ void PropulsionTask::sendStatistics() {
   m_statistics.queue = m_message_queue.statistics();
   m_statistics.urgent_queue = m_urgent_message_queue.statistics();
 
-    Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionTaskStatistics,
-                                                    (unsigned char*)&m_statistics, sizeof(m_statistics));
-    m_statistics = Statistics();
-
+  Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionTaskStatistics,
+                                                  (unsigned char*)&m_statistics,
+                                                  sizeof(m_statistics));
+  m_statistics = Statistics();
 }
 
 void PropulsionTask::processMessage() {
@@ -233,11 +237,10 @@ void PropulsionTask::processMessage() {
       break;
   }
   sendCommandEvent(sequence_number, CommandEvent::Ack);
-  if(!immediate) {
-	  onCommandBegin(sequence_number);
+  if (!immediate) {
+    onCommandBegin(sequence_number);
   }
 }
-
 
 void PropulsionTask::processODriveMessage() {
   auto message_type = (CommMessageType)m_odrive_message_queue.message_type();
@@ -245,14 +248,14 @@ void PropulsionTask::processODriveMessage() {
   uint32_t current_time = hal::get_tick_count();
 
   switch (message_type) {
-      case CommMessageType::ODriveResponsePacket: {
-        uint8_t buff[16];
-        auto message_size = m_odrive_message_queue.pop_message((unsigned char*)&buff, 16);
-        uint16_t seq = *(uint16_t*)buff & 0x3fff;
-        m_odrive_client.processResponse(current_time, seq, buff + 2, message_size - 2);
-      } break;
-      default:
-    	  break;
+    case CommMessageType::ODriveResponsePacket: {
+      uint8_t buff[16];
+      auto message_size = m_odrive_message_queue.pop_message((unsigned char*)&buff, 16);
+      uint16_t seq = *(uint16_t*)buff & 0x3fff;
+      m_odrive_client.processResponse(current_time, seq, buff + 2, message_size - 2);
+    } break;
+    default:
+      break;
   }
 }
 void PropulsionTask::processUrgentMessage() {
@@ -361,7 +364,7 @@ void PropulsionTask::processUrgentMessage() {
 
 // Command messages
 void PropulsionTask::onMsgExecuteReposition(size_t msg_size) {
-  float params[2]; //distance, speed
+  float params[2];  // distance, speed
   std::memcpy(params, exec_traj_buff + 2, 8);
 
   m_controller.executeRepositioning(params[0], params[1]);
@@ -505,14 +508,13 @@ void PropulsionTask::setMotorsTorqueLimits(float left, float right) {
   }
 }
 
-uint16_t PropulsionTask::readCommand(MessageQueue& queue, void* buff, size_t& size)
-{
-	uint16_t sequence_number;
-    unsigned char* buffs[] = {(unsigned char*)&sequence_number, (unsigned char*)buff};
-    size_t sizes[] = {2, size};
-    queue.pop_message(buffs, sizes, 2);
-    size = sizes[1];
-    return sequence_number;
+uint16_t PropulsionTask::readCommand(MessageQueue& queue, void* buff, size_t& size) {
+  uint16_t sequence_number;
+  unsigned char* buffs[] = {(unsigned char*)&sequence_number, (unsigned char*)buff};
+  size_t sizes[] = {2, size};
+  queue.pop_message(buffs, sizes, 2);
+  size = sizes[1];
+  return sequence_number;
 }
 
 void PropulsionTask::sendCommandEvent(uint16_t sequence_number, CommandEvent event) {
@@ -531,9 +533,8 @@ void PropulsionTask::onCommandBegin(uint16_t sequence_number) {
 }
 
 void PropulsionTask::onCommandEnd() {
-  auto event = m_controller.state() != PropulsionController::State::Error
-          ? CommandEvent::End
-          : CommandEvent::Error;
+  auto event = m_controller.state() != PropulsionController::State::Error ? CommandEvent::End
+                                                                          : CommandEvent::Error;
 
   sendCommandEvent(m_current_command_sequence_number, event);
 
@@ -748,6 +749,22 @@ void PropulsionTask::updateScope() {
     Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionScopeData,
                                                     m_scope_buffer, m_scope_idx);
     m_scope_idx = 0;
+  }
+}
+
+void PropulsionTask::updateOdometryStream(uint16_t left, uint16_t right) {
+  if (m_odometry_stream_cnt == 0) {
+    *(uint32_t*)(m_odometry_stream_buffer) = hal::get_tick_count();
+  }
+  uint16_t* ptr = (uint16_t*)(m_odometry_stream_buffer + 4 * (m_odometry_stream_cnt + 1));
+  *ptr = left;
+  *(ptr + 1) = right;
+  m_odometry_stream_cnt++;
+  if (m_odometry_stream_cnt == 20) {
+    m_odometry_stream_cnt = 0;
+    Robot::instance().exchangeOutFtdi().pushMessage(CommMessageType::PropulsionOdometryStream,
+                                                    (unsigned char*)m_odometry_stream_buffer,
+                                                    sizeof(m_odometry_stream_buffer));
   }
 }
 

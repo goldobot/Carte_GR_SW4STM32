@@ -34,8 +34,10 @@ class UARTCommTask : public Task {
   void sendStatistics();
   void sendHeartbeat(uint32_t timestamp);
 
+ public:
   std::atomic<bool> m_ftdi_enable{false};
 
+ private:
   uint32_t m_next_heartbeat_timestamp{0};
   uint32_t m_next_statistics_timestamp{0};
 

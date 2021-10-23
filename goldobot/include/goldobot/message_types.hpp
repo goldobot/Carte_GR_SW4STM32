@@ -41,7 +41,6 @@ enum class CommMessageType : uint16_t {
   ServoLiftDoHoming,
   ServoSetMaxTorque,
 
-
   ODriveRequestPacket = 50,
   ODriveResponsePacket,
   ODriveTelemetry,
@@ -70,6 +69,7 @@ enum class CommMessageType : uint16_t {
   PropulsionState,
   PropulsionODriveTelemetry,
   PropulsionScopeData,
+  PropulsionOdometryStream,
   PropulsionCommandEvent = 130,
 
   PropulsionExecuteTranslation = 140,

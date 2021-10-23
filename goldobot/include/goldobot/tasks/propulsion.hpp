@@ -83,14 +83,13 @@ class PropulsionTask : public Task {
   };
 
   struct Statistics {
-      uint32_t max_cycles{0};
-      MessageQueue::Statistics queue;
-      MessageQueue::Statistics urgent_queue;
-      MessageQueue::Statistics odrive_queue;
-    };
+    uint32_t max_cycles{0};
+    MessageQueue::Statistics queue;
+    MessageQueue::Statistics urgent_queue;
+    MessageQueue::Statistics odrive_queue;
+  };
 
  public:
-
   PropulsionTask();
   const char* name() const override;
 
@@ -164,7 +163,10 @@ class PropulsionTask : public Task {
   void sendODriveStatus();
   void sendStatistics();
 
-  uint16_t readCommand(MessageQueue& queue, void* buff, const size_t& size) { size_t size_ = size; return readCommand(queue, buff, size_);}
+  uint16_t readCommand(MessageQueue& queue, void* buff, const size_t& size) {
+    size_t size_ = size;
+    return readCommand(queue, buff, size_);
+  }
   uint16_t readCommand(MessageQueue& queue, void* buff, size_t& size);
 
   void sendCommandEvent(uint16_t sequence_number, CommandEvent event);
@@ -184,6 +186,12 @@ class PropulsionTask : public Task {
   uint32_t m_next_scope_ts{0};
 
   ODriveClient m_odrive_client;
+
+  // Odometry full encoders stream through secondary uart
+  void updateOdometryStream(uint16_t left, uint16_t right);
+  int m_odometry_stream_cnt{0};
+  // each packet is 32 bits timestamp + 20 (left encoder, right encoder) values
+  unsigned char m_odometry_stream_buffer[4 * (20 + 1)];
 
   static unsigned char s_message_queue_buffer[1024];
   static unsigned char s_urgent_message_queue_buffer[1024];
