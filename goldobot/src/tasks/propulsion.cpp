@@ -52,6 +52,7 @@ void PropulsionTask::doStep() {
   // test stopwatch
   uint32_t cyccnt_begin = DWT->CYCCNT;
   auto current_time = hal::get_tick_count();
+  m_current_timestamp = current_time;
 
   // Process messages
   while (m_urgent_message_queue.message_ready()) {
@@ -109,7 +110,8 @@ void PropulsionTask::doStep() {
   }
 
   if (m_config.motor_controller_type == MotorControllerType::ODriveUART) {
-    m_odrive_client.doStep(hal::get_tick_count());
+    m_odrive_client.doStep(m_current_timestamp);
+    updateOdriveStream();
     if (!m_use_simulator) {
       auto& telemetry = m_odrive_client.telemetry();
       float torque_constant = 0.04;
@@ -146,7 +148,7 @@ void PropulsionTask::doStep() {
 }
 
 void PropulsionTask::sendTelemetryMessages() {
-  uint32_t current_time = hal::get_tick_count();
+  uint32_t current_time = m_current_timestamp;
 
   if (current_time >= m_next_telemetry_ts) {
     auto msg = m_controller.getTelemetry();
@@ -178,7 +180,7 @@ void PropulsionTask::sendTelemetryMessages() {
 }
 
 void PropulsionTask::sendStatistics() {
-  uint32_t current_time = hal::get_tick_count();
+  uint32_t current_time = m_current_timestamp;
 
   m_statistics.odrive_queue = m_odrive_message_queue.statistics();
   m_statistics.queue = m_message_queue.statistics();
@@ -245,7 +247,7 @@ void PropulsionTask::processMessage() {
 void PropulsionTask::processODriveMessage() {
   auto message_type = (CommMessageType)m_odrive_message_queue.message_type();
 
-  uint32_t current_time = hal::get_tick_count();
+  uint32_t current_time = m_current_timestamp;
 
   switch (message_type) {
     case CommMessageType::ODriveResponsePacket: {
@@ -262,7 +264,7 @@ void PropulsionTask::processUrgentMessage() {
   auto message_type = (CommMessageType)m_urgent_message_queue.message_type();
   auto message_size = m_urgent_message_queue.message_size();
 
-  uint32_t current_time = hal::get_tick_count();
+  uint32_t current_time = m_current_timestamp;
   uint16_t sequence_number{0};
 
   switch (message_type) {
@@ -718,7 +720,7 @@ void PropulsionTask::updateScope() {
     return;
   }
 
-  auto current_time = hal::get_tick_count();
+  auto current_time = m_current_timestamp;
 
   if (current_time < m_next_scope_ts) {
     return;
@@ -727,7 +729,7 @@ void PropulsionTask::updateScope() {
   m_next_scope_ts = std::max(m_next_scope_ts + m_scope_config.period, current_time);
 
   if (m_scope_idx == 0) {
-    *reinterpret_cast<uint16_t*>(&m_scope_buffer[m_scope_idx]) = (uint16_t)hal::get_tick_count();
+    *reinterpret_cast<uint16_t*>(&m_scope_buffer[m_scope_idx]) = (uint16_t)m_current_timestamp;
     m_scope_idx = 2;
   }
 
@@ -752,9 +754,54 @@ void PropulsionTask::updateScope() {
   }
 }
 
+void PropulsionTask::updateOdriveStream() {
+	for(int i=0; i < 8; i++)
+	{
+		if(m_odrive_client.m_telemetry_ack[i])
+		{
+			m_odrive_client.m_telemetry_ack[i] = false;
+			// add header
+			if(m_odrive_stream_cnt == 0)
+			{
+				*(uint32_t*)m_odrive_stream_buffer = m_current_timestamp;
+			}
+			auto* ptr = m_odrive_stream_buffer + 4 + 6 * m_odrive_stream_cnt;
+			*(uint8_t*)(ptr) = i;
+			*(uint8_t*)(ptr+1) = (uint8_t)(m_current_timestamp % 256);
+			float val = 0;
+			auto& telemetry = m_odrive_client.telemetry().axis[i/4];
+			switch(i % 4)
+			{
+			case 0:
+				val = telemetry.pos_estimate;
+				break;
+			case 1:
+				val = telemetry.vel_estimate;
+				break;
+			case 2:
+				val = telemetry.current_iq_setpoint;
+				break;
+			case 4:
+				val = m_odrive_client.m_axis_requests[i/4].input_vel;
+				break;
+			}
+			m_odrive_stream_cnt++;
+			  if (m_odrive_stream_cnt == 20) {
+				  m_odrive_stream_cnt = 0;
+			    Robot::instance().exchangeOutFtdi().pushMessage(CommMessageType::PropulsionODriveStream,
+			                                                    (unsigned char*)m_odrive_stream_buffer,
+			                                                    sizeof(m_odrive_stream_buffer));
+			  }
+			  // end variable
+		}
+	}
+
+
+}
+
 void PropulsionTask::updateOdometryStream(uint16_t left, uint16_t right) {
   if (m_odometry_stream_cnt == 0) {
-    *(uint32_t*)(m_odometry_stream_buffer) = hal::get_tick_count();
+    *(uint32_t*)(m_odometry_stream_buffer) = m_current_timestamp;
   }
   uint16_t* ptr = (uint16_t*)(m_odometry_stream_buffer + 4 * (m_odometry_stream_cnt + 1));
   *ptr = left;

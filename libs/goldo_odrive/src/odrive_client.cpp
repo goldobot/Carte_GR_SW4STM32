@@ -42,7 +42,10 @@ const uint16_t ODriveClient::c_odrv_endpoints[4] = {
     546  // reboot
 };
 
-ODriveClient::ODriveClient() { requestSynchronization(); }
+ODriveClient::ODriveClient() {
+  requestSynchronization();
+  memset(m_telemetry_ack, 0, sizeof(m_telemetry_ack));
+}
 
 const std::array<ODriveClient::AxisErrorState, 2>& ODriveClient::errors() const noexcept {
   return m_errors;
@@ -157,6 +160,7 @@ bool ODriveClient::startMotorsCalibration() {
 }
 
 void ODriveClient::doStep(uint32_t timestamp) {
+  m_current_timestamp = timestamp;
   updateEndpoints(timestamp);
 
   if (!m_is_synchronized) {
@@ -519,6 +523,8 @@ void ODriveClient::writeRequest(int axis, AxisRequestId req_id, uint32_t timesta
       break;
     case AxisRequestId::InputVel:
       seq = writeEndpoint(endpoint_id, m_axis_requests[axis].input_vel, req_id_bin, true);
+      m_telemetry_ack[axis * 4 + 3] = true;
+      m_telemetry_timestamps[axis * 4 + 3] = (uint8_t)(m_current_timestamp % 256);
       break;
     case AxisRequestId::InputTorque:
       seq = writeEndpoint(endpoint_id, m_axis_requests[axis].input_torque, req_id_bin, true);
@@ -613,12 +619,18 @@ void ODriveClient::processReadResponse(int axis, AxisRequestId req_id, uint8_t* 
       break;
     case AxisRequestId::PosEstimate:
       m_telemetry.axis[axis].pos_estimate = *(float*)payload;
+      m_telemetry_ack[axis * 4 + 0] = true;
+      m_telemetry_timestamps[axis * 4 + 0] = (uint8_t)(m_current_timestamp % 256);
       break;
     case AxisRequestId::VelEstimate:
       m_telemetry.axis[axis].vel_estimate = *(float*)payload;
+      m_telemetry_ack[axis * 4 + 1] = true;
+      m_telemetry_timestamps[axis * 4 + 1] = (uint8_t)(m_current_timestamp % 256);
       break;
     case AxisRequestId::CurrentIqSetpoint:
       m_telemetry.axis[axis].current_iq_setpoint = *(float*)payload;
+      m_telemetry_ack[axis * 4 + 2] = true;
+      m_telemetry_timestamps[axis * 4 + 2] = (uint8_t)(m_current_timestamp % 256);
       break;
     case AxisRequestId::AxisError:
       m_errors[axis].axis = *(int32_t*)payload;

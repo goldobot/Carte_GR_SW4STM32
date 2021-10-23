@@ -93,49 +93,9 @@ void ServosTask::taskFunction() {
   } /* while(1) */
 }
 
-void ServosTask::updateServo(int id, uint16_t pos, uint16_t speed, uint8_t torque) {
-  const auto &config = m_servos_config->servos[id];
-  bool enabled = isEnabled(id);
-
-  // fpga servo
-  if (config.type == ServoType::StandardServo) {
-    uint32_t servo_pwm = enabled ? static_cast<uint32_t>(pos) << 2 : 0;
-    uint32_t buff[2] = {c_fpga_servos_base + 8 * config.id, servo_pwm};
-    Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaWriteReg,
-                                                   (unsigned char *)buff, 8);
-  }
-
-  if (config.type == ServoType::GoldoLift) {
-	  m_lift_servo_id[config.id] = id;
-
-	  if(m_lift_initialized[config.id] && m_lift_homed[config.id])
-	  {
-    	  // enable control
-		  uint32_t reg_val_e = enabled ? 0x10000001 : 0x10000001;
-		  uint32_t buff[2] = {c_lift_base[config.id], reg_val_e};
-		  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaWriteReg,
-														 (unsigned char *)buff, 8);
-		  if (enabled) {
-		        // lift goto_target
-		        uint32_t reg_val_p = 0x70000000 | (0x0fffffff & static_cast<uint32_t>(pos));
-		        buff[1] = reg_val_p;
-		        Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaWriteReg,
-		                                                       (unsigned char *)buff, 8);
-		        // set speed
-		        uint16_t lift_speed = (speed / 100) + 1;
-		        buff[1] = 0x90000000 | speed | ((m_lift_bltrig & 0xfff) << 16);
-		      }
-	  }
-	  // read status and position
-	  uint32_t buff[1] = {c_lift_base[config.id] + 4};
-	  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaReadRegInternal,
-													 (unsigned char *)buff, 4);
-	  buff[0] = c_lift_base[config.id] + 8;
-	  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaReadRegInternal,
-	  													 (unsigned char *)buff, 4);
-  }
-
-  if (config.type == ServoType::DynamixelAX12) {
+void ServosTask::updateServoDynamixelAX12(int id, bool enabled, uint16_t pos, float speed, uint8_t torque)
+{
+	const auto &config = m_servos_config->servos[id];
     // one pos unit = 0.29 deg
     // one speed unit is about 0.111 rpm, or 0.666 dps, or 2.3 pos units per second
     // speed = 0 correspond to max rpm in dynamixel, so add one
@@ -174,48 +134,113 @@ void ServosTask::updateServo(int id, uint16_t pos, uint16_t speed, uint8_t torqu
     *reinterpret_cast<uint8_t *>(buff + 6) = 6;
     Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DynamixelsRequest,
                                                    (unsigned char *)buff, 7);
+}
+
+void ServosTask::updateServoDynamixelMX28(int id, bool enabled, uint16_t pos, float speed, uint8_t torque)
+{
+	const auto &config = m_servos_config->servos[id];
+	// one pos unit = 0.088  deg
+	// one speed unit is about 0.114 rpm, or 0.684 dps, or 7.773 pos units per second
+	// speed = 0 correspond to max rpm in dynamixel, so add one
+	uint16_t dyna_speed = static_cast<uint16_t>(speed * 1.1f / 7.773f) + 1;
+	if (dyna_speed > 0x3ff) {
+	  dyna_speed = 0x3ff;
+	}
+	uint16_t dyna_torque = (torque * 0x3ff) / 0xff;  // dynamixel max torque = 0x3ff or 1023
+	uint8_t buff[12];
+	*reinterpret_cast<uint16_t *>(buff + 0) =
+		0x8000;                                  // msb=1 => send response to internal exchange
+	*reinterpret_cast<uint8_t *>(buff + 2) = 1;  // protocol version
+	*reinterpret_cast<uint8_t *>(buff + 3) = config.id;
+	*reinterpret_cast<uint8_t *>(buff + 4) = 0x03;  // write
+
+	// torque enable
+	*reinterpret_cast<uint8_t *>(buff + 5) = 24;  // torque enable register
+	*reinterpret_cast<uint16_t *>(buff + 6) = enabled ? 1 : 0;
+	Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DynamixelsRequest,
+												   (unsigned char *)buff, 7);
+	if (enabled) {
+	  *reinterpret_cast<uint8_t *>(buff + 5) = 30;  // position, speed, torque registers
+	  *reinterpret_cast<uint16_t *>(buff + 6) = pos;
+	  *reinterpret_cast<uint16_t *>(buff + 8) = dyna_speed;
+	  *reinterpret_cast<uint16_t *>(buff + 10) = dyna_torque;
+	  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DynamixelsRequest,
+													 (unsigned char *)buff, 12);
+	}
+
+	// request state
+	*reinterpret_cast<uint16_t *>(buff + 0) =
+		(36 << 8) | id | 0x8000;                    // msb=1 => send response to internal exchange
+	*reinterpret_cast<uint8_t *>(buff + 4) = 0x02;  // read
+
+	*reinterpret_cast<uint8_t *>(buff + 5) = 36;  // present position, speed, load
+	*reinterpret_cast<uint8_t *>(buff + 6) = 6;
+	Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DynamixelsRequest,
+												   (unsigned char *)buff, 7);
+}
+
+void ServosTask::updateServoGoldoLift(int id, bool enabled, uint16_t pos, float speed, uint8_t torque)
+{
+  const auto &config = m_servos_config->servos[id];
+  m_lift_servo_id[config.id] = id;
+
+  if(m_lift_initialized[config.id] && m_lift_homed[config.id])
+  {
+	  // enable control
+	  uint32_t reg_val_e = enabled ? 0x10000001 : 0x10000001;
+	  uint32_t buff[2] = {c_lift_base[config.id], reg_val_e};
+	  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaWriteReg,
+													 (unsigned char *)buff, 8);
+	  if (enabled) {
+			// lift goto_target
+			uint32_t reg_val_p = 0x70000000 | (0x0fffffff & static_cast<uint32_t>(pos));
+			buff[1] = reg_val_p;
+			Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaWriteReg,
+														   (unsigned char *)buff, 8);
+			// set speed
+			uint16_t lift_speed = (speed / 100) + 1;
+			//buff[1] = 0x90000000 | speed | ((m_lift_bltrig & 0xfff) << 16);
+		  }
+  }
+  // read status and position
+  uint32_t buff[1] = {c_lift_base[config.id] + 4};
+  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaReadRegInternal,
+												 (unsigned char *)buff, 4);
+  buff[0] = c_lift_base[config.id] + 8;
+  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaReadRegInternal,
+													 (unsigned char *)buff, 4);
+}
+
+void ServosTask::updateServo(int id, uint16_t pos, uint16_t speed, uint8_t torque) {
+  const auto &config = m_servos_config->servos[id];
+  bool enabled = isEnabled(id);
+
+  // fpga servo
+  if (config.type == ServoType::StandardServo) {
+    uint32_t servo_pwm = enabled ? static_cast<uint32_t>(pos) << 2 : 0;
+    uint32_t buff[2] = {c_fpga_servos_base + 8 * config.id, servo_pwm};
+    Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaWriteReg,
+                                                   (unsigned char *)buff, 8);
   }
 
-  if (config.type == ServoType::DynamixelMX28) {
-    // one pos unit = 0.088  deg
-    // one speed unit is about 0.114 rpm, or 0.684 dps, or 7.773 pos units per second
-    // speed = 0 correspond to max rpm in dynamixel, so add one
-    uint16_t dyna_speed = static_cast<uint16_t>(speed * 1.1f / 7.773f) + 1;
-    if (dyna_speed > 0x3ff) {
-      dyna_speed = 0x3ff;
-    }
-    uint16_t dyna_torque = (torque * 0x3ff) / 0xff;  // dynamixel max torque = 0x3ff or 1023
-    uint8_t buff[12];
-    *reinterpret_cast<uint16_t *>(buff + 0) =
-        0x8000;                                  // msb=1 => send response to internal exchange
-    *reinterpret_cast<uint8_t *>(buff + 2) = 1;  // protocol version
-    *reinterpret_cast<uint8_t *>(buff + 3) = config.id;
-    *reinterpret_cast<uint8_t *>(buff + 4) = 0x03;  // write
-
-    // torque enable
-    *reinterpret_cast<uint8_t *>(buff + 5) = 24;  // torque enable register
-    *reinterpret_cast<uint16_t *>(buff + 6) = enabled ? 1 : 0;
-    Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DynamixelsRequest,
-                                                   (unsigned char *)buff, 7);
-    if (enabled) {
-      *reinterpret_cast<uint8_t *>(buff + 5) = 30;  // position, speed, torque registers
-      *reinterpret_cast<uint16_t *>(buff + 6) = pos;
-      *reinterpret_cast<uint16_t *>(buff + 8) = dyna_speed;
-      *reinterpret_cast<uint16_t *>(buff + 10) = dyna_torque;
-      Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DynamixelsRequest,
-                                                     (unsigned char *)buff, 12);
-    }
-
-    // request state
-    *reinterpret_cast<uint16_t *>(buff + 0) =
-        (36 << 8) | id | 0x8000;                    // msb=1 => send response to internal exchange
-    *reinterpret_cast<uint8_t *>(buff + 4) = 0x02;  // read
-
-    *reinterpret_cast<uint8_t *>(buff + 5) = 36;  // present position, speed, load
-    *reinterpret_cast<uint8_t *>(buff + 6) = 6;
-    Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DynamixelsRequest,
-                                                   (unsigned char *)buff, 7);
+  switch(config.type)
+  {
+  case ServoType::DynamixelAX12:
+	  updateServoDynamixelAX12(id, enabled, pos, speed, torque);
+	  break;
+  case ServoType::DynamixelMX28:
+  	  updateServoDynamixelMX28(id, enabled, pos, speed, torque);
+  	  break;
+  case ServoType::GoldoLift:
+	  updateServoGoldoLift(id, enabled, pos, speed, torque);
+      break;
+  default:
+	  break;
   }
+  if (config.type == ServoType::GoldoLift) {
+
+  }
+
 }
 
 void ServosTask::publishServoState(int servo_id, bool state) {

@@ -116,6 +116,7 @@ class PropulsionTask : public Task {
 
   uint16_t m_encoder_left{0};
   uint16_t m_encoders_right{0};
+  uint32_t m_current_timestamp{0};
 
   float m_left_vel_setpoint{0};
   float m_right_vel_setpoint{0};
@@ -192,6 +193,12 @@ class PropulsionTask : public Task {
   int m_odometry_stream_cnt{0};
   // each packet is 32 bits timestamp + 20 (left encoder, right encoder) values
   unsigned char m_odometry_stream_buffer[4 * (20 + 1)];
+
+  // Odrive sent commands and received telemetry stream
+  void updateOdriveStream();
+  int m_odrive_stream_cnt{0};
+  // Each packet is 8 bits var id, 8 bits timestamp, 32 bits value
+  unsigned char m_odrive_stream_buffer[4 + 6 * 20];
 
   static unsigned char s_message_queue_buffer[1024];
   static unsigned char s_urgent_message_queue_buffer[1024];

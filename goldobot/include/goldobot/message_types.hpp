@@ -70,6 +70,7 @@ enum class CommMessageType : uint16_t {
   PropulsionODriveTelemetry,
   PropulsionScopeData,
   PropulsionOdometryStream,
+  PropulsionODriveStream,
   PropulsionCommandEvent = 130,
 
   PropulsionExecuteTranslation = 140,

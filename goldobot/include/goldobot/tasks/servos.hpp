@@ -18,6 +18,10 @@ class ServosTask : public Task {
   void processMessageCommand();
 
   void updateServo(int id, uint16_t pos, uint16_t speed, uint8_t torque);
+  void updateServoDynamixelAX12(int id, bool enabled, uint16_t pos, float speed, uint8_t torque);
+  void updateServoDynamixelMX28(int id, bool enabled, uint16_t pos, float speed, uint8_t torque);
+  void updateServoGoldoLift(int id, bool enabled, uint16_t pos, float speed, uint8_t torque);
+
 
   void publishServoState(int id, bool state);
 

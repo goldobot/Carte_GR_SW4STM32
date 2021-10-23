@@ -85,6 +85,11 @@ class ODriveClient {
   const std::array<AxisCalibrationState, 2>& axisCalibrationStates() const noexcept;
   Statistics statistics();
 
+  // experimental functions to get telemetry timings
+  // pos_estimate, vel_estimate, current_estimate, pwm_command * 2
+  bool m_telemetry_ack[8];
+  uint8_t m_telemetry_timestamps[8];
+
   Statistics m_statistics;
 
   uint16_t m_user_endpoints[4] = {0, 0, 0, 0};
@@ -234,6 +239,7 @@ class ODriveClient {
 
   MessageExchange* m_exchange{nullptr};
   CommMessageType m_request_packet_message_type;
+  uint32_t m_current_timestamp;
 
   std::array<AxisState, 2> m_axis_states;
   Telemetry m_telemetry;
