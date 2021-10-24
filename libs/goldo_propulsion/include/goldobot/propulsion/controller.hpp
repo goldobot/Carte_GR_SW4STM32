@@ -38,6 +38,8 @@ struct PropulsionTelemetryEx {
   int16_t target_yaw;
   int16_t target_speed;     // mm per second
   int16_t target_yaw_rate;  // mradian per second
+  int16_t lookahead_x;  // quarters of mm
+  int16_t lookahead_y;
   int16_t longitudinal_error;
   int16_t lateral_error;
   int16_t speed_error;

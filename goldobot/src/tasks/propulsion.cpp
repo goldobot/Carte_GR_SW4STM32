@@ -160,7 +160,7 @@ void PropulsionTask::sendTelemetryMessages() {
 
   if (current_time >= m_next_telemetry_ex_ts) {
     auto msg = m_controller.getTelemetryEx();
-    Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionTelemetryEx,
+    Robot::instance().exchangeOutFtdi().pushMessage(CommMessageType::PropulsionTelemetryEx,
                                                     (unsigned char*)&msg, sizeof(msg));
     m_next_telemetry_ex_ts =
         std::max(m_next_telemetry_ex_ts + m_config.telemetry_ex_period_ms, current_time);

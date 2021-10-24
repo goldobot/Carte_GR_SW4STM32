@@ -586,6 +586,8 @@ messages::PropulsionTelemetryEx PropulsionController::getTelemetryEx() const {
   msg.target_yaw = (int16_t)(m_target_pose.yaw * 32767 / c_pi);
   msg.target_speed = (int16_t)(m_target_pose.speed * 1000);
   msg.target_yaw_rate = (int16_t)(m_target_pose.yaw_rate * 1000);
+  msg.lookahead_x = (int16_t)(m_lookahead_position.x * 4e3f);
+  msg.lookahead_y = (int16_t)(m_lookahead_position.y * 4e3f);
   msg.longitudinal_error = (int16_t)(m_low_level_controller.m_longi_error * 4e3f);
   msg.lateral_error = (int16_t)(m_low_level_controller.m_lateral_error * 4e3f);
   msg.speed_error = (int16_t)(m_low_level_controller.m_lateral_error * 1e3f);
