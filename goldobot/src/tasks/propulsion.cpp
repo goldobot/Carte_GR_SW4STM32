@@ -785,6 +785,8 @@ void PropulsionTask::updateOdriveStream() {
 				val = m_odrive_client.m_axis_requests[i/4].input_vel;
 				break;
 			}
+			std::memcpy(ptr+2, &val, sizeof(float));
+
 			m_odrive_stream_cnt++;
 			  if (m_odrive_stream_cnt == 20) {
 				  m_odrive_stream_cnt = 0;
