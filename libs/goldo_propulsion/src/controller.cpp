@@ -219,12 +219,13 @@ void PropulsionController::updateTargetPositions() {
 
   // Compute position of lookahead point
   // Extend the trajectory past last point if necessary
-  if (lookahead_parameter <= m_trajectory_buffer.max_parameter()) {
+  auto max_parameter = m_trajectory_buffer.max_parameter();
+  if (lookahead_parameter <= max_parameter) {
     m_lookahead_position = m_trajectory_buffer.compute_point(lookahead_parameter).position;
   } else {
-    auto end_point = m_trajectory_buffer.compute_point(m_trajectory_buffer.max_parameter());
-    m_lookahead_position.x = end_point.position.x + lookahead_distance * end_point.tangent.x;
-    m_lookahead_position.y = end_point.position.y + lookahead_distance * end_point.tangent.y;
+    auto end_point = m_trajectory_buffer.compute_point(max_parameter);
+    m_lookahead_position.x = end_point.position.x + (lookahead_parameter - max_parameter) * end_point.tangent.x;
+    m_lookahead_position.y = end_point.position.y + (lookahead_parameter - max_parameter) * end_point.tangent.y;
   }
 
   // Compute speed. project trajectory speed on robot axis, to get correct value during curves
