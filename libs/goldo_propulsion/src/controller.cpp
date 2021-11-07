@@ -171,12 +171,10 @@ float PropulsionController::rightMotorTorqueInput() const noexcept {
 }
 
 float PropulsionController::leftMotorTorqueLimit() const noexcept {
-  return 0.4f;
   return m_low_level_controller.m_left_motor_torque_lim;
 }
 
 float PropulsionController::rightMotorTorqueLimit() const noexcept {
-  return 0.4f;
   return m_low_level_controller.m_right_motor_torque_lim;
 }
 
