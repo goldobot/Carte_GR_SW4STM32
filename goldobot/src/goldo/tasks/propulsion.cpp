@@ -217,6 +217,7 @@ void PropulsionTask::doStep()
 void PropulsionTask::processMessage()
 {
   auto message_type = (CommMessageType)m_message_queue.message_type();
+  auto message_seq = m_message_queue.message_seq();
 
 #if 1 /* FIXME : DEBUG */
   if ((message_type==CommMessageType::DbgPropulsionExecuteRotation) ||
@@ -236,10 +237,12 @@ void PropulsionTask::processMessage()
   {
   case CommMessageType::PropulsionExecuteTrajectory:
   case CommMessageType::DbgPropulsionExecuteTrajectory:
+    m_controller.set_current_seq(message_seq);
     onMsgExecuteTrajectory();
     break;
   case CommMessageType::PropulsionExecuteRotation:
   case CommMessageType::DbgPropulsionExecuteRotation:
+    m_controller.set_current_seq(message_seq);
     {
       float params[4];
       m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
@@ -248,6 +251,7 @@ void PropulsionTask::processMessage()
     break;
   case CommMessageType::PropulsionExecuteTranslation:
   case CommMessageType::DbgPropulsionExecuteTranslation:
+    m_controller.set_current_seq(message_seq);
     {
       float params[4];
       m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
@@ -255,9 +259,11 @@ void PropulsionTask::processMessage()
     }
     break;
   case CommMessageType::PropulsionExecutePointTo:
+    m_controller.set_current_seq(message_seq);
     onMsgExecutePointTo();
     break;
   case CommMessageType::PropulsionExecuteFaceDirection:
+    m_controller.set_current_seq(message_seq);
     {
       float params[4];
       m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
@@ -265,6 +271,7 @@ void PropulsionTask::processMessage()
     }
     break;
   case CommMessageType::PropulsionExecuteMoveTo:
+    m_controller.set_current_seq(message_seq);
     {
       float params[5];
       m_message_queue.pop_message((unsigned char*)&params, sizeof(params));
@@ -272,6 +279,7 @@ void PropulsionTask::processMessage()
     }
     break;
   case CommMessageType::PropulsionExecuteReposition:
+    m_controller.set_current_seq(message_seq);
     {
       float params[2];
       m_message_queue.pop_message((unsigned char*)&params, sizeof(params));

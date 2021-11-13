@@ -215,6 +215,7 @@ void RtTelemetryTask::taskFunction()
           (rt_rcv_buff[2]==0x00) &&
           (rt_rcv_buff[3]>= 0x0a)) {
         int frame_len = rt_rcv_buff[3];
+        uint32_t seq_cnt = *((uint32_t *)((uint8_t *)(&rt_rcv_buff[4])));
         uint16_t msg_type = *((uint16_t *)((uint8_t *)(&rt_rcv_buff[8])));
         size_t msg_size = frame_len - 8 - 2;
         uint8_t *msg_payload = &rt_rcv_buff[10];
@@ -224,7 +225,7 @@ void RtTelemetryTask::taskFunction()
           goldo_send_log("DRT : %d %d", msg_type, msg_size);
         }
 #endif
-        Robot::instance().mainExchangeIn().pushMessage((CommMessageType)msg_type, msg_payload, msg_size);
+        Robot::instance().mainExchangeIn().pushMessage((CommMessageType)msg_type, msg_payload, msg_size, seq_cnt);
       }
       rt_rcv_state = RT_RCV_IDLE;
       break;

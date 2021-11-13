@@ -39,6 +39,7 @@ void PropulsionController::setEnable(bool enable)
     m_current_pose = m_odometry->pose();
     m_target_pose = m_current_pose;
     m_low_level_controller.reset();
+    m_current_seq = 0xffff;
     on_stopped_enter();
   }
   if(!enable && m_state != State::Inactive)
@@ -60,6 +61,16 @@ PropulsionController::Error PropulsionController::error() const
   return m_error;
 }
 
+uint16_t PropulsionController::current_seq() const
+{
+  return m_current_seq;
+}
+
+void PropulsionController::set_current_seq(uint16_t seq)
+{
+  m_current_seq = seq;
+}
+
 const PropulsionControllerConfig& PropulsionController::config() const
 {
   return m_config;
@@ -78,6 +89,7 @@ void PropulsionController::clearError()
   m_error = Error::None;
   m_target_pose = m_current_pose;
   m_low_level_controller.reset();
+  m_current_seq = 0xffff;
   on_stopped_enter();
 }
 
@@ -365,6 +377,8 @@ void PropulsionController::on_stopped_enter()
 
   m_target_pose.speed = 0;
   m_target_pose.yaw_rate = 0;
+
+  m_current_seq++;
 
   m_pwm_limit = m_config.static_pwm_limit;
 }

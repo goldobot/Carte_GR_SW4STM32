@@ -64,6 +64,12 @@ namespace goldobot
     //! \brief Get current controller error code
     Error error() const;
 
+    //! \brief Get current executing sequence
+    uint16_t current_seq() const;
+
+    //! \brief Set current executing sequence
+    void set_current_seq(uint16_t seq);
+
     //! \brief Clear error and return to Stopped state
     void clearError();
 
@@ -117,6 +123,8 @@ namespace goldobot
 
     State m_state{State::Inactive};
     Error m_error{Error::None};
+
+    uint16_t m_current_seq{0xffff};
 
     float m_left_motor_pwm{0};
     float m_right_motor_pwm{0};

@@ -15,8 +15,9 @@ namespace goldobot
     bool message_ready() const;
     CommMessageType message_type() const;
     size_t message_size() const;
+    uint16_t message_seq() const;
 
-    bool push_message(uint16_t message_type, const unsigned char* buffer, size_t size);
+    bool push_message(uint16_t message_type, const unsigned char* buffer, size_t size, uint16_t seq=0xffff);
     void pop_message(unsigned char* buffer, size_t size);
 
     size_t available_capacity() const;
@@ -33,6 +34,7 @@ namespace goldobot
     bool m_message_ready;
     uint16_t m_message_size;
     uint16_t m_message_type;
+    uint16_t m_message_seq;
 
     SemaphoreHandle_t m_mutex; // FIXME : TODO : Should use generic mutex type instead of freertos one
   };
