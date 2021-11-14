@@ -7,7 +7,7 @@ MessageExchange::MessageExchange()
   m_mutex = xSemaphoreCreateMutex();
 }
 
-bool MessageExchange::pushMessage(CommMessageType message_type, const unsigned char* buffer, size_t size, uint32_t seq)
+bool MessageExchange::pushMessage(CommMessageType message_type, const unsigned char* buffer, size_t size, uint16_t seq)
 {
   while(xSemaphoreTake(m_mutex, portMAX_DELAY) != pdTRUE)
   {
@@ -18,7 +18,7 @@ bool MessageExchange::pushMessage(CommMessageType message_type, const unsigned c
     auto& sub = m_subscriptions[i];
     if((uint16_t)message_type >= sub.message_type_first && (uint16_t)message_type <= sub.message_type_last)
     {
-      sub.queue->push_message((uint16_t)message_type, buffer, size, (uint16_t)seq);
+      sub.queue->push_message((uint16_t)message_type, buffer, size, seq);
     }
   }
   xSemaphoreGive(m_mutex);

@@ -197,10 +197,10 @@ void RtTelemetryTask::taskFunction()
       /* receive completion is detected in rt_telemetry_cb() */
       break;
     case RT_RCV_WAIT_PROCESS:
-      /* Cmd msg : [x55 x24 x00 <frame_len> <seq_cnt> <msg_type> <msg_pload>] */
-      /*  - <frame_len> : 1 byte , includes header */
-      /*  - <seq_cnt>   : 4 bytes, little endian   */
-      /*  - <msg_type>  : 2 bytes, little endian   */
+      /* Cmd msg : [x55 x24 x00 <frame_len> <oob_and_seq> <msg_type> <msg_pload>] */
+      /*  - <frame_len>   : 1 byte , includes header */
+      /*  - <oob_and_seq> : 4 bytes, little endian   */
+      /*  - <msg_type>    : 2 bytes, little endian   */
 #if 1 /* FIXME : DEBUG : contournement TRES CRADE! (pour bug apparent de desynchronisation du RX..) */
       if ((rt_rcv_buff[1]==0x55) && (rt_rcv_buff[2]==0x24))
       {
@@ -215,7 +215,10 @@ void RtTelemetryTask::taskFunction()
           (rt_rcv_buff[2]==0x00) &&
           (rt_rcv_buff[3]>= 0x0a)) {
         int frame_len = rt_rcv_buff[3];
-        uint32_t seq_cnt = *((uint32_t *)((uint8_t *)(&rt_rcv_buff[4])));
+        uint32_t oob_and_seq = *((uint32_t *)((uint8_t *)(&rt_rcv_buff[4])));
+        uint32_t uart_seq = oob_and_seq & 0x0000ffff;
+        uint32_t oob_seq  = oob_and_seq & 0xffff0000;
+        oob_seq = oob_seq>>16;
         uint16_t msg_type = *((uint16_t *)((uint8_t *)(&rt_rcv_buff[8])));
         size_t msg_size = frame_len - 8 - 2;
         uint8_t *msg_payload = &rt_rcv_buff[10];
@@ -225,7 +228,7 @@ void RtTelemetryTask::taskFunction()
           goldo_send_log("DRT : %d %d", msg_type, msg_size);
         }
 #endif
-        Robot::instance().mainExchangeIn().pushMessage((CommMessageType)msg_type, msg_payload, msg_size, seq_cnt);
+        Robot::instance().mainExchangeIn().pushMessage((CommMessageType)msg_type, msg_payload, msg_size, (uint16_t)oob_seq);
       }
       rt_rcv_state = RT_RCV_IDLE;
       break;
