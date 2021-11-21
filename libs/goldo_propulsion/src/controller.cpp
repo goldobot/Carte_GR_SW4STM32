@@ -16,9 +16,8 @@ void PropulsionController::setEnable(bool enable) {
     setState(State::Stopped);
   }
   if (!enable && m_state != State::Inactive) {
-    m_error = Error::None;
     m_low_level_controller.reset();
-    setState(State::Inactive);
+    setState(State::Inactive, Error::None);
   }
 }
 
@@ -45,11 +44,12 @@ void PropulsionController::clearError() {
 	if(m_state != State::Error) {
 		return;
 	}
-  m_state = State::Stopped;
-  m_error = Error::None;
+
+  setState(State::Stopped, Error::None);
+
   m_target_pose = m_current_pose;
   m_low_level_controller.reset();
-  setState(State::Stopped);
+
 }
 
 bool PropulsionController::commandFinished() { return m_command_finished; }
@@ -105,8 +105,7 @@ void PropulsionController::update() {
       break;
     case State::Stopped:
       if (fabsf(m_low_level_controller.m_longi_error) > 0.1f) {
-        m_state = State::Error;
-        m_error = Error::TrackingError;
+        setState(State::Error, Error::TrackingError);
       }
       break;
     case State::FollowTrajectory: {
@@ -323,8 +322,7 @@ void PropulsionController::check_tracking_error()
 	}
 	if(error == true)
 	{
-		m_state = State::Error;
-		m_error = Error::TrackingError;
+		setState(State::Error, Error::TrackingError);
 	}
 
 }
@@ -347,6 +345,12 @@ void PropulsionController::on_stopped_enter() {
   m_emergency_stop = false;
 }
 
+void PropulsionController::setState(State state, Error error)
+{
+	m_error = error;
+	setState(state);
+	m_state_changed = true;
+}
 void PropulsionController::setState(State state)
 {
 	if(state == m_state)
@@ -369,8 +373,7 @@ void PropulsionController::on_command_finished()
 {
 	if(m_emergency_stop)
 	{
-		m_state = State::Error;
-		m_error = Error::EmergencyStop;
+		setState(State::Error, Error::EmergencyStop);
 		m_command_finished = true;
 		m_low_level_controller.reset();
 	} else

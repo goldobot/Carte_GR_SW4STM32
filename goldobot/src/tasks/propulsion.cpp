@@ -96,11 +96,14 @@ void PropulsionTask::doStep() {
 
   // Check state change
   if (m_controller.stateChanged()) {
-    uint8_t buff[2];
-    buff[0] = (uint8_t)m_controller.state();
-    buff[1] = (uint8_t)m_controller.error();
+    uint8_t buff[6];
+    *(uint32_t*)buff = m_current_timestamp;
+    buff[4] = (uint8_t)m_controller.state();
+    buff[5] = (uint8_t)m_controller.error();
+    Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionState,
+                                                   (unsigned char*)buff, sizeof(buff));
     Robot::instance().mainExchangeIn().pushMessage(CommMessageType::PropulsionState,
-                                                   (unsigned char*)buff, 2);
+                                                       (unsigned char*)buff, sizeof(buff));
   }
 
   if (m_controller.state() != PropulsionController::State::Inactive) {
@@ -520,12 +523,13 @@ uint16_t PropulsionTask::readCommand(MessageQueue& queue, void* buff, size_t& si
 }
 
 void PropulsionTask::sendCommandEvent(uint16_t sequence_number, CommandEvent event) {
-  uint8_t buff[4];  // sequence_number, status, error
-  *(uint16_t*)(buff) = sequence_number;
-  buff[2] = static_cast<uint8_t>(event);
-  buff[3] = static_cast<uint8_t>(m_controller.error());
+  uint8_t buff[8];  // timestamp, sequence_number, status, error
+  *(uint16_t*)(buff) = m_current_timestamp;
+  *(uint16_t*)(buff + 4) = sequence_number;
+  buff[6] = static_cast<uint8_t>(event);
+  buff[7] = static_cast<uint8_t>(m_controller.error());
   Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::PropulsionCommandEvent, buff,
-                                                      4);
+                                                      sizeof(buff));
 }
 
 void PropulsionTask::onCommandBegin(uint16_t sequence_number) {
@@ -781,7 +785,7 @@ void PropulsionTask::updateOdriveStream() {
 			case 2:
 				val = telemetry.current_iq_setpoint;
 				break;
-			case 4:
+			case 3:
 				val = m_odrive_client.m_axis_requests[i/4].input_vel;
 				break;
 			}
