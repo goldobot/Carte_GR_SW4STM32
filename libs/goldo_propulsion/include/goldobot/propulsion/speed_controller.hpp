@@ -25,6 +25,7 @@ class SpeedController {
   void setParameterRange(float min_parameter, float max_parameter);
 
   void setRequestedSpeed(float speed);
+  void setFinalSpeed(float final_speed);
   void setAccelerationLimits(float accel, float deccel);
 
   float maxParameter() const noexcept;
@@ -42,6 +43,7 @@ class SpeedController {
   float m_acceleration{0};
 
   float m_requested_speed{0};
+  float m_final_speed{0};
   float m_acceleration_limit{1};
   float m_decceleration_limit{1};
 

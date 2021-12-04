@@ -22,6 +22,8 @@ void SpeedController::setRequestedSpeed(float speed) {
   recompute();
 }
 
+void SpeedController::setFinalSpeed(float final_speed) { m_final_speed = final_speed; }
+
 void SpeedController::setAccelerationLimits(float accel, float deccel) {
   m_acceleration_limit = accel;
   m_decceleration_limit = deccel;
@@ -79,15 +81,14 @@ void SpeedController::recompute() {
   m_time = 0;
   m_index = 0;
 
-  if(m_max_parameter - m_parameter < std::numeric_limits<float>::epsilon())
-  {
-	  m_num_points = 1;
-	  m_t[0] = 0;
-	  m_c0[0] = m_parameter;
-	  m_c1[0] = m_requested_speed;
-	  m_c2[0] = 0;
-	  m_c3[0] = 0;
-	  return;
+  if (m_max_parameter - m_parameter < std::numeric_limits<float>::epsilon()) {
+    m_num_points = 1;
+    m_t[0] = 0;
+    m_c0[0] = m_parameter;
+    m_c1[0] = m_requested_speed;
+    m_c2[0] = 0;
+    m_c3[0] = 0;
+    return;
   }
 
   // trapezoidal profile in 3 phases
@@ -97,7 +98,7 @@ void SpeedController::recompute() {
 
   float target_speed = m_requested_speed;
   float delta_v_1 = target_speed - m_speed;
-  float delta_v_2 = 0 - target_speed;
+  float delta_v_2 = m_final_speed - target_speed;
   float distance = m_max_parameter - m_parameter;
 
   float a1 = delta_v_1 >= 0 ? m_acceleration_limit : -m_decceleration_limit;
@@ -152,7 +153,7 @@ void SpeedController::recompute() {
   m_c3[0] = 0;
   m_c3[1] = 0;
   m_c3[2] = 0;
-  m_c3[3] = 0;
+  m_c3[3] = m_final_speed;
 
   m_num_points = 4;
 }
