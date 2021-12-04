@@ -32,6 +32,7 @@ class SimpleOdometry {
   void update(uint16_t left_encoder, uint16_t right_encoder);
 
   float m_diff_left{0};
+
  private:
   uint16_t m_left_encoder{0};
   uint16_t m_right_encoder{0};

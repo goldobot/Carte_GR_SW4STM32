@@ -10,27 +10,21 @@ class PropulsionController;
 namespace propulsion {
 
 class BlockingDetector {
-public:
-	BlockingDetector();
-	void setVelEstimates(float left, float right);
-	void setTorqueEstimates(float left, float right);
-	
-	
-	void update(const PropulsionController& controller);
-	
-	float m_speed_estimate;
-	float m_force_estimate;
+ public:
+  BlockingDetector();
+  void setVelEstimates(float left, float right);
+  void setTorqueEstimates(float left, float right);
 
-	
-	float m_vel_estimates[2];
-	float m_torque_estimates[2];
+  void update(const PropulsionController& controller);
 
-	LowPassFilter m_slip_speeds[2];
+  float m_speed_estimate;
+  float m_force_estimate;
+
+  float m_vel_estimates[2];
+  float m_torque_estimates[2];
+
+  LowPassFilter m_slip_speeds[2];
 };
 
-
-
-
-}
-}
-
+}  // namespace propulsion
+}  // namespace goldobot

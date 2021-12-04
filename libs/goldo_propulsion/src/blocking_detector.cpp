@@ -6,13 +6,12 @@
 namespace goldobot {
 namespace propulsion {
 
-BlockingDetector::BlockingDetector()
-{
-	m_slip_speeds[0].setConfig(1e-3f, 10.0f);
-	m_slip_speeds[1].setConfig(1e-3f, 10.0f);
+BlockingDetector::BlockingDetector() {
+  m_slip_speeds[0].setConfig(1e-3f, 10.0f);
+  m_slip_speeds[1].setConfig(1e-3f, 10.0f);
 
-	m_slip_speeds[0].reset(0);
-	m_slip_speeds[1].reset(0);
+  m_slip_speeds[0].reset(0);
+  m_slip_speeds[1].reset(0);
 }
 void BlockingDetector::setVelEstimates(float left, float right) {
   m_vel_estimates[0] = left;
@@ -35,17 +34,17 @@ void BlockingDetector::update(const PropulsionController& controller) {
   m_speed_estimate = m_speed_estimate * 0.98f + 0.02f * speed_estimate;
   m_force_estimate = m_force_estimate * 0.98f + 0.02f * force_estimate;
 
-   auto current_pose = controller.currentPose();
-   auto ll_config = controller.config().low_level_config;
+  auto current_pose = controller.currentPose();
+  auto ll_config = controller.config().low_level_config;
 
-   float yaw_rate_command = current_pose.yaw_rate * 0.5f * ll_config.wheels_distance;
+  float yaw_rate_command = current_pose.yaw_rate * 0.5f * ll_config.wheels_distance;
 
-   float left_target_speed = (current_pose.speed - yaw_rate_command) * ll_config.motors_speed_factor;
-   float right_target_speed = (current_pose.speed + yaw_rate_command) * ll_config.motors_speed_factor;
+  float left_target_speed = (current_pose.speed - yaw_rate_command) * ll_config.motors_speed_factor;
+  float right_target_speed =
+      (current_pose.speed + yaw_rate_command) * ll_config.motors_speed_factor;
 
-   m_slip_speeds[0].step((m_vel_estimates[0] - left_target_speed)/ll_config.motors_speed_factor);
-   m_slip_speeds[1].step((m_vel_estimates[1] - right_target_speed)/ll_config.motors_speed_factor);
-
+  m_slip_speeds[0].step((m_vel_estimates[0] - left_target_speed) / ll_config.motors_speed_factor);
+  m_slip_speeds[1].step((m_vel_estimates[1] - right_target_speed) / ll_config.motors_speed_factor);
 }
 
 /*

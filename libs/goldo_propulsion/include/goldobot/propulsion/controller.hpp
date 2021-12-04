@@ -38,7 +38,7 @@ struct PropulsionTelemetryEx {
   int16_t target_yaw;
   int16_t target_speed;     // mm per second
   int16_t target_yaw_rate;  // mradian per second
-  int16_t lookahead_x;  // quarters of mm
+  int16_t lookahead_x;      // quarters of mm
   int16_t lookahead_y;
   int16_t longitudinal_error;
   int16_t lateral_error;
@@ -104,8 +104,7 @@ class PropulsionController {
   // \brief Return current robot pose
   const RobotPose& currentPose() const;
 
-
-  const LowLevelController& lowLevelController() const { return m_low_level_controller;};
+  const LowLevelController& lowLevelController() const { return m_low_level_controller; };
 
   void update();
 
@@ -122,6 +121,7 @@ class PropulsionController {
   void setMotorsTorqueEstimates(float left, float right);
 
   void setAccelerationLimits(float accel, float deccel, float angular_accel, float angular_deccel);
+  void setRepositionSpeed(float speed);
   void setTargetSpeed(float speed);
 
   //! \brief reset robot pose. Only works if state is Inactive or Stopped. Also change odometry.
@@ -162,7 +162,6 @@ class PropulsionController {
   LowLevelController m_low_level_controller;
   RobotPose m_current_pose;
   RobotPose m_target_pose;
-  RobotPose m_final_pose;  // Pose desired at the end of current command
 
   State m_state{State::Inactive};
   Error m_error{Error::None};
@@ -170,6 +169,7 @@ class PropulsionController {
   bool m_state_changed{false};
   bool m_emergency_stop{false};
 
+  float m_reposition_speed{1};
   float m_accel{1};
   float m_deccel{1};
   float m_angular_accel{1};
@@ -179,7 +179,7 @@ class PropulsionController {
   TrajectoryBuffer m_trajectory_buffer;
   float m_begin_yaw;              // yaw at beginning of current PointTo command
   float m_rotation_direction{1};  // sign of delta yaw
-  float m_direction_sign{0}; //direction of rotation or trajectory
+  float m_direction_sign{0};      // direction of rotation or trajectory
   SpeedController m_speed_controller;
 
   Direction m_direction;
@@ -210,8 +210,5 @@ class PropulsionController {
   void on_stopped_enter();
   void on_command_finished();
   void on_reposition_exit();
-
-  // Initialize speed parameters for move command
-  void initMoveCommand(float speed, float accel, float deccel);
 };
 }  // namespace goldobot
