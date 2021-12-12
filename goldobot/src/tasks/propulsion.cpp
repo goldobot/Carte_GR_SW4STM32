@@ -424,12 +424,16 @@ void PropulsionTask::onMsgExecutePointToBack(size_t msg_size) {
 
 void PropulsionTask::onMsgExecuteTrajectory(size_t msg_size) {
   // todo: send error message if message size is too large
-  if (msg_size <= 136) {
+  if (msg_size <= 144) {
     // message has a header of  8 bytes: uint16 sequence number, padding and float speed. each point
+	// added reposition distance and speed to header
     // is 2 floats
-    int num_points = (msg_size - 8) / 8;
+    int num_points = (msg_size - 16) / 8;
     float speed = *(float*)(exec_traj_buff + 4);
-    Vector2D* points = (Vector2D*)(exec_traj_buff + 8);
+    float reposition_distance = *(float*)(exec_traj_buff + 8);
+    float reposition_speed = *(float*)(exec_traj_buff + 12);
+    Vector2D* points = (Vector2D*)(exec_traj_buff + 16);
+    m_controller.prepareReposition(reposition_distance, reposition_speed);
     m_controller.executeTrajectory(points, num_points, speed);
   }
 }

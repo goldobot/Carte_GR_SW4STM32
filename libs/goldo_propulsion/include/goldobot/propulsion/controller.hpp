@@ -121,7 +121,7 @@ class PropulsionController {
   void setMotorsTorqueEstimates(float left, float right);
 
   void setAccelerationLimits(float accel, float deccel, float angular_accel, float angular_deccel);
-  void setRepositionSpeed(float speed);
+  void prepareReposition(float distance, float speed);
   void setTargetSpeed(float speed);
 
   //! \brief reset robot pose. Only works if state is Inactive or Stopped. Also change odometry.
@@ -169,7 +169,8 @@ class PropulsionController {
   bool m_state_changed{false};
   bool m_emergency_stop{false};
 
-  float m_reposition_speed{1};
+  float m_reposition_speed{0};
+  float m_reposition_distance{0};
   float m_accel{1};
   float m_deccel{1};
   float m_angular_accel{1};
@@ -207,8 +208,13 @@ class PropulsionController {
   void setState(State state);
   void setState(State state, Error error);
 
+  void initMoveCommand(float speed);
+
   void on_stopped_enter();
   void on_command_finished();
-  void on_reposition_exit();
+
+  void onFollowTrajectoryEnter();
+  void onRepositionEnter();
+  void onRepositionExit();
 };
 }  // namespace goldobot

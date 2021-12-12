@@ -110,7 +110,11 @@ void PropulsionController::update() {
       updateTargetPositions();
       check_tracking_error();
       if (m_speed_controller.finished()) {
-        on_command_finished();
+        if (m_reposition_distance != 0) {
+          setState(State::Reposition);
+        } else {
+          on_command_finished();
+        }
       }
       if (m_emergency_stop && fabsf(m_speed_controller.speed()) < 1e-3f) {
         on_command_finished();
@@ -260,7 +264,7 @@ void PropulsionController::updateReposition() {
   parameter = std::min(parameter, m_trajectory_buffer.max_parameter());
 
   // Compute target position
-  float sign = m_direction == Direction::Forward ? 1 : -1;
+  float sign = m_direction == Direction::Forward ? 1.0f : -1.0f;
   auto target_point = m_trajectory_buffer.compute_point(parameter);
   m_target_pose.position = target_point.position;
   m_target_pose.speed = speed * sign;
@@ -282,11 +286,11 @@ void PropulsionController::updateReposition() {
   }
 
   if (m_speed_controller.finished() && !m_reposition_hit) {
-    on_reposition_exit();
+    setState(State::Stopped);
   }
 
   if (m_reposition_hit && m_time_base_ms >= m_reposition_end_ts) {
-    on_reposition_exit();
+    setState(State::Stopped);
   }
 };
 
@@ -339,9 +343,23 @@ void PropulsionController::setState(State state) {
     return;
   }
 
+  switch (m_state) {
+    case State::Reposition:
+      onRepositionExit();
+      break;
+    default:
+      break;
+  }
+
   switch (state) {
     case State::Stopped:
       on_stopped_enter();
+      break;
+    case State::FollowTrajectory:
+      onFollowTrajectoryEnter();
+      break;
+    case State::Reposition:
+      onRepositionEnter();
       break;
     default:
       break;
@@ -359,20 +377,54 @@ void PropulsionController::on_command_finished() {
   }
 }
 
-void PropulsionController::on_reposition_exit() {
+void PropulsionController::onFollowTrajectoryEnter() {
+  m_low_level_controller.m_motor_velocity_limit = m_config.cruise_pwm_limit;
+  m_low_level_controller.m_left_motor_torque_lim = m_config.cruise_torque_limit;
+  m_low_level_controller.m_right_motor_torque_lim = m_config.cruise_torque_limit;
+
+  m_low_level_controller.setPidConfig(m_config.pid_configs[0]);
+  m_low_level_controller.m_longi_control_level = 2;
+  m_low_level_controller.m_yaw_control_level = 1;
+}
+
+void PropulsionController::onRepositionEnter() {
+  // compute target point
+  Vector2D target;
+
+  float ux = cos(m_target_pose.yaw);
+  float uy = sin(m_target_pose.yaw);
+
+  target.x = m_target_pose.position.x + ux * m_reposition_distance;
+  target.y = m_target_pose.position.y + uy * m_reposition_distance;
+
+  Vector2D traj[2];
+  traj[0] = m_target_pose.position;
+  traj[1] = target;
+
+  m_trajectory_buffer.push_segment(traj, 2);
+  initMoveCommand(m_reposition_speed);
+
+  m_reposition_hit = false;
+  m_low_level_controller.setPidConfig(m_config.pid_configs[0]);
+  m_low_level_controller.m_longi_control_level = 2;
+  m_low_level_controller.m_yaw_control_level = 2;
+}
+
+void PropulsionController::onRepositionExit() {
   auto pose = m_odometry->pose();
   m_target_pose.position = pose.position;
   m_target_pose.yaw = pose.yaw;
   m_target_pose.speed = 0;
   m_target_pose.yaw_rate = 0;
-  setState(State::Stopped);
+  m_reposition_speed = 0;
+  m_reposition_distance = 0;
 }
 
 void PropulsionController::initMoveCommand(float speed) {
   m_speed_controller.setAccelerationLimits(m_accel, m_deccel);
   m_speed_controller.setParameterRange(0, m_trajectory_buffer.max_parameter());
   m_speed_controller.setRequestedSpeed(speed);
-  m_speed_controller.reset(0, 0, 0);
+  m_speed_controller.reset(0, m_target_pose.speed, m_target_pose.acceleration);
 
   // Compute direction by taking scalar product of current robot orientation vector with tangent of
   // trajectory at origin
@@ -381,7 +433,6 @@ void PropulsionController::initMoveCommand(float speed) {
   float uy = sinf(m_target_pose.yaw);
   m_direction = ux * target_point.tangent.x + uy * target_point.tangent.y > 0 ? Direction::Forward
                                                                               : Direction::Backward;
-
   m_low_level_controller.m_motor_velocity_limit = m_config.cruise_pwm_limit;
   m_low_level_controller.m_left_motor_torque_lim = m_config.cruise_torque_limit;
   m_low_level_controller.m_right_motor_torque_lim = m_config.cruise_torque_limit;
@@ -420,13 +471,7 @@ bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, f
   m_direction = ux * target_point.tangent.x + uy * target_point.tangent.y > 0 ? Direction::Forward
                                                                               : Direction::Backward;
 
-  m_low_level_controller.m_motor_velocity_limit = m_config.cruise_pwm_limit;
-  m_low_level_controller.m_left_motor_torque_lim = m_config.cruise_torque_limit;
-  m_low_level_controller.m_right_motor_torque_lim = m_config.cruise_torque_limit;
 
-  m_low_level_controller.setPidConfig(m_config.pid_configs[0]);
-  m_low_level_controller.m_longi_control_level = 2;
-  m_low_level_controller.m_yaw_control_level = 1;
 
   setState(State::FollowTrajectory);
   return true;
@@ -465,7 +510,7 @@ bool PropulsionController::executeRotation(float delta_yaw, float yaw_rate) {
   m_begin_yaw = m_target_pose.yaw;
 
   // The speed controller output an increasing parameter.
-  m_rotation_direction = delta_yaw >= 0 ? 1 : -1;
+  m_rotation_direction = delta_yaw >= 0 ? 1.0f : -1.0f;
   m_speed_controller.setAccelerationLimits(m_angular_accel, m_angular_deccel);
   m_speed_controller.setParameterRange(0, fabs(delta_yaw));
   m_speed_controller.setRequestedSpeed(yaw_rate);
@@ -484,35 +529,18 @@ bool PropulsionController::executeRotation(float delta_yaw, float yaw_rate) {
   return true;
 }
 
+void PropulsionController::prepareReposition(float distance, float speed) {
+  m_reposition_distance = distance;
+  m_reposition_speed = speed;
+}
 bool PropulsionController::executeRepositioning(float distance, float speed) {
   if (m_state != State::Stopped) {
     return false;
   }
+  m_reposition_distance = distance;
+  m_reposition_speed = speed;
 
-  // compute target point
-  Vector2D target;
-
-  float ux = cos(m_target_pose.yaw);
-  float uy = sin(m_target_pose.yaw);
-
-  target.x = m_target_pose.position.x + ux * distance;
-  target.y = m_target_pose.position.y + uy * distance;
-
-  Vector2D traj[2];
-  traj[0] = m_target_pose.position;
-  traj[1] = target;
-
-  m_trajectory_buffer.push_segment(traj, 2);
-  initMoveCommand(speed, m_accel, m_deccel);
-
-  m_reposition_hit = false;
-  m_state = State::Reposition;
-  m_state_changed = true;
-
-  m_low_level_controller.setPidConfig(m_config.pid_configs[0]);
-  m_low_level_controller.m_longi_control_level = 2;
-  m_low_level_controller.m_yaw_control_level = 2;
-
+  setState(State::Reposition);
   return true;
 }
 
@@ -547,8 +575,8 @@ messages::PropulsionTelemetry PropulsionController::getTelemetry() const {
   msg.angular_acceleration = (int16_t)(m_current_pose.angular_acceleration * 1000);
   msg.left_encoder = m_odometry->leftEncoderValue();
   msg.right_encoder = m_odometry->rightEncoderValue();
-  msg.left_pwm = (int16_t)(leftMotorVelocityInput() * 100);
-  msg.right_pwm = (int16_t)(rightMotorVelocityInput() * 100);
+  msg.left_pwm = (int8_t)(leftMotorVelocityInput() * 100);
+  msg.right_pwm = (int8_t)(rightMotorVelocityInput() * 100);
   msg.state = (uint8_t)(state());
   msg.error = (uint8_t)(error());
   return msg;

@@ -13,11 +13,11 @@ class Vector2D {
 
 class RobotPose {
  public:
-  Vector2D position;
-  float yaw;
-  float speed;
-  float yaw_rate;
-  float acceleration;
-  float angular_acceleration;
+  Vector2D position{0,0};
+  float yaw{0};
+  float speed{0};
+  float yaw_rate{0};
+  float acceleration{0};
+  float angular_acceleration{0};
 };
 }  // namespace goldobot
