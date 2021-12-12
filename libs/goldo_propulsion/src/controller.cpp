@@ -402,7 +402,12 @@ void PropulsionController::onRepositionEnter() {
   traj[1] = target;
 
   m_trajectory_buffer.push_segment(traj, 2);
-  initMoveCommand(m_reposition_speed);
+
+  m_speed_controller.setAccelerationLimits(m_accel, m_deccel);
+  m_speed_controller.setParameterRange(0, m_trajectory_buffer.max_parameter());
+  m_speed_controller.setRequestedSpeed(m_reposition_speed);
+  m_speed_controller.setFinalSpeed(0);
+  m_speed_controller.reset(0, m_target_pose.speed, m_target_pose.acceleration);
 
   m_reposition_hit = false;
   m_low_level_controller.setPidConfig(m_config.pid_configs[0]);
@@ -420,6 +425,7 @@ void PropulsionController::onRepositionExit() {
   m_reposition_distance = 0;
 }
 
+/*
 void PropulsionController::initMoveCommand(float speed) {
   m_speed_controller.setAccelerationLimits(m_accel, m_deccel);
   m_speed_controller.setParameterRange(0, m_trajectory_buffer.max_parameter());
@@ -436,7 +442,7 @@ void PropulsionController::initMoveCommand(float speed) {
   m_low_level_controller.m_motor_velocity_limit = m_config.cruise_pwm_limit;
   m_low_level_controller.m_left_motor_torque_lim = m_config.cruise_torque_limit;
   m_low_level_controller.m_right_motor_torque_lim = m_config.cruise_torque_limit;
-}
+}*/
 
 bool PropulsionController::resetPose(float x, float y, float yaw) {
   RobotPose pose;
@@ -461,6 +467,7 @@ bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, f
   m_speed_controller.setAccelerationLimits(m_accel, m_deccel);
   m_speed_controller.setParameterRange(0, m_trajectory_buffer.max_parameter());
   m_speed_controller.setRequestedSpeed(speed);
+  m_speed_controller.setFinalSpeed(m_reposition_distance != 0 ? m_reposition_speed : 0);
   m_speed_controller.reset(0, 0, 0);
 
   // Compute direction by taking scalar product of current robot orientation vector with tangent of
@@ -514,6 +521,7 @@ bool PropulsionController::executeRotation(float delta_yaw, float yaw_rate) {
   m_speed_controller.setAccelerationLimits(m_angular_accel, m_angular_deccel);
   m_speed_controller.setParameterRange(0, fabs(delta_yaw));
   m_speed_controller.setRequestedSpeed(yaw_rate);
+  m_speed_controller.setFinalSpeed(0);
   m_speed_controller.reset(0, 0, 0);
 
   // Configure low level controller
@@ -539,6 +547,10 @@ bool PropulsionController::executeRepositioning(float distance, float speed) {
   }
   m_reposition_distance = distance;
   m_reposition_speed = speed;
+
+  m_low_level_controller.m_motor_velocity_limit = m_config.cruise_pwm_limit;
+  m_low_level_controller.m_left_motor_torque_lim = m_config.cruise_torque_limit;
+  m_low_level_controller.m_right_motor_torque_lim = m_config.cruise_torque_limit;
 
   setState(State::Reposition);
   return true;

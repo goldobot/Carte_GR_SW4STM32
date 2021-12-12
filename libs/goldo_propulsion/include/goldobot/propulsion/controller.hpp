@@ -208,7 +208,7 @@ class PropulsionController {
   void setState(State state);
   void setState(State state, Error error);
 
-  void initMoveCommand(float speed);
+  //void initMoveCommand(float speed);
 
   void on_stopped_enter();
   void on_command_finished();

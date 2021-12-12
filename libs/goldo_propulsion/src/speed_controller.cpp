@@ -54,7 +54,7 @@ void SpeedController::update() {
     m_parameter = clamp(m_parameter, m_min_parameter, m_max_parameter);
 
     if (finished()) {
-      m_speed = 0;
+      m_speed = m_final_speed;
       m_acceleration = 0;
     }
   }
@@ -108,7 +108,7 @@ void SpeedController::recompute() {
   float t_d = delta_v_2 / a2;
 
   float d_a = t_a * (m_speed + 0.5f * a1 * t_a);
-  float d_d = -0.5f * delta_v_2 * t_d;
+  float d_d = t_d * (target_speed + 0.5f * a2 * t_d);
   float d_c = distance - d_a - d_d;
 
   while (d_c < 0) {
@@ -124,7 +124,7 @@ void SpeedController::recompute() {
     t_d = delta_v_2 / a2;
 
     d_a = t_a * (m_speed + 0.5f * a1 * t_a);
-    d_d = -0.5f * delta_v_2 * t_d;
+    d_d = t_d * (target_speed + 0.5f * a2 * t_d);
     d_c = distance - d_a - d_d;
   }
 
@@ -143,7 +143,7 @@ void SpeedController::recompute() {
   m_c1[0] = m_speed;
   m_c1[1] = target_speed;
   m_c1[2] = target_speed;
-  m_c1[3] = 0;
+  m_c1[3] = m_final_speed;
 
   m_c2[0] = 0.5 * a1;
   m_c2[1] = 0;
@@ -153,7 +153,7 @@ void SpeedController::recompute() {
   m_c3[0] = 0;
   m_c3[1] = 0;
   m_c3[2] = 0;
-  m_c3[3] = m_final_speed;
+  m_c3[3] = 0;
 
   m_num_points = 4;
 }
