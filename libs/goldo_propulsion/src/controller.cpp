@@ -40,6 +40,10 @@ void PropulsionController::setConfig(const PropulsionControllerConfig& config) {
   m_low_level_controller.reset();
 }
 
+void PropulsionController::setEventCallback(std::function<void(const Event&)>&& callback) {
+  m_event_callback = callback;
+}
+
 void PropulsionController::clearError() {
   if (m_state != State::Error) {
     return;
@@ -291,6 +295,7 @@ void PropulsionController::updateReposition() {
 
   if (m_reposition_hit && m_time_base_ms >= m_reposition_end_ts) {
     setState(State::Stopped);
+    sendEvent(EventType::Reposition, 0);
   }
 };
 
@@ -367,6 +372,19 @@ void PropulsionController::setState(State state) {
   m_state_changed = true;
   m_state = state;
 }
+
+void PropulsionController::sendEvent(EventType type, uint32_t data) {
+  if (!m_event_callback) {
+    return;
+  }
+  Event event;
+  event.type = type;
+  event.data = data;
+  event.pose = m_current_pose;
+  event.parameter = m_speed_controller.parameter();
+  m_event_callback(event);
+}
+
 void PropulsionController::on_command_finished() {
   if (m_emergency_stop) {
     setState(State::Error, Error::EmergencyStop);
@@ -477,8 +495,6 @@ bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, f
   float uy = sinf(m_target_pose.yaw);
   m_direction = ux * target_point.tangent.x + uy * target_point.tangent.y > 0 ? Direction::Forward
                                                                               : Direction::Backward;
-
-
 
   setState(State::FollowTrajectory);
   return true;

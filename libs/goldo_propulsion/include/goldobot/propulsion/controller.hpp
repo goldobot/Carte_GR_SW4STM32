@@ -9,6 +9,7 @@
 #include "goldobot/propulsion/blocking_detector.hpp"
 
 #include <cstdint>
+#include <functional>
 
 namespace goldobot {
 class SimpleOdometry;
@@ -76,6 +77,18 @@ class PropulsionController {
   };
 
   enum class Direction { Forward, Backward };
+
+  enum class EventType : uint8_t { User, Reposition };
+
+  // message sent for an event
+  // such as a slipping or blocking detection, a successfull repositioning, or a sensor detection
+  struct Event {
+    EventType type;
+    uint8_t reserved[3];
+    uint32_t data;
+    float parameter;
+    RobotPose pose;
+  };
 
  public:
   PropulsionController(SimpleOdometry* odometry);
@@ -150,6 +163,8 @@ class PropulsionController {
   const PropulsionControllerConfig& config() const;
   void setConfig(const PropulsionControllerConfig& config);
 
+  void setEventCallback(std::function<void(const Event&)>&& callback);
+
   messages::PropulsionTelemetry getTelemetry() const;
   /*< */
   messages::PropulsionTelemetryEx getTelemetryEx() const;
@@ -159,6 +174,8 @@ class PropulsionController {
  private:
   SimpleOdometry* m_odometry;
   PropulsionControllerConfig m_config;
+  std::function<void(const Event&)> m_event_callback;
+
   LowLevelController m_low_level_controller;
   RobotPose m_current_pose;
   RobotPose m_target_pose;
@@ -208,7 +225,7 @@ class PropulsionController {
   void setState(State state);
   void setState(State state, Error error);
 
-  //void initMoveCommand(float speed);
+  // void initMoveCommand(float speed);
 
   void on_stopped_enter();
   void on_command_finished();
@@ -216,5 +233,7 @@ class PropulsionController {
   void onFollowTrajectoryEnter();
   void onRepositionEnter();
   void onRepositionExit();
+
+  void sendEvent(EventType type, uint32_t data);
 };
 }  // namespace goldobot

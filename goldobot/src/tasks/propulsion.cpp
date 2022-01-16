@@ -101,9 +101,9 @@ void PropulsionTask::doStep() {
     buff[4] = (uint8_t)m_controller.state();
     buff[5] = (uint8_t)m_controller.error();
     Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionState,
-                                                   (unsigned char*)buff, sizeof(buff));
+                                                    (unsigned char*)buff, sizeof(buff));
     Robot::instance().mainExchangeIn().pushMessage(CommMessageType::PropulsionState,
-                                                       (unsigned char*)buff, sizeof(buff));
+                                                   (unsigned char*)buff, sizeof(buff));
   }
 
   if (m_controller.state() != PropulsionController::State::Inactive) {
@@ -426,7 +426,7 @@ void PropulsionTask::onMsgExecuteTrajectory(size_t msg_size) {
   // todo: send error message if message size is too large
   if (msg_size <= 144) {
     // message has a header of  8 bytes: uint16 sequence number, padding and float speed. each point
-	// added reposition distance and speed to header
+    // added reposition distance and speed to header
     // is 2 floats
     int num_points = (msg_size - 16) / 8;
     float speed = *(float*)(exec_traj_buff + 4);
@@ -569,6 +569,11 @@ void PropulsionTask::clearCommandQueue() {
     uint16_t sequence_number = *(uint16_t*)exec_traj_buff;
     onCommandCancel(sequence_number);
   }
+}
+
+void PropulsionTask::onControllerEvent(const PropulsionController::Event& event) {
+  Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionControllerEvent,
+                                                  (unsigned char*)&event, sizeof(event));
 }
 
 void PropulsionTask::sendODriveStatus() {
@@ -763,50 +768,44 @@ void PropulsionTask::updateScope() {
 }
 
 void PropulsionTask::updateOdriveStream() {
-	for(int i=0; i < 8; i++)
-	{
-		if(m_odrive_client.m_telemetry_ack[i])
-		{
-			m_odrive_client.m_telemetry_ack[i] = false;
-			// add header
-			if(m_odrive_stream_cnt == 0)
-			{
-				*(uint32_t*)m_odrive_stream_buffer = m_current_timestamp;
-			}
-			auto* ptr = m_odrive_stream_buffer + 4 + 6 * m_odrive_stream_cnt;
-			*(uint8_t*)(ptr) = i;
-			*(uint8_t*)(ptr+1) = (uint8_t)(m_current_timestamp % 256);
-			float val = 0;
-			auto& telemetry = m_odrive_client.telemetry().axis[i/4];
-			switch(i % 4)
-			{
-			case 0:
-				val = telemetry.pos_estimate;
-				break;
-			case 1:
-				val = telemetry.vel_estimate;
-				break;
-			case 2:
-				val = telemetry.current_iq_setpoint;
-				break;
-			case 3:
-				val = m_odrive_client.m_axis_requests[i/4].input_vel;
-				break;
-			}
-			std::memcpy(ptr+2, &val, sizeof(float));
+  for (int i = 0; i < 8; i++) {
+    if (m_odrive_client.m_telemetry_ack[i]) {
+      m_odrive_client.m_telemetry_ack[i] = false;
+      // add header
+      if (m_odrive_stream_cnt == 0) {
+        *(uint32_t*)m_odrive_stream_buffer = m_current_timestamp;
+      }
+      auto* ptr = m_odrive_stream_buffer + 4 + 6 * m_odrive_stream_cnt;
+      *(uint8_t*)(ptr) = i;
+      *(uint8_t*)(ptr + 1) = (uint8_t)(m_current_timestamp % 256);
+      float val = 0;
+      auto& telemetry = m_odrive_client.telemetry().axis[i / 4];
+      switch (i % 4) {
+        case 0:
+          val = telemetry.pos_estimate;
+          break;
+        case 1:
+          val = telemetry.vel_estimate;
+          break;
+        case 2:
+          val = telemetry.current_iq_setpoint;
+          break;
+        case 3:
+          val = m_odrive_client.m_axis_requests[i / 4].input_vel;
+          break;
+      }
+      std::memcpy(ptr + 2, &val, sizeof(float));
 
-			m_odrive_stream_cnt++;
-			  if (m_odrive_stream_cnt == 20) {
-				  m_odrive_stream_cnt = 0;
-			    Robot::instance().exchangeOutFtdi().pushMessage(CommMessageType::PropulsionODriveStream,
-			                                                    (unsigned char*)m_odrive_stream_buffer,
-			                                                    sizeof(m_odrive_stream_buffer));
-			  }
-			  // end variable
-		}
-	}
-
-
+      m_odrive_stream_cnt++;
+      if (m_odrive_stream_cnt == 20) {
+        m_odrive_stream_cnt = 0;
+        Robot::instance().exchangeOutFtdi().pushMessage(CommMessageType::PropulsionODriveStream,
+                                                        (unsigned char*)m_odrive_stream_buffer,
+                                                        sizeof(m_odrive_stream_buffer));
+      }
+      // end variable
+    }
+  }
 }
 
 void PropulsionTask::updateOdometryStream(uint16_t left, uint16_t right) {

@@ -138,6 +138,8 @@ class PropulsionTask : public Task {
   void processUrgentMessage();
   void taskFunction() override;
 
+  void onControllerEvent(const PropulsionController::Event& event);
+
   void onMsgExecuteTranslation(size_t msg_size);
   void onMsgExecuteRotation(size_t msg_size);
   void onMsgExecuteFaceDirection(size_t msg_size);
