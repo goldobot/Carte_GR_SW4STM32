@@ -22,7 +22,6 @@ class ServosTask : public Task {
   void updateServoDynamixelMX28(int id, bool enabled, uint16_t pos, float speed, uint8_t torque);
   void updateServoGoldoLift(int id, bool enabled, uint16_t pos, float speed, uint8_t torque);
 
-
   void publishServoState(int id, bool state);
 
   void moveMultiple(int num_servos);
@@ -60,7 +59,7 @@ class ServosTask : public Task {
 
   bool m_lift_initialized[2] = {false, false};
   bool m_lift_homed[2] = {false, false};
-  uint8_t m_lift_servo_id[2] = {0,0};
+  uint8_t m_lift_servo_id[2] = {0, 0};
   uint16_t m_lift_bltrig = 80;
 
   uint32_t m_next_statistics_ts{10};

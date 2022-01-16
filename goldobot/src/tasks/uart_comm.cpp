@@ -176,14 +176,14 @@ void UARTCommTask::process_message(uint16_t message_type) {
 }
 
 void UARTCommTask::sendHeartbeat(uint32_t timestamp) {
-	m_out_prio_queue.push_message(CommMessageType::Heartbeat, (unsigned char*)&timestamp, sizeof(timestamp));
+  m_out_prio_queue.push_message(CommMessageType::Heartbeat, (unsigned char*)&timestamp,
+                                sizeof(timestamp));
 }
 
 struct TaskStats {
-	char task_name[16];
-	uint32_t runtime_counter;
+  char task_name[16];
+  uint32_t runtime_counter;
 };
-
 
 void UARTCommTask::sendStatistics() {
   m_statistics.serializer = m_serializer.statistics();
@@ -205,14 +205,14 @@ void UARTCommTask::sendStatistics() {
   TaskStats tasks_stats[16];
   for(unsigned i = 0; i < num_tasks; i++)
   {
-	  strncpy(tasks_stats[i].task_name, tasks_status[i].pcTaskName, 16);
-	  tasks_stats[i].runtime_counter = tasks_status[i].ulRunTimeCounter;
+          strncpy(tasks_stats[i].task_name, tasks_status[i].pcTaskName, 16);
+          tasks_stats[i].runtime_counter = tasks_status[i].ulRunTimeCounter;
   }
   //m_out_prio_queue.push_message(CommMessageType::TaskStats, (unsigned char*)&tasks_stats,
   //					  sizeof(TaskStats) * num_tasks);
 */
-  //HeapStats_t heap_stats;
-  //vPortGetHeapStats(&heap_stats);
- // m_out_prio_queue.push_message(CommMessageType::HeapStats, (unsigned char*)&heap_stats,
-	//				  sizeof(heap_stats));
+  // HeapStats_t heap_stats;
+  // vPortGetHeapStats(&heap_stats);
+  // m_out_prio_queue.push_message(CommMessageType::HeapStats, (unsigned char*)&heap_stats,
+  //				  sizeof(heap_stats));
 }

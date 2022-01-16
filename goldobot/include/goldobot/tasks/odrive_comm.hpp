@@ -9,9 +9,9 @@
 namespace goldobot {
 
 struct ODriveCommStats {
-	ODriveStreamParser::Statistics parser;
-	ODriveStreamWriter::Statistics writer;
-	MessageQueue::Statistics queue;
+  ODriveStreamParser::Statistics parser;
+  ODriveStreamWriter::Statistics writer;
+  MessageQueue::Statistics queue;
 };
 
 class ODriveCommTask : public Task {

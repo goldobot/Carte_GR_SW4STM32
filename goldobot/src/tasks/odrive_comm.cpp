@@ -38,12 +38,10 @@ void ODriveCommTask::taskFunction() {
       uint8_t* ptr;
       size_t space_available = hal::io_map_write(1, &ptr);
 
-      if(space_available == 0)
-      {
-    	  m_no_write_cnt++;
-      } else
-      {
-    	  m_no_write_cnt = 0;
+      if (space_available == 0) {
+        m_no_write_cnt++;
+      } else {
+        m_no_write_cnt = 0;
       }
       size_t dtlen = m_stream_writer.popData(ptr, space_available);
       hal::io_unmap_write(1, ptr, dtlen);
@@ -55,20 +53,17 @@ void ODriveCommTask::taskFunction() {
       size_t dtlen = m_stream_parser.pushData((unsigned char*)ptr, bytes_available);
       hal::io_unmap_read(1, ptr, dtlen);
 
-      if(bytes_available==0)
-      {
-    	  m_no_read_cnt++;
-      } else
-      {
-    	  m_no_read_cnt=0;
+      if (bytes_available == 0) {
+        m_no_read_cnt++;
+      } else {
+        m_no_read_cnt = 0;
       }
     }
     // try to reset communication when it crashes
-    if(m_no_read_cnt > 100 || m_no_write_cnt > 100)
-    {
-    	m_no_read_cnt = 0;
-    	m_no_write_cnt = 0;
-    	hal::io_reset(1);
+    if (m_no_read_cnt > 100 || m_no_write_cnt > 100) {
+      m_no_read_cnt = 0;
+      m_no_write_cnt = 0;
+      hal::io_reset(1);
     }
 
     if (m_stream_parser.packetReady()) {
@@ -123,12 +118,11 @@ bool ODriveCommTask::processMessage() {
 }
 
 void ODriveCommTask::sendStatistics() {
-
   ODriveCommStats statistics;
   statistics.writer = m_stream_writer.statistics();
   statistics.parser = m_stream_parser.statistics();
   statistics.queue = m_message_queue.statistics();
 
   Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ODriveCommTaskStatistics,
-                                                    (unsigned char*)&statistics, sizeof(statistics));
+                                                  (unsigned char*)&statistics, sizeof(statistics));
 }

@@ -246,7 +246,7 @@ void FpgaTask::process_message() {
       goldo_fpga_master_spi_read_word(apb_addr, &apb_data);
       std::memcpy(buff + 4, (unsigned char *)&apb_data, 4);
       Robot::instance().exchangeInternal().pushMessage(CommMessageType::FpgaReadRegStatus,
-                                                      (unsigned char *)buff, 8);
+                                                       (unsigned char *)buff, 8);
     } break;
 
     case CommMessageType::FpgaWriteReg: {
