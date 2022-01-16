@@ -99,6 +99,18 @@ void SimpleOdometry::setPose(const RobotPose& pose) {
   m_angular_accel_filter.reset(m_pose.angular_acceleration);
 }
 
+void SimpleOdometry::transformPose(Vector2D translation, float rotation) {
+  double nx =  m_x * cos(rotation) + m_y * sin(rotation) + translation.x;
+  double ny = -m_x * sin(rotation) + m_y * cos(rotation) + translation.y;
+  m_x = nx;
+  m_y = ny;
+  m_yaw = clampAngle(m_yaw + rotation);
+
+  m_pose.position.x = static_cast<float>(m_x);
+  m_pose.position.y = static_cast<float>(m_y);
+  m_pose.yaw = static_cast<float>(m_yaw);
+}
+
 void SimpleOdometry::measureLineNormal(Vector2D normal, float distance) {
   // Project position on line
   double new_x = normal.y * normal.y * m_x - normal.x * normal.y * m_y + normal.x * distance;

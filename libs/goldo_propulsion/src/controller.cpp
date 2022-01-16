@@ -291,6 +291,7 @@ void PropulsionController::updateReposition() {
 
   if (m_speed_controller.finished() && !m_reposition_hit) {
     setState(State::Stopped);
+    sendEvent(EventType::Reposition, 0);
   }
 
   if (m_reposition_hit && m_time_base_ms >= m_reposition_end_ts) {

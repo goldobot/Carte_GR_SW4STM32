@@ -23,6 +23,7 @@ class SimpleOdometry {
 
   const RobotPose& pose() const;
   void setPose(const RobotPose& pose);
+  void transformPose(Vector2D translation, float rotation);
 
   //! \brief Update current pose to be on specified line, with yaw normal to line.
   //! Used for repositioning on table borders

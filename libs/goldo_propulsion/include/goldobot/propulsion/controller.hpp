@@ -83,11 +83,10 @@ class PropulsionController {
   // message sent for an event
   // such as a slipping or blocking detection, a successfull repositioning, or a sensor detection
   struct Event {
-    EventType type;
-    uint8_t reserved[3];
-    uint32_t data;
-    float parameter;
-    RobotPose pose;
+	RobotPose pose;
+	float parameter;
+	uint32_t data;
+	EventType type;
   };
 
  public:
