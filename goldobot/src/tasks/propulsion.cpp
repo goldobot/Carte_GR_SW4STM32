@@ -277,6 +277,14 @@ void PropulsionTask::processUrgentMessage() {
       m_controller.resetPose(pose[0], pose[1], pose[2]);
       sendCommandEvent(sequence_number, CommandEvent::Ack);
     } break;
+    case CommMessageType::PropulsionTransformPose: {
+      float transform[3];
+      auto sequence_number = readCommand(m_urgent_message_queue, &transform, 12);
+      m_odometry.transformPose(Vector2D{transform[0], transform[1]} , transform[2]);
+      auto pose = m_odometry.pose();
+      m_controller.resetPose(pose.position.x, pose.position.y, pose.yaw);
+      sendCommandEvent(sequence_number, CommandEvent::Ack);
+    } break;
     case CommMessageType::OdometryConfigGet: {
       auto config = m_odometry.config();
       Robot::instance().mainExchangeOut().pushMessage(CommMessageType::OdometryConfigGetStatus,
@@ -572,7 +580,7 @@ void PropulsionTask::clearCommandQueue() {
 }
 
 void PropulsionTask::onControllerEvent(const PropulsionController::Event& event) {
-  Robot::instance().mainExchangeOut().pushMessage(CommMessageType::PropulsionControllerEvent,
+  Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::PropulsionControllerEvent,
                                                   (unsigned char*)&event, sizeof(event));
 }
 
@@ -852,6 +860,7 @@ void PropulsionTask::taskFunction() {
   m_odometry.setConfig(m_odometry.config());
   m_odometry.reset(left, right);
 
+  m_controller.setEventCallback([this] (const PropulsionController::Event& event) {this->onControllerEvent(event);});
   m_odrive_client.setOutputExchange(&Robot::instance().mainExchangeIn(),
                                     CommMessageType::ODriveRequestPacket);
 

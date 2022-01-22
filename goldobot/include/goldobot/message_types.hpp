@@ -30,7 +30,7 @@ enum class CommMessageType : uint16_t {
   FpgaGpioState,
   FpgaReadRegInternal,
 
-  ServoMove = 40,
+  ServoAck = 40,
   ServoMoveMultiple,
   ServoSetEnable,
   ServoState,
@@ -62,6 +62,7 @@ enum class CommMessageType : uint16_t {
   PropulsionSetSimulationMode,
   PropulsionScopeConfig,
   PropulsionMotorsTorqueLimitsSet,
+  PropulsionTransformPose,
 
   PropulsionTelemetry = 120,
   PropulsionTelemetryEx,
