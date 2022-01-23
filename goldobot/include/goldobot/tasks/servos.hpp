@@ -10,19 +10,25 @@ namespace goldobot {
 class LiftController {
 public:
 	enum class State {
-
+		Init,
+		InitDisabled,
+		Homing,
+		HomedWaitPosition,
+		Homed
 	};
 	enum class Register {
 		Cmd,
 		Status,
 		Position,
-		Debug
+		Debug,
+		MotorPwm
 	};
 public:
 	void init(int id, uint8_t* scratchpad);
 	void setEnable(bool enable);
 
-	void update(uint16_t pos, float speed, uint8_t torque);
+	void update(bool enable, uint16_t pos, float speed, uint8_t torque);
+	void doHoming();
 
 
 
@@ -48,12 +54,17 @@ public:
 	// position a max range, donc faire set range clamp avant
 	// convention range: 0 en bas, course maximale haut
 
+	uint32_t m_position;
+
 
 private:
 	static const uint32_t c_lift_base[2];
+	static const uint32_t c_motor_apb[2];
 
 	uint32_t m_apb_base;
 	uint8_t* m_scratchpad;
+	int m_id;
+	State m_state;
 	bool m_enable{false};
 };
 
@@ -83,6 +94,11 @@ class ServosTask : public Task {
   void processDynamixelResponse();
   void onFpgaReadRegStatus();
 
+  bool isInitialized(int id) const noexcept { return (m_servo_initialized & (1 << id)) != 0; };
+  void setInitialized(int id, bool initialized) noexcept {
+	  m_servo_initialized = ((m_servo_initialized & (0xffff - (1 << id)))) | (initialized ? (1 << id) : 0);
+    };
+
   bool isEnabled(int id) const noexcept { return (m_servo_enabled & (1 << id)) != 0; };
   void setEnabled(int id, bool enabled) noexcept {
     m_servo_enabled = ((m_servo_enabled & (0xffff - (1 << id)))) | (enabled ? (1 << id) : 0);
@@ -105,8 +121,10 @@ class ServosTask : public Task {
   uint8_t m_servos_torques[32];
   uint16_t m_servos_target_positions[32];
   uint16_t m_servos_measured_positions[32];
+  uint16_t m_servos_measured_torques[32];
 
   uint32_t m_servo_enabled{0};
+  uint32_t m_servo_initialized{0};
   uint32_t m_servo_moving{0};
 
   LiftController m_lifts[2];
