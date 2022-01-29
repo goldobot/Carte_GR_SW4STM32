@@ -104,6 +104,9 @@ bool Robot::endLoadConfig(uint16_t crc) {
       case ConfigSection::Servos:
         m_servos_config = reinterpret_cast<ServosConfig*>(s_config_area + section_offset);
         break;
+      case ConfigSection::Lifts:
+		  m_lifts_config = reinterpret_cast<LiftsConfig*>(s_config_area + section_offset);
+		  break;
       case ConfigSection::TasksEnable:
         tasks_enable = *reinterpret_cast<uint32_t*>(s_config_area + section_offset);
         break;

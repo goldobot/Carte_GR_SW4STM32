@@ -28,7 +28,7 @@ void ServosTask::taskFunction() {
 	auto& config = m_servos_config->servos[i];
     m_servos_positions[i] = -1;
     m_servos_target_positions[i] = 0;
-    m_servos_torques[i] = config.max_torque;
+    m_servos_torques[i] = 0xff;
     if(config.type == ServoType::GoldoLift) {
     	m_lift_servo_id[config.id] = i;
     	setInitialized(i, true);
@@ -36,12 +36,16 @@ void ServosTask::taskFunction() {
   }
 
   for(unsigned i = 0; i < 2; i++) {
-	  m_lifts[i].init(i, m_scratchpad);
+	  m_lifts[i].init(i, m_lifts_config->lifts[i], m_scratchpad);
   }
 
   int cnt = 0;
 
   while (1) {
+	m_current_timestamp = hal::get_tick_count();
+	for(unsigned i = 0; i < 2; i++) {
+		  m_lifts[i].setTimestamp(m_current_timestamp);
+	  }
     while (m_message_queue.message_ready()) {
       processMessage();
     }
@@ -120,7 +124,10 @@ void ServosTask::updateServoDynamixelAX12(int id, bool enabled, uint16_t pos, fl
   if (dyna_speed > 0x3ff) {
     dyna_speed = 0x3ff;
   }
-  uint16_t dyna_torque = ((uint32_t)torque * 0x3ff) / 0xff;
+  uint16_t dyna_torque = ((uint32_t)torque * config.max_torque) / 0xff;
+  if (dyna_torque > 0x3ff) {
+	dyna_torque = 0x3ff;
+  }
   uint8_t buff[12];
   *reinterpret_cast<uint16_t *>(buff + 0) = 0x8000;  // msb=1 => send response to internal exchange
   *reinterpret_cast<uint8_t *>(buff + 2) = 1;        // protocol version
@@ -198,35 +205,6 @@ void ServosTask::updateServoGoldoLift(int id, bool enabled, uint16_t pos, float 
                                       uint8_t torque) {
   const auto &config = m_servos_config->servos[id];
   m_lifts[config.id].update(enabled, pos, speed, torque);
-
-  // read status
-
-
-  /*
-  if (m_lift_initialized[config.id] && m_lift_homed[config.id]) {
-    // enable control
-    uint32_t reg_val_e = enabled ? 0x10000001 : 0x10000001;
-    uint32_t buff[2] = {c_lift_base[config.id], reg_val_e};
-    Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaWriteReg,
-                                                   (unsigned char *)buff, 8);
-    if (enabled) {
-      // lift goto_target
-      uint32_t reg_val_p = 0x70000000 | (0x0fffffff & static_cast<uint32_t>(pos));
-      buff[1] = reg_val_p;
-      Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaWriteReg,
-                                                     (unsigned char *)buff, 8);
-      // set speed
-      uint16_t lift_speed = (speed / 100) + 1;
-      // buff[1] = 0x90000000 | speed | ((m_lift_bltrig & 0xfff) << 16);
-    }
-  }
-  // read status and position
-  uint32_t buff[1] = {c_lift_base[config.id] + 4};
-  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaReadRegInternal,
-                                                 (unsigned char *)buff, 4);
-  buff[0] = c_lift_base[config.id] + 8;
-  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaReadRegInternal,
-                                                 (unsigned char *)buff, 4);*/
 }
 
 void ServosTask::updateServo(int id, uint16_t pos, uint16_t speed, uint8_t torque) {
@@ -279,6 +257,9 @@ void ServosTask::processMessage() {
         uint16_t load = *reinterpret_cast<uint16_t *>(m_scratchpad + 9);
         // uint8_t error = m_scratchpad[4];
         m_servos_measured_positions[id] = position;
+        m_servos_measured_speeds[id] = speed;
+        m_servos_measured_torques[id] = load;
+
         setInitialized(id, true);
       }
     } break;
@@ -292,6 +273,17 @@ void ServosTask::processMessage() {
   };
 }
 
+size_t ServosTask::readCommand(size_t size) {
+	auto msg_size = m_message_queue_commands.pop_message(m_scratchpad, size);
+	m_sequence_number = *(uint16_t *)m_scratchpad;
+	return msg_size;
+}
+
+void ServosTask::ackCommand(CommMessageType type, size_t size) {
+	*(uint16_t *)m_scratchpad = m_sequence_number;
+	Robot::instance().mainExchangeOutPrio().pushMessage(type, (unsigned char *)m_scratchpad, size);
+}
+
 void ServosTask::processMessageCommand() {
   auto message_type = (CommMessageType)m_message_queue_commands.message_type();
 
@@ -300,50 +292,46 @@ void ServosTask::processMessageCommand() {
       for (int i = 0; i < m_servos_config->num_servos; i++) {
         m_servo_enabled = 0;
       }
-      m_message_queue_commands.pop_message(nullptr, 0);
+      readCommand(2);
+      ackCommand(CommMessageType::ServoAck, 2);
       break;
     case CommMessageType::ServoSetEnable: {
-      m_message_queue_commands.pop_message(m_scratchpad, sizeof(m_scratchpad));
-      int id = m_scratchpad[0];
-      setEnabled(id, m_scratchpad[1] != 0);
+      auto msg_size = readCommand(sizeof(m_scratchpad));
+      for(unsigned i=0; i < (msg_size - 2)/2; i++) {
+    	  int id = m_scratchpad[2 + i*2];
+    	  setEnabled(id, m_scratchpad[3 + i*2] != 0);
+      }
+      ackCommand(CommMessageType::ServoAck, 2);
     } break;
     case CommMessageType::ServoMoveMultiple: {
-      auto msg_size = m_message_queue_commands.pop_message(m_scratchpad, sizeof(m_scratchpad));
+      // sequence number is first 2 bytes, + padding
+      auto msg_size = readCommand(sizeof(m_scratchpad));
       moveMultiple((msg_size - 4) / 3);
       // send ack with sequence number
-      Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::ServoMoveMultiple,
-                                                          (unsigned char *)m_scratchpad, 2);
-    } break;
-    case CommMessageType::ServoSetLiftEnable: {
-      m_message_queue_commands.pop_message(m_scratchpad, 4);
-      uint16_t sequence_number = *(uint16_t *)m_scratchpad;
-      uint8_t id_ = m_scratchpad[2];
-      //m_lift_initialized[id_] = m_scratchpad[3] != 0;
+      ackCommand(CommMessageType::ServoAck, 2);
     } break;
     case CommMessageType::ServoLiftDoHoming: {
-      m_message_queue_commands.pop_message(m_scratchpad, 3);
-      uint16_t sequence_number = *(uint16_t *)m_scratchpad;
+      readCommand(3);
       uint8_t id_ = m_scratchpad[2];
       m_lifts[id_].doHoming();
-      // send ack with sequence number
-	  Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::ServoAck,
-														(unsigned char *)&sequence_number, 2);
+      ackCommand(CommMessageType::ServoAck, 2);
     } break;
     case CommMessageType::ServoGetState: {
       m_message_queue_commands.pop_message(m_scratchpad, 3);
-      uint16_t sequence_number = *(uint16_t *)m_scratchpad;
       uint8_t id_ = m_scratchpad[2];
       *(uint16_t *)(m_scratchpad + 3) = m_servos_measured_positions[id_];
       Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ServoGetState,
                                                       (unsigned char *)m_scratchpad, 5);
     }
-    case CommMessageType::ServoSetMaxTorque: {
-      /*m_message_queue_commands.pop_message(m_scratchpad, 3);
-      uint16_t sequence_number = *(uint16_t*)m_scratchpad;
-      uint8_t id_ = m_scratchpad[2];
-      *(uint16_t*)(m_scratchpad + 3) = m_servos_measured_positions[id_];
-      Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ServoGetState,
-                                                                                                       (unsigned char *)m_scratchpad, 5);*/
+    case CommMessageType::ServoSetMaxTorques: {
+      auto msg_size = readCommand(3);
+      auto num_commands = msg_size/2;
+      for(unsigned i = 0; i < num_commands; i++) {
+    	uint8_t id_ = m_scratchpad[2 + i*2];
+    	uint8_t torque = m_scratchpad[3 + i*2];
+    	m_servos_torques[id_] = torque;
+      }
+      ackCommand(CommMessageType::ServoAck, 2);
     } break;
     default:
       m_message_queue_commands.pop_message(nullptr, 0);
@@ -420,11 +408,16 @@ const uint32_t LiftController::c_lift_base[2] = {0x80008500, 0x80008510};
 const uint32_t LiftController::c_motor_apb[2] = {0x80008494, 0x800849c};
 
 
-void LiftController::init(int id, uint8_t* scratchpad) {
+void LiftController::init(int id, LiftConfig config, uint8_t* scratchpad) {
+	m_config = config;
 	m_apb_base = c_lift_base[id];
 	m_scratchpad = scratchpad;
 	m_id = id;
 	m_state = State::Init;
+}
+
+void LiftController::setTimestamp(uint32_t ts) {
+	m_timestamp = ts;
 }
 
 void LiftController::update(bool enable, uint16_t pos, float speed, uint8_t torque) {
@@ -454,14 +447,17 @@ void LiftController::update(bool enable, uint16_t pos, float speed, uint8_t torq
 
 void LiftController::doHoming() {
 	uint32_t homing_pwm[2] = {0x80, 0xffffff80};
-	cmdDoHoming();
 	regWrite(LiftController::Register::MotorPwm, homing_pwm[m_id]);
+	m_state = State::HomingWaitPwm;
+	cmdDoHoming();
 	m_state = State::Homing;
+
 }
 
 void LiftController::onFpgaReadStatus(uint32_t apb_address, uint32_t value) {
 	if(apb_address == m_apb_base + 4) {
 		//onRegRead(Register::Status, value);
+		m_status = value;
 		uint32_t state = value & 0xff000000;
 		uint32_t flags = value & 0x000000ff;
 
@@ -470,14 +466,16 @@ void LiftController::onFpgaReadStatus(uint32_t apb_address, uint32_t value) {
 		}
 		if(m_state == State::Homing && (flags & 0x1)) {
 			m_state = State::HomedWaitPosition;
+			m_next_ts = m_timestamp + 100;
 		}
 	}
 	if(apb_address == m_apb_base + 8) {
-		if(m_state == State::HomedWaitPosition) {
+		if(m_state == State::HomedWaitPosition && m_timestamp >= m_next_ts) {
 			m_state = State::Homed;
+		}
+		if(m_state == State::Homed) {
 			m_position = value;
 		}
-
 	}
 }
 

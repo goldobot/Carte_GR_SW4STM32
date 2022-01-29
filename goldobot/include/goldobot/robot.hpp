@@ -27,7 +27,8 @@ class Robot {
     PropulsionController,
     Servos,
     PropulsionTask,
-    TasksEnable
+    TasksEnable,
+	Lifts
   };
 
  public:
@@ -67,6 +68,7 @@ class Robot {
   void beginLoadConfig();
   void loadConfig(char* buffer, size_t size);
   bool endLoadConfig(uint16_t crc);
+  LiftsConfig* m_lifts_config{nullptr};
 
  private:
   SensorsConfig m_sensors_config;
@@ -86,6 +88,7 @@ class Robot {
 
   RobotGeometryConfig* m_robot_geometry_config;
   ServosConfig* m_servos_config;
+
 
   unsigned char* m_load_config_ptr{nullptr};
   uint16_t m_load_config_crc{0};

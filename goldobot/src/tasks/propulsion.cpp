@@ -183,8 +183,6 @@ void PropulsionTask::sendTelemetryMessages() {
 }
 
 void PropulsionTask::sendStatistics() {
-  uint32_t current_time = m_current_timestamp;
-
   m_statistics.odrive_queue = m_odrive_message_queue.statistics();
   m_statistics.queue = m_message_queue.statistics();
   m_statistics.urgent_queue = m_urgent_message_queue.statistics();
@@ -267,7 +265,6 @@ void PropulsionTask::processUrgentMessage() {
   auto message_type = (CommMessageType)m_urgent_message_queue.message_type();
   auto message_size = m_urgent_message_queue.message_size();
 
-  uint32_t current_time = m_current_timestamp;
   uint16_t sequence_number{0};
 
   switch (message_type) {

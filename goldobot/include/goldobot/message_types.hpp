@@ -39,7 +39,7 @@ enum class CommMessageType : uint16_t {
   ServoSetLiftEnable,
   ServoGetState,
   ServoLiftDoHoming,
-  ServoSetMaxTorque,
+  ServoSetMaxTorques,
 
   ODriveRequestPacket = 50,
   ODriveResponsePacket,

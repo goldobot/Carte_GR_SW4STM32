@@ -9,13 +9,27 @@ struct ServoConfig {
   uint16_t cw_limit;
   uint16_t ccw_limit;
   uint16_t max_speed;
-  uint8_t max_torque;
-  uint8_t reserved;
+  uint16_t max_torque;
 };
 
 struct ServosConfig {
   uint16_t num_servos;
   ServoConfig servos[32];
+};
+
+struct LiftConfig {
+	uint32_t kp;
+	uint32_t ki;
+	uint32_t kd;
+	uint16_t range;
+	uint16_t pwm_clamp;
+	uint16_t block_trig;
+	uint16_t reserved;
+};
+
+struct LiftsConfig {
+	uint32_t num_lifts{0};
+	LiftConfig lifts[2];
 };
 
 struct SensorConfig {
