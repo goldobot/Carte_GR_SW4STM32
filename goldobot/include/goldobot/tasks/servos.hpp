@@ -115,8 +115,8 @@ class ServosTask : public Task {
   uint8_t m_servos_torques[32];
   uint16_t m_servos_target_positions[32];
   uint16_t m_servos_measured_positions[32];
-  uint16_t m_servos_measured_speeds[32];
-  uint16_t m_servos_measured_torques[32];
+  int16_t m_servos_measured_speeds[32];
+  int16_t m_servos_measured_torques[32];
 
   uint32_t m_servo_enabled{0};
   uint32_t m_servo_initialized{0};

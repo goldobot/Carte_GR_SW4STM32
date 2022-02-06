@@ -113,7 +113,6 @@ void ServosTask::taskFunction() {
   }
 
   delay_periodic(c_update_period);
-} /* while(1) */
 }
 
 void ServosTask::updateServoDynamixelAX12(int id, bool enabled, uint16_t pos, float speed,
@@ -264,8 +263,8 @@ void ServosTask::processMessage() {
         uint16_t load = *reinterpret_cast<uint16_t *>(m_scratchpad + 9);
         // uint8_t error = m_scratchpad[4];
         m_servos_measured_positions[id] = position;
-        m_servos_measured_speeds[id] = speed;
-        m_servos_measured_torques[id] = load;
+        m_servos_measured_speeds[id] = speed < 1024 ? speed : -(speed - 1024);
+        m_servos_measured_torques[id] = load < 1024 ? load : -(load - 1024);
 
         setInitialized(id, true);
       }
@@ -331,7 +330,7 @@ void ServosTask::processMessageCommand() {
                                                       (unsigned char *)m_scratchpad, 5);
     }
     case CommMessageType::ServoSetMaxTorques: {
-      auto msg_size = readCommand(3);
+      auto msg_size = readCommand(sizeof(m_scratchpad));
       auto num_commands = msg_size / 2;
       for (unsigned i = 0; i < num_commands; i++) {
         uint8_t id_ = m_scratchpad[2 + i * 2];
