@@ -25,27 +25,27 @@ void ServosTask::taskFunction() {
   m_servos_config = Robot::instance().servosConfig();
 
   for (unsigned i = 0; i < m_servos_config->num_servos; i++) {
-	auto& config = m_servos_config->servos[i];
+    auto &config = m_servos_config->servos[i];
     m_servos_positions[i] = -1;
     m_servos_target_positions[i] = 0;
     m_servos_torques[i] = 0xff;
-    if(config.type == ServoType::GoldoLift) {
-    	m_lift_servo_id[config.id] = i;
-    	setInitialized(i, true);
+    if (config.type == ServoType::GoldoLift) {
+      m_lift_servo_id[config.id] = i;
+      setInitialized(i, true);
     }
   }
 
-  for(unsigned i = 0; i < 2; i++) {
-	  m_lifts[i].init(i, m_lifts_config->lifts[i], m_scratchpad);
+  for (unsigned i = 0; i < 2; i++) {
+    m_lifts[i].init(i, m_lifts_config->lifts[i], m_scratchpad);
   }
 
   int cnt = 0;
 
   while (1) {
-	m_current_timestamp = hal::get_tick_count();
-	for(unsigned i = 0; i < 2; i++) {
-		  m_lifts[i].setTimestamp(m_current_timestamp);
-	  }
+    m_current_timestamp = hal::get_tick_count();
+    for (unsigned i = 0; i < 2; i++) {
+      m_lifts[i].setTimestamp(m_current_timestamp);
+    }
     while (m_message_queue.message_ready()) {
       processMessage();
     }
@@ -68,9 +68,8 @@ void ServosTask::taskFunction() {
 
       bool was_moving = false;
 
-
       if (isEnabled(i)) {
-    	// move servo position at speed
+        // move servo position at speed
         auto position = m_servos_positions[i];
         auto target_position = m_servos_target_positions[i];
 
@@ -85,16 +84,13 @@ void ServosTask::taskFunction() {
               std::min<float>(target_position, position + m_servos_speeds[i] * delta_t);
           was_moving = true;
         }
-      } else  {
-    	  // if servo is disabled, position and target position track measured positions
-          m_servos_target_positions[i] = m_servos_measured_positions[i];
-          m_servos_positions[i] = m_servos_measured_positions[i];
+      } else {
+        // if servo is disabled, position and target position track measured positions
+        m_servos_target_positions[i] = m_servos_measured_positions[i];
+        m_servos_positions[i] = m_servos_measured_positions[i];
       }
 
       m_servo_moving |= was_moving ? (1 << i) : 0;
-      if (was_moving && m_servos_positions[i] == m_servos_target_positions[i]) {
-        publishServoState(i, false);
-      }
       updateServo(i, static_cast<uint16_t>(m_servos_positions[i]), m_servos_speeds[i],
                   m_servos_torques[i]);
     }
@@ -110,8 +106,14 @@ void ServosTask::taskFunction() {
       cnt = 0;
     }
 
-    delay_periodic(c_update_period);
-  } /* while(1) */
+    if (m_current_timestamp >= m_next_telemetry_ts) {
+      publishTelemetry();
+      m_next_telemetry_ts = std::max(m_next_telemetry_ts + 50, m_current_timestamp);
+    }
+  }
+
+  delay_periodic(c_update_period);
+} /* while(1) */
 }
 
 void ServosTask::updateServoDynamixelAX12(int id, bool enabled, uint16_t pos, float speed,
@@ -126,7 +128,7 @@ void ServosTask::updateServoDynamixelAX12(int id, bool enabled, uint16_t pos, fl
   }
   uint16_t dyna_torque = ((uint32_t)torque * config.max_torque) / 0xff;
   if (dyna_torque > 0x3ff) {
-	dyna_torque = 0x3ff;
+    dyna_torque = 0x3ff;
   }
   uint8_t buff[12];
   *reinterpret_cast<uint16_t *>(buff + 0) = 0x8000;  // msb=1 => send response to internal exchange
@@ -234,12 +236,17 @@ void ServosTask::updateServo(int id, uint16_t pos, uint16_t speed, uint8_t torqu
   }
 }
 
-void ServosTask::publishServoState(int servo_id, bool state) {
-  unsigned char buff[2] = {(unsigned char)servo_id, true};
-  Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ServoState,
-                                                  (unsigned char *)buff, 2);
-  Robot::instance().exchangeInternal().pushMessage(CommMessageType::ServoState,
-                                                   (unsigned char *)buff, 2);
+void ServosTask::publishTelemetry() {
+  *reinterpret_cast<uint32_t *>(m_scratchpad) = m_current_timestamp;
+  for (unsigned i = 0; i < m_servos_config->num_servos; i++) {
+    uint8_t *ptr = &m_scratchpad[6 + i * 6];
+    *reinterpret_cast<uint16_t *>(ptr) = (float)m_servos_positions[i];
+    *reinterpret_cast<uint16_t *>(ptr + 2) = m_servos_measured_positions[i];
+    *reinterpret_cast<uint16_t *>(ptr + 4) = m_servos_measured_torques[i];
+  }
+  Robot::instance().exchangeOutFtdi().pushMessage(CommMessageType::ServoState,
+                                                  (unsigned char *)m_scratchpad,
+                                                  m_servos_config->num_servos * 6 + 6);
 }
 
 void ServosTask::processMessage() {
@@ -274,14 +281,14 @@ void ServosTask::processMessage() {
 }
 
 size_t ServosTask::readCommand(size_t size) {
-	auto msg_size = m_message_queue_commands.pop_message(m_scratchpad, size);
-	m_sequence_number = *(uint16_t *)m_scratchpad;
-	return msg_size;
+  auto msg_size = m_message_queue_commands.pop_message(m_scratchpad, size);
+  m_sequence_number = *(uint16_t *)m_scratchpad;
+  return msg_size;
 }
 
 void ServosTask::ackCommand(CommMessageType type, size_t size) {
-	*(uint16_t *)m_scratchpad = m_sequence_number;
-	Robot::instance().mainExchangeOutPrio().pushMessage(type, (unsigned char *)m_scratchpad, size);
+  *(uint16_t *)m_scratchpad = m_sequence_number;
+  Robot::instance().mainExchangeOutPrio().pushMessage(type, (unsigned char *)m_scratchpad, size);
 }
 
 void ServosTask::processMessageCommand() {
@@ -297,9 +304,9 @@ void ServosTask::processMessageCommand() {
       break;
     case CommMessageType::ServoSetEnable: {
       auto msg_size = readCommand(sizeof(m_scratchpad));
-      for(unsigned i=0; i < (msg_size - 2)/2; i++) {
-    	  int id = m_scratchpad[2 + i*2];
-    	  setEnabled(id, m_scratchpad[3 + i*2] != 0);
+      for (unsigned i = 0; i < (msg_size - 2) / 2; i++) {
+        int id = m_scratchpad[2 + i * 2];
+        setEnabled(id, m_scratchpad[3 + i * 2] != 0);
       }
       ackCommand(CommMessageType::ServoAck, 2);
     } break;
@@ -325,11 +332,11 @@ void ServosTask::processMessageCommand() {
     }
     case CommMessageType::ServoSetMaxTorques: {
       auto msg_size = readCommand(3);
-      auto num_commands = msg_size/2;
-      for(unsigned i = 0; i < num_commands; i++) {
-    	uint8_t id_ = m_scratchpad[2 + i*2];
-    	uint8_t torque = m_scratchpad[3 + i*2];
-    	m_servos_torques[id_] = torque;
+      auto num_commands = msg_size / 2;
+      for (unsigned i = 0; i < num_commands; i++) {
+        uint8_t id_ = m_scratchpad[2 + i * 2];
+        uint8_t torque = m_scratchpad[3 + i * 2];
+        m_servos_torques[id_] = torque;
       }
       ackCommand(CommMessageType::ServoAck, 2);
     } break;
@@ -398,159 +405,148 @@ void ServosTask::onFpgaReadRegStatus() {
   uint32_t apb_address = *reinterpret_cast<uint32_t *>(m_scratchpad);
   uint32_t apb_value = *reinterpret_cast<uint32_t *>(m_scratchpad + 4);
   for (int i = 0; i < 2; i++) {
-	  m_lifts[i].onFpgaReadStatus(apb_address, apb_value);
-	  auto id = m_lift_servo_id[i];
-	  m_servos_measured_positions[id] = m_lifts[i].m_position;
- }
+    m_lifts[i].onFpgaReadStatus(apb_address, apb_value);
+    auto id = m_lift_servo_id[i];
+    m_servos_measured_positions[id] = m_lifts[i].m_position;
+  }
 }
 
 const uint32_t LiftController::c_lift_base[2] = {0x80008500, 0x80008510};
 const uint32_t LiftController::c_motor_apb[2] = {0x80008494, 0x800849c};
 
-
-void LiftController::init(int id, LiftConfig config, uint8_t* scratchpad) {
-	m_config = config;
-	m_apb_base = c_lift_base[id];
-	m_scratchpad = scratchpad;
-	m_id = id;
-	m_state = State::Init;
+void LiftController::init(int id, LiftConfig config, uint8_t *scratchpad) {
+  m_config = config;
+  m_apb_base = c_lift_base[id];
+  m_scratchpad = scratchpad;
+  m_id = id;
+  m_state = State::Init;
 }
 
-void LiftController::setTimestamp(uint32_t ts) {
-	m_timestamp = ts;
-}
+void LiftController::setTimestamp(uint32_t ts) { m_timestamp = ts; }
 
 void LiftController::update(bool enable, uint16_t pos, float speed, uint8_t torque) {
-
-	// Schedule read status
-	// read status and position
-	  uint32_t buff[1] = {m_apb_base + 4};
-	  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaReadRegInternal,
-	                                                 (unsigned char *)buff, 4);
-	  buff[0] = m_apb_base + 8;
-	  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaReadRegInternal,
-	                                                 (unsigned char *)buff, 4);
-	  if(m_state == State::Init)
-	  {
-		  cmdSetEnable(false);
-	  }
-	  if(m_state == State::Homing) {
-		  uint32_t homing_pwm[2] = {0x80, 0xffffff80};
-		  regWrite(LiftController::Register::MotorPwm, homing_pwm[m_id]);
-	  }
-	  if(m_state == State::Homed) {
-		  cmdSetEnable(enable);
-		  cmdGotoTarget(pos);
-	  }
-
+  // Schedule read status
+  // read status and position
+  uint32_t buff[1] = {m_apb_base + 4};
+  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaReadRegInternal,
+                                                 (unsigned char *)buff, 4);
+  buff[0] = m_apb_base + 8;
+  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaReadRegInternal,
+                                                 (unsigned char *)buff, 4);
+  if (m_state == State::Init) {
+    cmdSetEnable(false);
+  }
+  if (m_state == State::Homing) {
+    uint32_t homing_pwm[2] = {0x80, 0xffffff80};
+    regWrite(LiftController::Register::MotorPwm, homing_pwm[m_id]);
+  }
+  if (m_state == State::Homed) {
+    cmdSetEnable(enable);
+    cmdGotoTarget(pos);
+  }
 }
 
 void LiftController::doHoming() {
-	uint32_t homing_pwm[2] = {0x80, 0xffffff80};
-	regWrite(LiftController::Register::MotorPwm, homing_pwm[m_id]);
-	m_state = State::HomingWaitPwm;
-	cmdDoHoming();
-	m_state = State::Homing;
-
+  uint32_t homing_pwm[2] = {0x80, 0xffffff80};
+  regWrite(LiftController::Register::MotorPwm, homing_pwm[m_id]);
+  m_state = State::HomingWaitPwm;
+  cmdDoHoming();
+  m_state = State::Homing;
 }
 
 void LiftController::onFpgaReadStatus(uint32_t apb_address, uint32_t value) {
-	if(apb_address == m_apb_base + 4) {
-		//onRegRead(Register::Status, value);
-		m_status = value;
-		uint32_t state = value & 0xff000000;
-		uint32_t flags = value & 0x000000ff;
+  if (apb_address == m_apb_base + 4) {
+    // onRegRead(Register::Status, value);
+    m_status = value;
+    uint32_t state = value & 0xff000000;
+    uint32_t flags = value & 0x000000ff;
 
-		if(m_state == State::Init && state == 0) {
-			m_state = State::InitDisabled;
-		}
-		if(m_state == State::Homing && (flags & 0x1)) {
-			m_state = State::HomedWaitPosition;
-			m_next_ts = m_timestamp + 100;
-		}
-	}
-	if(apb_address == m_apb_base + 8) {
-		if(m_state == State::HomedWaitPosition && m_timestamp >= m_next_ts) {
-			m_state = State::Homed;
-		}
-		if(m_state == State::Homed) {
-			m_position = value;
-		}
-	}
+    if (m_state == State::Init && state == 0) {
+      m_state = State::InitDisabled;
+    }
+    if (m_state == State::Homing && (flags & 0x1)) {
+      m_state = State::HomedWaitPosition;
+      m_next_ts = m_timestamp + 100;
+    }
+  }
+  if (apb_address == m_apb_base + 8) {
+    if (m_state == State::HomedWaitPosition && m_timestamp >= m_next_ts) {
+      m_state = State::Homed;
+    }
+    if (m_state == State::Homed) {
+      m_position = value;
+    }
+  }
 }
 
-void LiftController::onRegRead(Register reg, uint32_t value) {
-
-}
+void LiftController::onRegRead(Register reg, uint32_t value) {}
 
 void LiftController::regsRead() {
-	uint32_t apb_address = m_apb_base + 4;
-	Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaReadRegInternal,
-	                                                 (unsigned char *)&apb_address, 4);
-	apb_address = m_apb_base + 8;
-	Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaReadRegInternal,
-	                                                 (unsigned char *)&apb_address, 4);
+  uint32_t apb_address = m_apb_base + 4;
+  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaReadRegInternal,
+                                                 (unsigned char *)&apb_address, 4);
+  apb_address = m_apb_base + 8;
+  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaReadRegInternal,
+                                                 (unsigned char *)&apb_address, 4);
 }
 
 void LiftController::regWrite(Register reg, uint32_t value) {
-	uint32_t apb_address{m_apb_base};
-	switch(reg) {
-	case Register::Cmd:
-		apb_address += 0;
-		break;
-	case Register::MotorPwm:
-		apb_address = c_motor_apb[m_id];
-		break;
-	default:
-		return;
-	}
-	uint32_t buff[2] = {apb_address, value};
-	Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaWriteReg,
-	                                                     (unsigned char *)buff, 8);
+  uint32_t apb_address{m_apb_base};
+  switch (reg) {
+    case Register::Cmd:
+      apb_address += 0;
+      break;
+    case Register::MotorPwm:
+      apb_address = c_motor_apb[m_id];
+      break;
+    default:
+      return;
+  }
+  uint32_t buff[2] = {apb_address, value};
+  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaWriteReg,
+                                                 (unsigned char *)buff, 8);
 }
 
 void LiftController::cmdSetEnable(bool enable) {
-	regWrite(Register::Cmd, 0x10000000 | (enable ? 1 : 0));
+  regWrite(Register::Cmd, 0x10000000 | (enable ? 1 : 0));
 }
-void LiftController::cmdSetKp(uint32_t kp)  {
-	regWrite(Register::Cmd, 0x20000000 | (kp & 0x0fffffff));
-}
-
-void LiftController::cmdSetKi(uint32_t ki)  {
-	regWrite(Register::Cmd, 0x30000000 | (ki & 0x0fffffff));
+void LiftController::cmdSetKp(uint32_t kp) {
+  regWrite(Register::Cmd, 0x20000000 | (kp & 0x0fffffff));
 }
 
-void LiftController::cmdSetKd(uint32_t kd)  {
-	regWrite(Register::Cmd, 0x40000000 | (kd & 0x0fffffff));
+void LiftController::cmdSetKi(uint32_t ki) {
+  regWrite(Register::Cmd, 0x30000000 | (ki & 0x0fffffff));
 }
 
-void LiftController::cmdDoHoming() {
-	regWrite(Register::Cmd, 0x50000000);
+void LiftController::cmdSetKd(uint32_t kd) {
+  regWrite(Register::Cmd, 0x40000000 | (kd & 0x0fffffff));
 }
+
+void LiftController::cmdDoHoming() { regWrite(Register::Cmd, 0x50000000); }
 
 void LiftController::cmdJumpTarget(int32_t target) {
-	regWrite(Register::Cmd, 0x60000000 | (target & 0x0fffffff));
+  regWrite(Register::Cmd, 0x60000000 | (target & 0x0fffffff));
 }
 
 void LiftController::cmdGotoTarget(int32_t target) {
-	regWrite(Register::Cmd, 0x70000000 | (target & 0x0fffffff));
+  regWrite(Register::Cmd, 0x70000000 | (target & 0x0fffffff));
 }
 
 void LiftController::cmdSetRangeClamp(uint16_t range, uint16_t clamp) {
-	uint32_t r = (uint32_t)(range & 0xfff) << 4;
-	uint32_t c = (uint32_t)(clamp & 0xffff);
-	regWrite(Register::Cmd, 0x80000000 | r | c);
+  uint32_t r = (uint32_t)(range & 0xfff) << 4;
+  uint32_t c = (uint32_t)(clamp & 0xffff);
+  regWrite(Register::Cmd, 0x80000000 | r | c);
 }
 
 void LiftController::cmdSetBltrigSpeed(uint16_t bltrig, uint16_t speed) {
-	uint32_t t = (uint32_t)(bltrig & 0xfff) << 4;
-	uint32_t s = (uint32_t)(speed & 0xffff);
-	regWrite(Register::Cmd, 0x90000000 | t | s);
+  uint32_t t = (uint32_t)(bltrig & 0xfff) << 4;
+  uint32_t s = (uint32_t)(speed & 0xffff);
+  regWrite(Register::Cmd, 0x90000000 | t | s);
 }
 
 void LiftController::cmdResetError() {
-	regWrite(Register::Cmd, 0xf0000000);
-	// 0x80000000 robot reset reg
+  regWrite(Register::Cmd, 0xf0000000);
+  // 0x80000000 robot reset reg
 }
 
 /*
@@ -567,4 +563,3 @@ void LiftController::cmdResetError() {
  *
  *
  */
-

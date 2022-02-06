@@ -8,69 +8,54 @@
 namespace goldobot {
 
 class LiftController {
-public:
-	enum class State {
-		Init,
-		InitDisabled,
-		HomingWaitPwm,
-		Homing,
-		HomedWaitPosition,
-		Homed
-	};
-	enum class Register {
-		Cmd,
-		Status,
-		Position,
-		Debug,
-		MotorPwm
-	};
-public:
-	void init(int id, LiftConfig config, uint8_t* scratchpad);
+ public:
+  enum class State { Init, InitDisabled, HomingWaitPwm, Homing, HomedWaitPosition, Homed };
+  enum class Register { Cmd, Status, Position, Debug, MotorPwm };
 
-	void update(bool enable, uint16_t pos, float speed, uint8_t torque);
-	void doHoming();
-	void setTimestamp(uint32_t ts);
-	void onFpgaReadStatus(uint32_t apb_address, uint32_t value);
-	void onRegRead(Register reg, uint32_t value);
-	void regWrite(Register reg, uint32_t value);
+ public:
+  void init(int id, LiftConfig config, uint8_t* scratchpad);
 
-	void regsRead();
+  void update(bool enable, uint16_t pos, float speed, uint8_t torque);
+  void doHoming();
+  void setTimestamp(uint32_t ts);
+  void onFpgaReadStatus(uint32_t apb_address, uint32_t value);
+  void onRegRead(Register reg, uint32_t value);
+  void regWrite(Register reg, uint32_t value);
 
-	void cmdSetEnable(bool enable);
-	// 28 bits fixed point, 12 bits integer part, 16 fractional
-	void cmdSetKp(uint32_t kp);
-	void cmdSetKi(uint32_t ki);
-	void cmdSetKd(uint32_t kd);
-	void cmdDoHoming();
-	void cmdJumpTarget(int32_t target);
-	void cmdGotoTarget(int32_t target);
-	void cmdSetRangeClamp(uint16_t range, uint16_t clamp);
-	void cmdSetBltrigSpeed(uint16_t bltrig, uint16_t speed);
-	void cmdResetError();
+  void regsRead();
 
-	// homing done bit 0x1
-	// position a max range, donc faire set range clamp avant
-	// convention range: 0 en bas, course maximale haut
+  void cmdSetEnable(bool enable);
+  // 28 bits fixed point, 12 bits integer part, 16 fractional
+  void cmdSetKp(uint32_t kp);
+  void cmdSetKi(uint32_t ki);
+  void cmdSetKd(uint32_t kd);
+  void cmdDoHoming();
+  void cmdJumpTarget(int32_t target);
+  void cmdGotoTarget(int32_t target);
+  void cmdSetRangeClamp(uint16_t range, uint16_t clamp);
+  void cmdSetBltrigSpeed(uint16_t bltrig, uint16_t speed);
+  void cmdResetError();
 
-	uint32_t m_position;
+  // homing done bit 0x1
+  // position a max range, donc faire set range clamp avant
+  // convention range: 0 en bas, course maximale haut
 
+  uint32_t m_position;
 
-private:
-	static const uint32_t c_lift_base[2];
-	static const uint32_t c_motor_apb[2];
+ private:
+  static const uint32_t c_lift_base[2];
+  static const uint32_t c_motor_apb[2];
 
-	LiftConfig m_config;
-	uint32_t m_apb_base;
-	uint8_t* m_scratchpad;
-	int m_id;
-	State m_state;
-	uint32_t m_status{0};
-	uint32_t m_timestamp{0};
-	uint32_t m_next_ts{0};
-	bool m_enable{false};
+  LiftConfig m_config;
+  uint32_t m_apb_base;
+  uint8_t* m_scratchpad;
+  int m_id;
+  State m_state;
+  uint32_t m_status{0};
+  uint32_t m_timestamp{0};
+  uint32_t m_next_ts{0};
+  bool m_enable{false};
 };
-
-
 
 class ServosTask : public Task {
  public:
@@ -91,7 +76,7 @@ class ServosTask : public Task {
   void updateServoDynamixelMX28(int id, bool enabled, uint16_t pos, float speed, uint8_t torque);
   void updateServoGoldoLift(int id, bool enabled, uint16_t pos, float speed, uint8_t torque);
 
-  void publishServoState(int id, bool state);
+  void publishTelemetry();
 
   void moveMultiple(int num_servos);
 
@@ -102,8 +87,9 @@ class ServosTask : public Task {
 
   bool isInitialized(int id) const noexcept { return (m_servo_initialized & (1 << id)) != 0; };
   void setInitialized(int id, bool initialized) noexcept {
-	  m_servo_initialized = ((m_servo_initialized & (0xffff - (1 << id)))) | (initialized ? (1 << id) : 0);
-    };
+    m_servo_initialized =
+        ((m_servo_initialized & (0xffff - (1 << id)))) | (initialized ? (1 << id) : 0);
+  };
 
   bool isEnabled(int id) const noexcept { return (m_servo_enabled & (1 << id)) != 0; };
   void setEnabled(int id, bool enabled) noexcept {
@@ -115,7 +101,7 @@ class ServosTask : public Task {
   unsigned char m_message_queue_buffer[256];
   unsigned char m_message_queue_commands_buffer[256];
   uint16_t m_sequence_number;
-  uint8_t m_scratchpad[128];
+  uint8_t m_scratchpad[256];
 
   ServosConfig* m_servos_config{nullptr};
   LiftsConfig* m_lifts_config{nullptr};
@@ -142,5 +128,6 @@ class ServosTask : public Task {
   uint8_t m_lift_servo_id[2] = {0, 0};
 
   uint32_t m_next_statistics_ts{10};
+  uint32_t m_next_telemetry_ts{10};
 };
 }  // namespace goldobot
