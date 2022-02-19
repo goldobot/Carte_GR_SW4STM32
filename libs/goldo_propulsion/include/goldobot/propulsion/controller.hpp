@@ -78,14 +78,14 @@ class PropulsionController {
 
   enum class Direction { Forward, Backward };
 
-  enum class EventType : uint8_t { User, Reposition };
+  enum class EventType : uint8_t { Unknown, Reposition, User=33};
 
   // message sent for an event
   // such as a slipping or blocking detection, a successfull repositioning, or a sensor detection
   struct Event {
 	RobotPose pose;
 	float parameter;
-	uint32_t data;
+	uint32_t data[2];
 	EventType type;
   };
 
@@ -163,6 +163,7 @@ class PropulsionController {
   void setConfig(const PropulsionControllerConfig& config);
 
   void setEventCallback(std::function<void(const Event&)>&& callback);
+  void sendEvent(EventType type, uint32_t data1=0, uint32_t data2=0);
 
   messages::PropulsionTelemetry getTelemetry() const;
   /*< */
@@ -232,7 +233,5 @@ class PropulsionController {
   void onFollowTrajectoryEnter();
   void onRepositionEnter();
   void onRepositionExit();
-
-  void sendEvent(EventType type, uint32_t data);
 };
 }  // namespace goldobot

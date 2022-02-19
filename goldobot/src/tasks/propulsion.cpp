@@ -268,6 +268,18 @@ void PropulsionTask::processUrgentMessage() {
   uint16_t sequence_number{0};
 
   switch (message_type) {
+  	case CommMessageType::SensorsState: {
+  	  uint32_t sensors;
+  	  m_urgent_message_queue.pop_message((unsigned char*)&sensors, 4);
+  	  onSensors(sensors);
+  	} break;
+  	case CommMessageType::PropulsionSetEventSensorsMask: {
+  	  uint32_t buff[2];
+  	  auto sequence_number = readCommand(m_urgent_message_queue, buff, 8);
+	  m_sensors_mask_rising = buff[0];
+	  m_sensors_mask_falling = buff[1];
+	  sendCommandEvent(sequence_number, CommandEvent::Ack);
+	} break;
     case CommMessageType::PropulsionSetPose: {
       float pose[3];
       auto sequence_number = readCommand(m_urgent_message_queue, &pose, 12);
@@ -581,6 +593,25 @@ void PropulsionTask::onControllerEvent(const PropulsionController::Event& event)
                                                   (unsigned char*)&event, sizeof(event));
 }
 
+void PropulsionTask::onSensors(uint32_t sensors) {
+	uint32_t changed = sensors ^ m_sensors;
+	m_sensors = sensors;
+	uint32_t rising = changed & sensors;
+	uint32_t falling = changed & !sensors;
+
+	bool triggered = false;
+	if((rising & m_sensors_mask_rising) != 0) {
+	  triggered = true;
+	}
+	if((falling & m_sensors_mask_falling) != 0) {
+	  triggered = true;
+	}
+	if(triggered) {
+		m_controller.sendEvent(PropulsionController::EventType::User, changed, sensors);
+	}
+
+}
+
 void PropulsionTask::sendODriveStatus() {
   {
     auto axis_states = m_odrive_client.axisStates();
@@ -836,6 +867,8 @@ void PropulsionTask::taskFunction() {
   // immediate commands
   Robot::instance().mainExchangeIn().subscribe({100, 119, &m_urgent_message_queue});
   Robot::instance().mainExchangeIn().subscribe({151, 152, &m_urgent_message_queue});
+  // sensors
+  Robot::instance().exchangeInternal().subscribe({33, 33, &m_urgent_message_queue});
 
   // immediate commands
   Robot::instance().exchangeInternal().subscribe({12, 12, &m_urgent_message_queue});

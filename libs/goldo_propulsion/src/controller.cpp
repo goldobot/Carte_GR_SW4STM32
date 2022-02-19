@@ -374,13 +374,14 @@ void PropulsionController::setState(State state) {
   m_state = state;
 }
 
-void PropulsionController::sendEvent(EventType type, uint32_t data) {
+void PropulsionController::sendEvent(EventType type, uint32_t data1, uint32_t data2) {
   if (!m_event_callback) {
     return;
   }
   Event event;
   event.type = type;
-  event.data = data;
+  event.data[0] = data1;
+  event.data[1] = data2;
   event.pose = m_current_pose;
   event.parameter = m_speed_controller.parameter();
   m_event_callback(event);

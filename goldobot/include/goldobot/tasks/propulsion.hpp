@@ -140,6 +140,11 @@ class PropulsionTask : public Task {
 
   void onControllerEvent(const PropulsionController::Event& event);
 
+  void onSensors(uint32_t sensors);
+  uint32_t m_sensors{0};
+  uint32_t m_sensors_mask_rising{0};
+  uint32_t m_sensors_mask_falling{0};
+
   void onMsgExecuteTranslation(size_t msg_size);
   void onMsgExecuteRotation(size_t msg_size);
   void onMsgExecuteFaceDirection(size_t msg_size);
