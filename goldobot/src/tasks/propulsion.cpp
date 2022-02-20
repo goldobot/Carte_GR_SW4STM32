@@ -268,18 +268,18 @@ void PropulsionTask::processUrgentMessage() {
   uint16_t sequence_number{0};
 
   switch (message_type) {
-  	case CommMessageType::SensorsState: {
-  	  uint32_t sensors;
-  	  m_urgent_message_queue.pop_message((unsigned char*)&sensors, 4);
-  	  onSensors(sensors);
-  	} break;
-  	case CommMessageType::PropulsionSetEventSensorsMask: {
-  	  uint32_t buff[2];
-  	  auto sequence_number = readCommand(m_urgent_message_queue, buff, 8);
-	  m_sensors_mask_rising = buff[0];
-	  m_sensors_mask_falling = buff[1];
-	  sendCommandEvent(sequence_number, CommandEvent::Ack);
-	} break;
+    case CommMessageType::SensorsState: {
+      uint32_t sensors;
+      m_urgent_message_queue.pop_message((unsigned char*)&sensors, 4);
+      onSensors(sensors);
+    } break;
+    case CommMessageType::PropulsionSetEventSensorsMask: {
+      uint32_t buff[2];
+      auto sequence_number = readCommand(m_urgent_message_queue, buff, 8);
+      m_sensors_mask_rising = buff[0];
+      m_sensors_mask_falling = buff[1];
+      sendCommandEvent(sequence_number, CommandEvent::Ack);
+    } break;
     case CommMessageType::PropulsionSetPose: {
       float pose[3];
       auto sequence_number = readCommand(m_urgent_message_queue, &pose, 12);
@@ -289,7 +289,7 @@ void PropulsionTask::processUrgentMessage() {
     case CommMessageType::PropulsionTransformPose: {
       float transform[3];
       auto sequence_number = readCommand(m_urgent_message_queue, &transform, 12);
-      m_odometry.transformPose(Vector2D{transform[0], transform[1]} , transform[2]);
+      m_odometry.transformPose(Vector2D{transform[0], transform[1]}, transform[2]);
       auto pose = m_odometry.pose();
       m_controller.resetPose(pose.position.x, pose.position.y, pose.yaw);
       sendCommandEvent(sequence_number, CommandEvent::Ack);
@@ -590,26 +590,25 @@ void PropulsionTask::clearCommandQueue() {
 
 void PropulsionTask::onControllerEvent(const PropulsionController::Event& event) {
   Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::PropulsionControllerEvent,
-                                                  (unsigned char*)&event, sizeof(event));
+                                                      (unsigned char*)&event, sizeof(event));
 }
 
 void PropulsionTask::onSensors(uint32_t sensors) {
-	uint32_t changed = sensors ^ m_sensors;
-	m_sensors = sensors;
-	uint32_t rising = changed & sensors;
-	uint32_t falling = changed & !sensors;
+  uint32_t changed = sensors ^ m_sensors;
+  m_sensors = sensors;
+  uint32_t rising = changed & sensors;
+  uint32_t falling = changed & !sensors;
 
-	bool triggered = false;
-	if((rising & m_sensors_mask_rising) != 0) {
-	  triggered = true;
-	}
-	if((falling & m_sensors_mask_falling) != 0) {
-	  triggered = true;
-	}
-	if(triggered) {
-		m_controller.sendEvent(PropulsionController::EventType::User, changed, sensors);
-	}
-
+  bool triggered = false;
+  if ((rising & m_sensors_mask_rising) != 0) {
+    triggered = true;
+  }
+  if ((falling & m_sensors_mask_falling) != 0) {
+    triggered = true;
+  }
+  if (triggered) {
+    m_controller.sendEvent(PropulsionController::EventType::User, changed, sensors);
+  }
 }
 
 void PropulsionTask::sendODriveStatus() {
@@ -890,7 +889,8 @@ void PropulsionTask::taskFunction() {
   m_odometry.setConfig(m_odometry.config());
   m_odometry.reset(left, right);
 
-  m_controller.setEventCallback([this] (const PropulsionController::Event& event) {this->onControllerEvent(event);});
+  m_controller.setEventCallback(
+      [this](const PropulsionController::Event& event) { this->onControllerEvent(event); });
   m_odrive_client.setOutputExchange(&Robot::instance().mainExchangeIn(),
                                     CommMessageType::ODriveRequestPacket);
 

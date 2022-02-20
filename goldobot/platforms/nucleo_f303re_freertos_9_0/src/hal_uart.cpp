@@ -47,7 +47,7 @@ using namespace goldobot::hal::platform;
 using namespace goldobot::hal;
 
 void goldobot_hal_uart_irq_handler(int uart_index) {
-  //auto& huart = g_uart_handles[uart_index];
+  // auto& huart = g_uart_handles[uart_index];
   /* bool idle_detected{false};
    if (HAL_IS_BIT_SET(huart.Instance->CR1, UART_IT_IDLE) &&
        HAL_IS_BIT_SET(huart.Instance->ISR, UART_FLAG_IDLE)) {
@@ -122,7 +122,7 @@ void hal_uart_callback(int uart_index, int callback_id) {
   // uart transfer error
   if (callback_id == 1) {
     // disable uart interrupt
-	IRQLock lock(irqn);
+    IRQLock lock(irqn);
     HAL_UART_Abort(huart);
 
     {
@@ -345,10 +345,9 @@ bool uart_rx_abort(IORequest* req, uint32_t device_index) {
 
   HAL_UART_AbortReceive(uart_handle);
 
-  if (uart_handle->hdmarx != NULL)
-  {
-	  uart_handle->hdmarx->XferAbortCallback = NULL;
-	  HAL_DMA_Abort(uart_handle->hdmarx);
+  if (uart_handle->hdmarx != NULL) {
+    uart_handle->hdmarx->XferAbortCallback = NULL;
+    HAL_DMA_Abort(uart_handle->hdmarx);
   };
 
   if (req && req->callback) {
@@ -368,10 +367,9 @@ bool uart_tx_abort(IORequest* req, uint32_t device_index) {
   g_uart_tx_io_requests[device_index] = nullptr;
 
   HAL_UART_AbortTransmit(uart_handle);
-  if (uart_handle->hdmatx != NULL)
-  {
-	  uart_handle->hdmatx->XferAbortCallback = NULL;
-	  HAL_DMA_Abort(uart_handle->hdmatx);
+  if (uart_handle->hdmatx != NULL) {
+    uart_handle->hdmatx->XferAbortCallback = NULL;
+    HAL_DMA_Abort(uart_handle->hdmatx);
   };
 
   if (req && req->callback) {

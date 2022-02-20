@@ -18,18 +18,18 @@ struct ServosConfig {
 };
 
 struct LiftConfig {
-	uint32_t kp;
-	uint32_t ki;
-	uint32_t kd;
-	uint16_t range;
-	uint16_t pwm_clamp;
-	uint16_t block_trig;
-	uint16_t reserved;
+  uint32_t kp;
+  uint32_t ki;
+  uint32_t kd;
+  uint16_t range;
+  uint16_t pwm_clamp;
+  uint16_t block_trig;
+  uint16_t reserved;
 };
 
 struct LiftsConfig {
-	uint32_t num_lifts{0};
-	LiftConfig lifts[2];
+  uint32_t num_lifts{0};
+  LiftConfig lifts[2];
 };
 
 struct SensorConfig {

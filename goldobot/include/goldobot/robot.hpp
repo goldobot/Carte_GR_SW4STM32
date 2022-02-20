@@ -28,7 +28,7 @@ class Robot {
     Servos,
     PropulsionTask,
     TasksEnable,
-	Lifts
+    Lifts
   };
 
  public:
@@ -88,7 +88,6 @@ class Robot {
 
   RobotGeometryConfig* m_robot_geometry_config;
   ServosConfig* m_servos_config;
-
 
   unsigned char* m_load_config_ptr{nullptr};
   uint16_t m_load_config_crc{0};

@@ -78,15 +78,15 @@ class PropulsionController {
 
   enum class Direction { Forward, Backward };
 
-  enum class EventType : uint8_t { Unknown, Reposition, User=33};
+  enum class EventType : uint8_t { Unknown, Reposition, User = 33 };
 
   // message sent for an event
   // such as a slipping or blocking detection, a successfull repositioning, or a sensor detection
   struct Event {
-	RobotPose pose;
-	float parameter;
-	uint32_t data[2];
-	EventType type;
+    RobotPose pose;
+    float parameter;
+    uint32_t data[2];
+    EventType type;
   };
 
  public:
@@ -163,7 +163,7 @@ class PropulsionController {
   void setConfig(const PropulsionControllerConfig& config);
 
   void setEventCallback(std::function<void(const Event&)>&& callback);
-  void sendEvent(EventType type, uint32_t data1=0, uint32_t data2=0);
+  void sendEvent(EventType type, uint32_t data1 = 0, uint32_t data2 = 0);
 
   messages::PropulsionTelemetry getTelemetry() const;
   /*< */

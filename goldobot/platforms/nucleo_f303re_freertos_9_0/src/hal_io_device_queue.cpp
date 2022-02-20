@@ -108,9 +108,8 @@ size_t IODeviceQueue::map_push(uint8_t** buffer) {
     retval = m_buffer_end - head;
   }
   auto size_left = m_buffer_end - (head + retval);
-  if(size_left != 0 && size_left < 8)
-  {
-	  retval = retval > 8 ? retval - (8 - size_left) : 0;
+  if (size_left != 0 && size_left < 8) {
+    retval = retval > 8 ? retval - (8 - size_left) : 0;
   }
   return retval;
 }

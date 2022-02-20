@@ -32,7 +32,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* Data, size_t Size) {
   // messages data is allocated from the end of the buffer
   // stop when there is no more space to allocate a 1 byte message for the next command
 
-  while (ptr_end - ptr - sum_message_sizes > sizeof(size_t) + sizeof(uint8_t) + sizeof(goldobot::CommMessageType)) {
+  while (ptr_end - ptr - sum_message_sizes >
+         sizeof(size_t) + sizeof(uint8_t) + sizeof(goldobot::CommMessageType)) {
     // choose a command type and size
     uint8_t cmd_choice = *ptr++;
     goldobot::CommMessageType msg_type;
@@ -49,7 +50,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* Data, size_t Size) {
       msg_size = std::min(msg_size, remaining_space);
 
       // message pointers whil be filled later
-      messages.push_back(std::make_tuple(msg_type, (const uint8_t*) nullptr, msg_size));
+      messages.push_back(std::make_tuple(msg_type, (const uint8_t*)nullptr, msg_size));
       commands.push_back(Command{Command::Type::Push, msg_size});
       sum_message_sizes += msg_size;
     } else {
@@ -75,14 +76,13 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* Data, size_t Size) {
     switch (cmd.type) {
       case Command::Type::Push: {
         auto& msg = messages[msg_idx_head];
-        if (message_queue.push_message(std::get<0>(msg), std::get<1>(msg), std::get<2>(msg)))
-        {
-            // successfully pushed message
-            msg_idx_head++;
+        if (message_queue.push_message(std::get<0>(msg), std::get<1>(msg), std::get<2>(msg))) {
+          // successfully pushed message
+          msg_idx_head++;
         }
-       
+
       } break;
-      case Command::Type::Pop: {        
+      case Command::Type::Pop: {
         if (msg_idx_tail == msg_idx_head) {
           assert(!message_queue.message_ready());
         } else {
@@ -95,7 +95,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* Data, size_t Size) {
           assert(memcmp(msg_buffer, std::get<1>(msg), pop_size) == 0);
 
           msg_idx_tail++;
-        }      
+        }
       } break;
       default:
         break;

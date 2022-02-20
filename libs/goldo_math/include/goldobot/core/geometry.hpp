@@ -13,7 +13,7 @@ class Vector2D {
 
 class RobotPose {
  public:
-  Vector2D position{0,0};
+  Vector2D position{0, 0};
   float yaw{0};
   float speed{0};
   float yaw_rate{0};

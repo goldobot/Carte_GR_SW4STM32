@@ -80,7 +80,7 @@ void init() {
 
   init_io_devices(),
 
-  hal_callback_handler_task_start();
+      hal_callback_handler_task_start();
 
   // init uart
   IODeviceConfigUart uart_config;

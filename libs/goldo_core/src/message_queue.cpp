@@ -43,7 +43,6 @@ bool MessageQueue::push_message(CommMessageType message_type, const unsigned cha
 }
 
 void MessageQueue::push_data(const unsigned char* buffer, size_t size) {
-
   size_t idx = m_end_index;
   size_t idx_end = m_end_index + size;
 
@@ -51,8 +50,8 @@ void MessageQueue::push_data(const unsigned char* buffer, size_t size) {
     std::memcpy(m_buffer + idx, buffer, size);
     m_end_index = idx_end;
   } else {
-	auto s1 = m_buffer_size - idx;
-	auto s2 = idx_end - m_buffer_size;
+    auto s1 = m_buffer_size - idx;
+    auto s2 = idx_end - m_buffer_size;
     std::memcpy(m_buffer + idx, buffer, s1);
     std::memcpy(m_buffer, buffer + s1, s2);
     m_end_index = s2;
@@ -82,8 +81,8 @@ void MessageQueue::read_data(size_t start_index, unsigned char* buffer, size_t s
   if (idx_end < m_buffer_size) {
     std::memcpy(buffer, &m_buffer[idx], size);
   } else {
-	size_t s1 = m_buffer_size - idx;
-	size_t s2 = idx_end - m_buffer_size;
+    size_t s1 = m_buffer_size - idx;
+    size_t s2 = idx_end - m_buffer_size;
 
     std::memcpy(buffer, &m_buffer[idx], s1);
     std::memcpy(buffer + m_buffer_size - idx, m_buffer, s2);
@@ -93,7 +92,7 @@ void MessageQueue::read_data(size_t start_index, unsigned char* buffer, size_t s
 void MessageQueue::pop_data(size_t size) {
   size_t index = m_begin_index + size;
   while (index >= m_buffer_size) {
-	  index -= m_buffer_size;
+    index -= m_buffer_size;
   }
   m_begin_index = index;
 }
@@ -127,29 +126,25 @@ bool MessageQueue::pop_message(unsigned char** buffers, size_t* sizes, int num_b
 
   size_t remaining_size = m_message_size;
 
-  for(int i = 0; i < num_buffers; i++)
-  {
-	  auto ptr = buffers[i];
-	  size_t size = sizes[i];
-	  if(size > remaining_size)
-	  {
-		  size = remaining_size;
-	  }
-	  remaining_size -= size;
-	  sizes[i] = size;
-	  if(size > 0)
-	  {
-		  read_data(m_begin_index, ptr, size);
-		  pop_data(size);
-	  }
+  for (int i = 0; i < num_buffers; i++) {
+    auto ptr = buffers[i];
+    size_t size = sizes[i];
+    if (size > remaining_size) {
+      size = remaining_size;
+    }
+    remaining_size -= size;
+    sizes[i] = size;
+    if (size > 0) {
+      read_data(m_begin_index, ptr, size);
+      pop_data(size);
+    }
   }
   pop_data(remaining_size);
   load_next_message();
   return true;
 }
 
-void MessageQueue::load_next_message()
-{
+void MessageQueue::load_next_message() {
   if (m_begin_index != m_end_index) {
     uint16_t buff[2];
     read_data(m_begin_index, (unsigned char*)buff, 4);

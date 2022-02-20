@@ -177,13 +177,12 @@ void IODevice::execute(IORequest* req, uint32_t timeout) {
   }
 }
 
-
 void IODevice::reset() {
-	rx_functions->abort_request(nullptr, device_index);
-	tx_functions->abort_request(nullptr, device_index);
-	tx_busy = false;
-	rx_busy = false;
-    try_start_rx_fifo();
+  rx_functions->abort_request(nullptr, device_index);
+  tx_functions->abort_request(nullptr, device_index);
+  tx_busy = false;
+  rx_busy = false;
+  try_start_rx_fifo();
 }
 
 size_t IODevice::read(uint8_t* buffer, size_t buffer_size, uint32_t timeout) {

@@ -100,7 +100,7 @@ void SimpleOdometry::setPose(const RobotPose& pose) {
 }
 
 void SimpleOdometry::transformPose(Vector2D translation, float rotation) {
-  double nx =  m_x * cos(rotation) + m_y * sin(rotation) + translation.x;
+  double nx = m_x * cos(rotation) + m_y * sin(rotation) + translation.x;
   double ny = -m_x * sin(rotation) + m_y * cos(rotation) + translation.y;
   m_x = nx;
   m_y = ny;
