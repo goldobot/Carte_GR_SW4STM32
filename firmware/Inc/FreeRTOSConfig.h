@@ -182,12 +182,13 @@ standard names. */
  * FreeRTOS.h) */
 void goldo_trace_task_switched_in(void* task);
 void goldo_trace_task_switched_out(void* task);
-void goldo_trace_task_create(void* task);
+void goldo_trace_task_create(void* task, unsigned tcb_number);
 
 void goldo_hal_init_cycle_counter();
-//#define traceTASK_CREATE(xTask) goldo_trace_task_create(xTask)
-//#define traceTASK_SWITCHED_OUT() goldo_trace_task_switched_out(pxCurrentTCB);
-//#define traceTASK_SWITCHED_IN() goldo_trace_task_switched_in(pxCurrentTCB);
+//traceTASK_INCREMENT_TICK(xTickCount)
+#define traceTASK_CREATE(xTask) goldo_trace_task_create(xTask, xTask->uxTCBNumber)
+#define traceTASK_SWITCHED_OUT() goldo_trace_task_switched_out(pxCurrentTCB)
+#define traceTASK_SWITCHED_IN() goldo_trace_task_switched_in(pxCurrentTCB)
 
 #define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() goldo_hal_init_cycle_counter()
 #define portGET_RUN_TIME_COUNTER_VALUE() DWT->CYCCNT

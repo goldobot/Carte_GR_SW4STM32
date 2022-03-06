@@ -170,8 +170,8 @@ void MainTask::checkSensorsState() {
   if (m_sensors_state_changed && timestamp >= m_sensors_state_next_ts_min) {
     Robot::instance().mainExchangeOut().pushMessage(CommMessageType::SensorsState,
                                                     (unsigned char*)&m_sensors_state, 4);
-    Robot::instance().exchangeInternal().pushMessage(CommMessageType::SensorsState,
-                                                     (unsigned char*)&m_sensors_state, 4);
+    //Robot::instance().exchangeInternal().pushMessage(CommMessageType::SensorsState,
+    //                                                 (unsigned char*)&m_sensors_state, 4);
     m_sensors_state_next_ts_min = std::max(m_sensors_state_next_ts_min + 50, timestamp);
     m_sensors_state_changed = false;
   }

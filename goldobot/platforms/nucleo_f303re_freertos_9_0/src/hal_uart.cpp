@@ -165,7 +165,7 @@ bool uart_start_rx_request(IORequest* req, uint32_t device_index) {
   auto status = HAL_UART_Receive_IT(uart_handle, req->rx_ptr, req->size);
 
   if (status != HAL_OK) {
-    hal_trace_error(HalEvent::UartRxStartErrorHal);
+    hal_trace_event(HalEvent::UartRxStartErrorHal);
     g_uart_rx_io_requests[device_index] = nullptr;
     return false;
   }
@@ -212,7 +212,7 @@ bool uart_start_tx_request(IORequest* req, uint32_t device_index) {
   if (status != HAL_OK) {
     hal_gpio_pin_set(g_uart_txen_pins[device_index], false);
     g_uart_tx_io_requests[device_index] = nullptr;
-    hal_trace_error(HalEvent::UartTxStartErrorHal);
+    hal_trace_event(HalEvent::UartTxStartErrorHal);
     if (req->callback) {
       req->callback(req, IORequestStatus::Error);
     }
@@ -258,7 +258,7 @@ bool uart_start_rx_request_dma(IORequest* req, uint32_t device_index) {
 
   auto status = HAL_UART_Receive_DMA(uart_handle, req->rx_ptr, req->size);
   if (status != HAL_OK) {
-    hal_trace_error(HalEvent::UartRxStartErrorHal);
+    hal_trace_event(HalEvent::UartRxStartErrorHal);
     g_uart_rx_io_requests[device_index] = nullptr;
     if (req->callback) {
       req->callback(req, IORequestStatus::Error);
@@ -307,7 +307,7 @@ bool uart_start_tx_request_dma(IORequest* req, uint32_t device_index) {
   auto status = HAL_UART_Transmit_DMA(uart_handle, req->tx_ptr, req->size);
   if (status != HAL_OK) {
     hal_gpio_pin_set(g_uart_txen_pins[device_index], false);
-    hal_trace_error(HalEvent::UartTxStartErrorHal);
+    hal_trace_event(HalEvent::UartTxStartErrorHal);
     g_uart_tx_io_requests[device_index] = nullptr;
     if (req->callback) {
       req->callback(req, IORequestStatus::Error);

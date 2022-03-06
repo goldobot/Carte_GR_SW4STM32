@@ -867,7 +867,7 @@ void PropulsionTask::taskFunction() {
   Robot::instance().mainExchangeIn().subscribe({100, 119, &m_urgent_message_queue});
   Robot::instance().mainExchangeIn().subscribe({151, 152, &m_urgent_message_queue});
   // sensors
-  Robot::instance().exchangeInternal().subscribe({33, 33, &m_urgent_message_queue});
+  //Robot::instance().exchangeInternal().subscribe({33, 33, &m_urgent_message_queue});
 
   // immediate commands
   Robot::instance().exchangeInternal().subscribe({12, 12, &m_urgent_message_queue});

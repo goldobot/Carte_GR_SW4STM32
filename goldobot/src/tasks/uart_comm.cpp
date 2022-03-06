@@ -4,6 +4,7 @@
 #include "goldobot/propulsion/odometry_config.hpp"
 #include "goldobot/robot.hpp"
 #include "goldobot/tasks/main.hpp"
+#include "goldobot/utils/update_timestamp.hpp"
 
 // for measuring computing time, should be in hal
 #include "stm32f3xx_hal.h"
@@ -140,13 +141,14 @@ void UARTCommTask::taskFunction() {
     // send task statistics every second
     if (timestamp >= m_next_statistics_timestamp) {
       sendStatistics();
-      m_next_statistics_timestamp = m_next_statistics_timestamp + 1000;
+      update_timestamp(m_next_statistics_timestamp, timestamp, 1000);
+      //m_next_task_decrs =
     }
 
     // send heartbeat every 100ms
     if (timestamp >= m_next_heartbeat_timestamp) {
       sendHeartbeat(timestamp);
-      m_next_heartbeat_timestamp = m_next_heartbeat_timestamp + 100;
+      update_timestamp(m_next_heartbeat_timestamp, timestamp, 100);
     }
 
     uint32_t cyccnt_end = DWT->CYCCNT;
@@ -183,6 +185,8 @@ void UARTCommTask::sendHeartbeat(uint32_t timestamp) {
 struct TaskStats {
   char task_name[16];
   uint32_t runtime_counter;
+  uint16_t stack_high_watermark;
+  uint16_t task_number;
 };
 
 void UARTCommTask::sendStatistics() {
@@ -198,19 +202,27 @@ void UARTCommTask::sendStatistics() {
                                 (unsigned char*)&m_statistics, sizeof(m_statistics));
   memset(&m_statistics, 0, sizeof(m_statistics));
 
-  /*
+
   TaskStatus_t tasks_status[16];
+
   unsigned long total_runtime;
   auto num_tasks = uxTaskGetSystemState(tasks_status, 16, &total_runtime);
+
   TaskStats tasks_stats[16];
   for(unsigned i = 0; i < num_tasks; i++)
   {
-          strncpy(tasks_stats[i].task_name, tasks_status[i].pcTaskName, 16);
-          tasks_stats[i].runtime_counter = tasks_status[i].ulRunTimeCounter;
+	  strncpy(tasks_stats[i].task_name, tasks_status[i].pcTaskName, 16);
+	  tasks_stats[i].runtime_counter = tasks_status[i].ulRunTimeCounter;
+	  tasks_stats[i].task_number = tasks_status[i].xTaskNumber;
   }
-  //m_out_prio_queue.push_message(CommMessageType::TaskStats, (unsigned char*)&tasks_stats,
-  //					  sizeof(TaskStats) * num_tasks);
-*/
+  m_out_queue.push_message(CommMessageType::TaskStats, (unsigned char*)&tasks_stats,
+  					  sizeof(TaskStats) * num_tasks);
+
+  auto t = hal::dbg_get_trace_buffer();
+  m_out_queue.push_message(CommMessageType::DbgTrace, (unsigned char*)std::get<0>(t), std::get<1>(t));
+
+
+
   // HeapStats_t heap_stats;
   // vPortGetHeapStats(&heap_stats);
   // m_out_prio_queue.push_message(CommMessageType::HeapStats, (unsigned char*)&heap_stats,

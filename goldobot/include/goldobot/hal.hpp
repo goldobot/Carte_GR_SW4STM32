@@ -1,6 +1,7 @@
 #pragma once
 #include <cstddef>
 #include <cstdint>
+#include <tuple>
 
 namespace goldobot {
 namespace hal {
@@ -33,6 +34,8 @@ void init();
 void configure(uint8_t* config);
 
 TickType_t get_tick_count();
+
+std::tuple<const char*, size_t> dbg_get_trace_buffer();
 
 bool gpio_get(int gpio_id);
 void gpio_set(int gpio_id, bool value);

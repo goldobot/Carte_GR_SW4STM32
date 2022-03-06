@@ -174,6 +174,9 @@ void hal_uart_callback(int uart_index, int callback_id);
 // event tracing
 
 enum class HalEvent : uint8_t {
+  None,
+  OSTaskSwitchedIn,
+  OSTaskSwitchedOut,
   UartIRQEnter,
   UartIRQExit,
   UartRxStart,
@@ -189,11 +192,10 @@ enum class HalEvent : uint8_t {
   UartTxUpdateErrorBadReqState
 };
 
-void hal_trace_error(HalEvent event_code);
-void hal_trace_event(HalEvent event_code);
+void hal_trace_event(HalEvent event_code, uint8_t payload = 0);
 inline void hal_assert(bool condition, HalEvent event_code) {
   if (!condition) {
-    hal_trace_error(event_code);
+    hal_trace_event(event_code);
   }
 }
 

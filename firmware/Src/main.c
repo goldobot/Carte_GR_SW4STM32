@@ -82,7 +82,6 @@ void prvGetRegistersFromStack(uint32_t *pulFaultStackAddress) {
     ;
 }
 
-void goldo_trace_init(void);
 
 /* USER CODE END 0 */
 

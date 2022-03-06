@@ -11,6 +11,7 @@ enum class CommMessageType : uint16_t {
   Reset,
   GetNucleoFirmwareVersion,
   TaskStats,
+  DbgTrace,
 
   MatchTimer = 10,
   MatchTimerStart,
