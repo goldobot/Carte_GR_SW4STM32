@@ -284,8 +284,9 @@ uint16_t encoder_get(int id) {
 using namespace goldobot::hal;
 
 #include <atomic>
-uint16_t g_encoder_queue_left[16];
-uint16_t g_encoder_queue_right[16];
+constexpr size_t c_encoder_queue_size = 32;
+uint16_t g_encoder_queue_left[c_encoder_queue_size];
+uint16_t g_encoder_queue_right[c_encoder_queue_size];
 std::atomic<int> g_encoder_queue_head{0};
 std::atomic<int> g_encoder_queue_tail{0};
 
@@ -297,7 +298,7 @@ bool goldo_hal_read_encoders(uint16_t& left, uint16_t& right) {
   left = g_encoder_queue_left[tail];
   right = g_encoder_queue_right[tail];
   tail++;
-  if (tail == 16) {
+  if (tail == c_encoder_queue_size) {
     tail = 0;
   }
   g_encoder_queue_tail = tail;
@@ -312,6 +313,6 @@ void goldobot_hal_tim6_irq_handler() {
   g_encoder_queue_right[g_encoder_queue_head] = right;
 
   auto head = g_encoder_queue_head.load() + 1;
-  if (head == 16) head = 0;
+  if (head == c_encoder_queue_size) head = 0;
   g_encoder_queue_head = head;
 }

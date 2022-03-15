@@ -84,6 +84,8 @@ class PropulsionTask : public Task {
 
   struct Statistics {
     uint32_t max_cycles{0};
+    uint32_t min_interval{std::numeric_limits<uint32_t>::max()};
+    uint32_t max_interval{0};
     MessageQueue::Statistics queue;
     MessageQueue::Statistics urgent_queue;
     MessageQueue::Statistics odrive_queue;
@@ -127,6 +129,7 @@ class PropulsionTask : public Task {
   uint32_t m_next_odrive_status_ts{0};
   uint32_t m_next_statistics_ts{0};
 
+  uint32_t m_last_run_cyccnt;
   Statistics m_statistics;
 
   uint16_t m_current_command_sequence_number{0};

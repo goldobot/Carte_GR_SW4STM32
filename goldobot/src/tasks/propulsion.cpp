@@ -49,10 +49,16 @@ void PropulsionTask::setRobotSimulatorConfig(const RobotSimulatorConfig& config)
 }
 
 void PropulsionTask::doStep() {
-  // test stopwatch
+	auto current_time = hal::get_tick_count();
+	m_current_timestamp = current_time;
+
+  // statistics on task runtime and jitter
   uint32_t cyccnt_begin = DWT->CYCCNT;
-  auto current_time = hal::get_tick_count();
-  m_current_timestamp = current_time;
+  uint32_t interval_cycles = cyccnt_begin - m_last_run_cyccnt;
+  m_last_run_cyccnt = cyccnt_begin;
+  m_statistics.min_interval = std::min(interval_cycles, m_statistics.min_interval);
+  m_statistics.max_interval = std::max(interval_cycles, m_statistics.max_interval);
+
 
   // Process messages
   while (m_urgent_message_queue.message_ready()) {
