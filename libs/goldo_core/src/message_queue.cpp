@@ -21,7 +21,7 @@ bool MessageQueue::push_message(CommMessageType message_type, const unsigned cha
 
   // Reject message if buffer is full
   auto available_cap = available_capacity();
-  if (msg_size > available_capacity()) {
+  if (msg_size > available_cap) {
     return false;
   }
 
@@ -37,7 +37,7 @@ bool MessageQueue::push_message(CommMessageType message_type, const unsigned cha
 
   push_data(buffer, msg_size);
   m_statistics.min_available_capacity =
-      std::min(m_statistics.min_available_capacity, available_capacity());
+      std::min(m_statistics.min_available_capacity, available_cap);
   m_statistics.messages_pushed++;
   return true;
 }

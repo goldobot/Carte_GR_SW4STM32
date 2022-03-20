@@ -4,6 +4,7 @@
 
 #include <array>
 #include <cstdint>
+#include <atomic>
 
 namespace goldobot {
 enum class CommMessageType : uint16_t;
@@ -30,7 +31,7 @@ class MessageExchange {
 
  private:
   std::array<Subscription, 64> m_subscriptions;
-  int m_num_subscriptions{0};
+  std::atomic<int> m_num_subscriptions{0};
   detail::LockerMutex m_mutex;
 };
 }  // namespace goldobot
