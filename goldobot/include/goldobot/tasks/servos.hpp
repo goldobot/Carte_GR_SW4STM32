@@ -106,7 +106,7 @@ class ServosTask : public Task {
   ServosConfig* m_servos_config{nullptr};
   LiftsConfig* m_lifts_config{nullptr};
   static constexpr int c_max_num_servos = 32;
-  static constexpr int c_update_period = 30;  // update period in ms
+  static constexpr int c_update_period = 20;  // update period in ms
   static constexpr uint32_t c_fpga_servos_base = 0x80008404;
   static const uint32_t c_lift_base[2];
 

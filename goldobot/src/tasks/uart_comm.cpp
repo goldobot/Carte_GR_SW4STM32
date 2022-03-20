@@ -44,7 +44,7 @@ const char* UARTCommTask::name() const { return "uart_comm"; }
 void UARTCommTask::init() { Task::init(); }
 
 void UARTCommTask::taskFunction() {
-  set_priority(5);
+  set_priority(6);
 
   Robot::instance().mainExchangeOut().subscribe({0, 1000, &m_out_queue});
   Robot::instance().mainExchangeOutPrio().subscribe({0, 1000, &m_out_prio_queue});
@@ -142,7 +142,7 @@ void UARTCommTask::taskFunction() {
     if (timestamp >= m_next_statistics_timestamp) {
       sendStatistics();
       update_timestamp(m_next_statistics_timestamp, timestamp, 1000);
-      //m_next_task_decrs =
+      // m_next_task_decrs =
     }
 
     // send heartbeat every 100ms
@@ -202,26 +202,23 @@ void UARTCommTask::sendStatistics() {
                                 (unsigned char*)&m_statistics, sizeof(m_statistics));
   memset(&m_statistics, 0, sizeof(m_statistics));
 
-
   TaskStatus_t tasks_status[16];
 
   unsigned long total_runtime;
   auto num_tasks = uxTaskGetSystemState(tasks_status, 16, &total_runtime);
 
   TaskStats tasks_stats[16];
-  for(unsigned i = 0; i < num_tasks; i++)
-  {
-	  strncpy(tasks_stats[i].task_name, tasks_status[i].pcTaskName, 16);
-	  tasks_stats[i].runtime_counter = tasks_status[i].ulRunTimeCounter;
-	  tasks_stats[i].task_number = tasks_status[i].xTaskNumber;
+  for (unsigned i = 0; i < num_tasks; i++) {
+    strncpy(tasks_stats[i].task_name, tasks_status[i].pcTaskName, 16);
+    tasks_stats[i].runtime_counter = tasks_status[i].ulRunTimeCounter;
+    tasks_stats[i].task_number = tasks_status[i].xTaskNumber;
   }
   m_out_queue.push_message(CommMessageType::TaskStats, (unsigned char*)&tasks_stats,
-  					  sizeof(TaskStats) * num_tasks);
+                           sizeof(TaskStats) * num_tasks);
 
   auto t = hal::dbg_get_trace_buffer();
-  m_out_queue.push_message(CommMessageType::DbgTrace, (unsigned char*)std::get<0>(t), std::get<1>(t));
-
-
+  m_out_queue.push_message(CommMessageType::DbgTrace, (unsigned char*)std::get<0>(t),
+                           std::get<1>(t));
 
   // HeapStats_t heap_stats;
   // vPortGetHeapStats(&heap_stats);

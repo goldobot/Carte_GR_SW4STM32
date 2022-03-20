@@ -49,8 +49,8 @@ void PropulsionTask::setRobotSimulatorConfig(const RobotSimulatorConfig& config)
 }
 
 void PropulsionTask::doStep() {
-	auto current_time = hal::get_tick_count();
-	m_current_timestamp = current_time;
+  auto current_time = hal::get_tick_count();
+  m_current_timestamp = current_time;
 
   // statistics on task runtime and jitter
   uint32_t cyccnt_begin = DWT->CYCCNT;
@@ -58,7 +58,6 @@ void PropulsionTask::doStep() {
   m_last_run_cyccnt = cyccnt_begin;
   m_statistics.min_interval = std::min(interval_cycles, m_statistics.min_interval);
   m_statistics.max_interval = std::max(interval_cycles, m_statistics.max_interval);
-
 
   // Process messages
   while (m_urgent_message_queue.message_ready()) {
@@ -873,7 +872,7 @@ void PropulsionTask::taskFunction() {
   Robot::instance().mainExchangeIn().subscribe({100, 119, &m_urgent_message_queue});
   Robot::instance().mainExchangeIn().subscribe({151, 152, &m_urgent_message_queue});
   // sensors
-  //Robot::instance().exchangeInternal().subscribe({33, 33, &m_urgent_message_queue});
+  // Robot::instance().exchangeInternal().subscribe({33, 33, &m_urgent_message_queue});
 
   // immediate commands
   Robot::instance().exchangeInternal().subscribe({12, 12, &m_urgent_message_queue});

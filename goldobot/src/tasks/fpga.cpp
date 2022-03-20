@@ -30,6 +30,7 @@ const char *FpgaTask::name() const { return "fpga"; }
 void FpgaTask::taskFunction() {
   Robot::instance().mainExchangeIn().subscribe({30, 49, &m_message_queue});
   auto &exchange_out = Robot::instance().mainExchangeOut();
+  set_priority(3);
 
   m_last_timestamp = hal::get_tick_count();
 

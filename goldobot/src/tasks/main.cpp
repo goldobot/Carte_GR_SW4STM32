@@ -35,6 +35,7 @@ void MainTask::taskFunction() {
   Robot::instance().mainExchangeIn().subscribe({10, 12, &m_message_queue});
   Robot::instance().exchangeInternal().subscribe({34, 34, &m_message_queue});
   Robot::instance().mainExchangeIn().subscribe({200, 205, &m_message_queue});
+  set_priority(5);
 
   // Config loop
   while (Robot::instance().matchState() == MatchState::Unconfigured) {
@@ -170,7 +171,7 @@ void MainTask::checkSensorsState() {
   if (m_sensors_state_changed && timestamp >= m_sensors_state_next_ts_min) {
     Robot::instance().mainExchangeOut().pushMessage(CommMessageType::SensorsState,
                                                     (unsigned char*)&m_sensors_state, 4);
-    //Robot::instance().exchangeInternal().pushMessage(CommMessageType::SensorsState,
+    // Robot::instance().exchangeInternal().pushMessage(CommMessageType::SensorsState,
     //                                                 (unsigned char*)&m_sensors_state, 4);
     m_sensors_state_next_ts_min = std::max(m_sensors_state_next_ts_min + 50, timestamp);
     m_sensors_state_changed = false;

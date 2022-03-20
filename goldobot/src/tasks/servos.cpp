@@ -17,7 +17,7 @@ ServosTask::ServosTask()
 const char *ServosTask::name() const { return "servos"; }
 
 void ServosTask::taskFunction() {
-  set_priority(4);
+  set_priority(2);
   Robot::instance().mainExchangeIn().subscribe({40, 49, &m_message_queue_commands});
   Robot::instance().exchangeInternal().subscribe({31, 31, &m_message_queue});
   Robot::instance().exchangeInternal().subscribe({61, 61, &m_message_queue});
@@ -110,9 +110,8 @@ void ServosTask::taskFunction() {
       publishTelemetry();
       m_next_telemetry_ts = std::max(m_next_telemetry_ts + 50, m_current_timestamp);
     }
+    delay_periodic(c_update_period);
   }
-
-  delay_periodic(c_update_period);
 }
 
 void ServosTask::updateServoDynamixelAX12(int id, bool enabled, uint16_t pos, float speed,
