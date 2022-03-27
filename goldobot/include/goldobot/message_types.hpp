@@ -91,6 +91,7 @@ enum class CommMessageType : uint16_t {
   PropulsionCalibrateODrive,
   PropulsionODriveClearErrors,
   PropulsionExecutePointToBack,
+  PropulsionExecuteUpdateTrajectory,
 
   PropulsionODriveStatistics = 180,
   PropulsionODriveAxisStates,

@@ -11,6 +11,12 @@ class Vector2D {
   float y;
 };
 
+class StaticPose {
+ public:
+  Vector2D position{0, 0};
+  float yaw{0};
+};
+
 class RobotPose {
  public:
   Vector2D position{0, 0};

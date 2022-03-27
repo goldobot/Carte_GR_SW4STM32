@@ -132,9 +132,12 @@ class PropulsionController {
   void setMotorsVelEstimates(float left, float right);
   void setMotorsTorqueEstimates(float left, float right);
 
-  void setAccelerationLimits(float accel, float deccel, float angular_accel, float angular_deccel);
-  void prepareReposition(float distance, float speed);
   void setTargetSpeed(float speed);
+  void setAccelerationLimits(float accel, float deccel, float angular_accel, float angular_deccel);
+
+  void prepareReposition(float distance, float speed);
+
+  bool updateTrajectory(Vector2D* points, int num_points);
 
   //! \brief reset robot pose. Only works if state is Inactive or Stopped. Also change odometry.
   bool resetPose(float x, float y, float yaw);

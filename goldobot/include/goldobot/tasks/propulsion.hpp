@@ -148,14 +148,15 @@ class PropulsionTask : public Task {
   uint32_t m_sensors_mask_rising{0};
   uint32_t m_sensors_mask_falling{0};
 
-  void onMsgExecuteTranslation(size_t msg_size);
-  void onMsgExecuteRotation(size_t msg_size);
-  void onMsgExecuteFaceDirection(size_t msg_size);
-  void onMsgExecutePointTo(size_t msg_size);
-  void onMsgExecutePointToBack(size_t msg_size);
-  void onMsgExecuteMoveTo(size_t msg_size);
-  void onMsgExecuteTrajectory(size_t msg_size);
-  void onMsgExecuteReposition(size_t msg_size);
+  bool onMsgExecuteTranslation(size_t msg_size);
+  bool onMsgExecuteRotation(size_t msg_size);
+  bool onMsgExecuteFaceDirection(size_t msg_size);
+  bool onMsgExecutePointTo(size_t msg_size);
+  bool onMsgExecutePointToBack(size_t msg_size);
+  bool onMsgExecuteMoveTo(size_t msg_size);
+  bool onMsgExecuteTrajectory(size_t msg_size);
+  bool onMsgExecuteUpdateTrajectory(size_t msg_size);
+  bool onMsgExecuteReposition(size_t msg_size);
 
   void onMsgExecuteSetTargetPose(size_t msg_size);
   void onMsgExecuteMeasureNormal(size_t msg_size);

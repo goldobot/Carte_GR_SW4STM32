@@ -25,6 +25,7 @@ class TrajectoryBuffer {
   TrajectoryPoint compute_point(float parameter) const;
   float min_parameter() const;
   float max_parameter() const;
+  float closestParameter(const StaticPose& pose) const;
 
  private:
   // Trajectory control points

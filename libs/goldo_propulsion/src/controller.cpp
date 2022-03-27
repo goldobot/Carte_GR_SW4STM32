@@ -202,9 +202,6 @@ void PropulsionController::setControlLevels(uint8_t longi, uint8_t yaw) {
 }
 
 void PropulsionController::updateTargetPositions() {
-  // Compute current distance on trajectory target
-  // float t = (m_time_base_ms - m_command_begin_time) * 1e-3f;
-
   float parameter = m_speed_controller.parameter();
   float speed = m_speed_controller.speed();
   parameter = std::min(parameter, m_trajectory_buffer.max_parameter());
@@ -296,7 +293,7 @@ void PropulsionController::updateReposition() {
 
   if (m_reposition_hit && m_time_base_ms >= m_reposition_end_ts) {
     setState(State::Stopped);
-    sendEvent(EventType::Reposition, 0);
+    sendEvent(EventType::Reposition, 1);
   }
 };
 
@@ -445,25 +442,6 @@ void PropulsionController::onRepositionExit() {
   m_reposition_distance = 0;
 }
 
-/*
-void PropulsionController::initMoveCommand(float speed) {
-  m_speed_controller.setAccelerationLimits(m_accel, m_deccel);
-  m_speed_controller.setParameterRange(0, m_trajectory_buffer.max_parameter());
-  m_speed_controller.setRequestedSpeed(speed);
-  m_speed_controller.reset(0, m_target_pose.speed, m_target_pose.acceleration);
-
-  // Compute direction by taking scalar product of current robot orientation vector with tangent of
-  // trajectory at origin
-  auto target_point = m_trajectory_buffer.compute_point(0);
-  float ux = cosf(m_target_pose.yaw);
-  float uy = sinf(m_target_pose.yaw);
-  m_direction = ux * target_point.tangent.x + uy * target_point.tangent.y > 0 ? Direction::Forward
-                                                                              : Direction::Backward;
-  m_low_level_controller.m_motor_velocity_limit = m_config.cruise_pwm_limit;
-  m_low_level_controller.m_left_motor_torque_lim = m_config.cruise_torque_limit;
-  m_low_level_controller.m_right_motor_torque_lim = m_config.cruise_torque_limit;
-}*/
-
 bool PropulsionController::resetPose(float x, float y, float yaw) {
   RobotPose pose;
   pose.position.x = x;
@@ -475,6 +453,27 @@ bool PropulsionController::resetPose(float x, float y, float yaw) {
   m_target_pose = pose;
   m_low_level_controller.reset();
   return true;
+}
+
+bool PropulsionController::updateTrajectory(Vector2D* points, int num_points) {
+  if (m_state != State::FollowTrajectory) {
+    return false;
+  }
+
+  m_trajectory_buffer.push_segment(points, num_points);
+
+  auto current_speed = m_speed_controller.speed();
+  auto current_acceleration = m_speed_controller.acceleration();
+
+  // current position and orientation of robot movement
+  StaticPose pose{m_current_pose.position, m_current_pose.yaw};
+  if (m_direction == Direction::Backward) pose.yaw = clampAngle(pose.yaw + c_pi);
+  auto current_parameter = m_trajectory_buffer.closestParameter(pose);
+
+  m_speed_controller.setAccelerationLimits(m_accel, m_deccel);
+  m_speed_controller.setParameterRange(0, m_trajectory_buffer.max_parameter());
+  m_speed_controller.setFinalSpeed(m_reposition_distance != 0 ? m_reposition_speed : 0);
+  m_speed_controller.reset(current_parameter, current_speed, current_acceleration);
 }
 
 bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, float speed) {

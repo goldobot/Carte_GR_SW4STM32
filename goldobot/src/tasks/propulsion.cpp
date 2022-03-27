@@ -208,44 +208,51 @@ void PropulsionTask::processMessage() {
   m_message_queue.pop_message(exec_traj_buff, msg_size);
   uint16_t sequence_number = *(uint16_t*)exec_traj_buff;
   bool immediate = false;
+  bool ok = false;
 
   switch (message_type) {
     case CommMessageType::PropulsionExecuteTrajectory:
-      onMsgExecuteTrajectory(msg_size);
+      ok = onMsgExecuteTrajectory(msg_size);
+      break;
+    case CommMessageType::PropulsionExecuteUpdateTrajectory:
+      ok = onMsgExecuteUpdateTrajectory(msg_size);
       break;
     case CommMessageType::PropulsionExecuteRotation:
-      onMsgExecuteRotation(msg_size);
+      ok = onMsgExecuteRotation(msg_size);
       break;
     case CommMessageType::PropulsionExecuteTranslation:
-      onMsgExecuteTranslation(msg_size);
+      ok = onMsgExecuteTranslation(msg_size);
       break;
     case CommMessageType::PropulsionExecutePointTo:
-      onMsgExecutePointTo(msg_size);
+      ok = onMsgExecutePointTo(msg_size);
       break;
     case CommMessageType::PropulsionExecutePointToBack:
-      onMsgExecutePointToBack(msg_size);
+      ok = onMsgExecutePointToBack(msg_size);
       break;
     case CommMessageType::PropulsionExecuteFaceDirection:
-      onMsgExecuteFaceDirection(msg_size);
+      ok = onMsgExecuteFaceDirection(msg_size);
       break;
     case CommMessageType::PropulsionExecuteMoveTo:
-      onMsgExecuteMoveTo(msg_size);
+      ok = onMsgExecuteMoveTo(msg_size);
       break;
     case CommMessageType::PropulsionExecuteReposition:
-      onMsgExecuteReposition(msg_size);
+      ok = onMsgExecuteReposition(msg_size);
       break;
     case CommMessageType::PropulsionSetTargetPose:
       onMsgExecuteSetTargetPose(msg_size);
+      ok = true;
+      immediate = true;
       break;
     case CommMessageType::PropulsionMeasureNormal:
       onMsgExecuteMeasureNormal(msg_size);
+      ok = true;
       immediate = true;
       break;
     default:
       break;
   }
-  sendCommandEvent(sequence_number, CommandEvent::Ack);
-  if (!immediate) {
+  sendCommandEvent(sequence_number, ok ? CommandEvent::Ack : CommandEvent::Error);
+  if (ok && !immediate) {
     onCommandBegin(sequence_number);
   }
 }
@@ -390,11 +397,11 @@ void PropulsionTask::processUrgentMessage() {
 }
 
 // Command messages
-void PropulsionTask::onMsgExecuteReposition(size_t msg_size) {
+bool PropulsionTask::onMsgExecuteReposition(size_t msg_size) {
   float params[2];  // distance, speed
   std::memcpy(params, exec_traj_buff + 2, 8);
 
-  m_controller.executeRepositioning(params[0], params[1]);
+  return m_controller.executeRepositioning(params[0], params[1]);
 }
 
 void PropulsionTask::onMsgExecuteSetTargetPose(size_t msg_size) {
@@ -408,43 +415,43 @@ void PropulsionTask::onMsgExecuteMeasureNormal(size_t msg_size) {
   measureNormal(angle, distance);
 }
 
-void PropulsionTask::onMsgExecuteTranslation(size_t msg_size) {
+bool PropulsionTask::onMsgExecuteTranslation(size_t msg_size) {
   float distance = *(float*)(exec_traj_buff + 2);
   float speed = *(float*)(exec_traj_buff + 6);
-  m_controller.executeTranslation(distance, speed);
+  return m_controller.executeTranslation(distance, speed);
 }
 
-void PropulsionTask::onMsgExecuteRotation(size_t msg_size) {
+bool PropulsionTask::onMsgExecuteRotation(size_t msg_size) {
   float angle = *(float*)(exec_traj_buff + 2);
   float yaw_rate = *(float*)(exec_traj_buff + 6);
-  m_controller.executeRotation(angle, yaw_rate);
+  return m_controller.executeRotation(angle, yaw_rate);
 }
 
-void PropulsionTask::onMsgExecuteMoveTo(size_t msg_size) {
+bool PropulsionTask::onMsgExecuteMoveTo(size_t msg_size) {
   Vector2D point = *(Vector2D*)(exec_traj_buff + 2);
   float speed = *(float*)(exec_traj_buff + 10);
-  m_controller.executeMoveTo(point, speed);
+  return m_controller.executeMoveTo(point, speed);
 }
 
-void PropulsionTask::onMsgExecuteFaceDirection(size_t msg_size) {
+bool PropulsionTask::onMsgExecuteFaceDirection(size_t msg_size) {
   float yaw = *(float*)(exec_traj_buff + 2);
   float yaw_rate = *(float*)(exec_traj_buff + 6);
-  m_controller.executeFaceDirection(yaw, yaw_rate);
+  return m_controller.executeFaceDirection(yaw, yaw_rate);
 }
 
-void PropulsionTask::onMsgExecutePointTo(size_t msg_size) {
+bool PropulsionTask::onMsgExecutePointTo(size_t msg_size) {
   Vector2D point = *(Vector2D*)(exec_traj_buff + 2);
   float yaw_rate = *(float*)(exec_traj_buff + 10);
-  m_controller.executePointTo(point, yaw_rate);
+  return m_controller.executePointTo(point, yaw_rate);
 }
 
-void PropulsionTask::onMsgExecutePointToBack(size_t msg_size) {
+bool PropulsionTask::onMsgExecutePointToBack(size_t msg_size) {
   Vector2D point = *(Vector2D*)(exec_traj_buff + 2);
   float yaw_rate = *(float*)(exec_traj_buff + 10);
-  m_controller.executePointToBack(point, yaw_rate);
+  return m_controller.executePointToBack(point, yaw_rate);
 }
 
-void PropulsionTask::onMsgExecuteTrajectory(size_t msg_size) {
+bool PropulsionTask::onMsgExecuteTrajectory(size_t msg_size) {
   // todo: send error message if message size is too large
   if (msg_size <= 144) {
     // message has a header of  8 bytes: uint16 sequence number, padding and float speed. each point
@@ -456,8 +463,21 @@ void PropulsionTask::onMsgExecuteTrajectory(size_t msg_size) {
     float reposition_speed = *(float*)(exec_traj_buff + 12);
     Vector2D* points = (Vector2D*)(exec_traj_buff + 16);
     m_controller.prepareReposition(reposition_distance, reposition_speed);
-    m_controller.executeTrajectory(points, num_points, speed);
+    return m_controller.executeTrajectory(points, num_points, speed);
   }
+}
+
+bool PropulsionTask::onMsgExecuteUpdateTrajectory(size_t msg_size) {
+  constexpr int c_points_offset = 4;
+  constexpr int c_points_size = 8;
+  // header: sequence_number, trajectory sequence number, points
+  uint16_t trajectory_sequence_number = *(uint16_t*)(exec_traj_buff + 2);
+  if (trajectory_sequence_number != m_current_command_sequence_number) return false;
+
+  int num_points = (msg_size - c_points_offset) / c_points_size;
+  Vector2D* points = (Vector2D*)(exec_traj_buff + c_points_offset);
+  m_controller.updateTrajectory(points, num_points);
+  return true;
 }
 
 SimpleOdometry& PropulsionTask::odometry() { return m_odometry; }

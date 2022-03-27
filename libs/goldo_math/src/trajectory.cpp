@@ -51,3 +51,8 @@ TrajectoryPoint TrajectoryBuffer::compute_point(float parameter) const {
 float TrajectoryBuffer::min_parameter() const { return m_knot_parameters[m_current_first_index]; }
 
 float TrajectoryBuffer::max_parameter() const { return m_knot_parameters[m_current_last_index]; }
+
+float TrajectoryBuffer::closestParameter(const StaticPose& pose) const {
+  // \todo: implement
+  return 0;
+}
