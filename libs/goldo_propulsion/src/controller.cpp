@@ -411,8 +411,9 @@ void PropulsionController::onRepositionEnter() {
   float ux = cos(m_target_pose.yaw);
   float uy = sin(m_target_pose.yaw);
 
-  target.x = m_target_pose.position.x + ux * m_reposition_distance;
-  target.y = m_target_pose.position.y + uy * m_reposition_distance;
+  float distance = m_reposition_distance * (m_direction == Direction::Backward ? -1.0 : 1.0);
+  target.x = m_target_pose.position.x + ux * distance;
+  target.y = m_target_pose.position.y + uy * distance;
 
   Vector2D traj[2];
   traj[0] = m_target_pose.position;
@@ -562,8 +563,10 @@ bool PropulsionController::executeRepositioning(float distance, float speed) {
   if (m_state != State::Stopped) {
     return false;
   }
-  m_reposition_distance = distance;
+  m_reposition_distance = fabsf(distance);
   m_reposition_speed = speed;
+
+  m_direction = distance >= 0 ? Direction::Forward : Direction::Backward;
 
   m_low_level_controller.m_motor_velocity_limit = m_config.cruise_pwm_limit;
   m_low_level_controller.m_left_motor_torque_lim = m_config.cruise_torque_limit;

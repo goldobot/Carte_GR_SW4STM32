@@ -209,6 +209,7 @@ void UARTCommTask::sendStatistics() {
 
   TaskStats tasks_stats[16];
   for (unsigned i = 0; i < num_tasks; i++) {
+    memset(tasks_stats[i].task_name, 0, 16);
     strncpy(tasks_stats[i].task_name, tasks_status[i].pcTaskName, 16);
     tasks_stats[i].runtime_counter = tasks_status[i].ulRunTimeCounter;
     tasks_stats[i].task_number = tasks_status[i].xTaskNumber;
