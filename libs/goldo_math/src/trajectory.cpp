@@ -2,6 +2,9 @@
 
 #include <cmath>
 
+#define EIGEN _MALLOC
+#include <Eigen/Core>
+
 using namespace goldobot;
 
 TrajectoryBuffer::TrajectoryBuffer()
@@ -52,7 +55,37 @@ float TrajectoryBuffer::min_parameter() const { return m_knot_parameters[m_curre
 
 float TrajectoryBuffer::max_parameter() const { return m_knot_parameters[m_current_last_index]; }
 
-float TrajectoryBuffer::closestParameter(const StaticPose& pose) const {
+TrajectoryBuffer::ClosestPointResult TrajectoryBuffer::closestParameter(
+    const StaticPose& pose) const {
   // \todo: implement
-  return 0;
+  Eigen::Vector2f p{pose.position.x, pose.position.y};
+  ClosestPointResult closest;
+  closest.distance = std::numeric_limits<float>::max();
+
+  for (unsigned i = 0; i < m_current_last_index; i++) {
+    Eigen::Vector2f p1{m_control_points[i].x, m_control_points[i].y};
+    Eigen::Vector2f p2{m_control_points[i + 1].x, m_control_points[i + 1].y};
+    auto t = (p2 - p1).normalized();
+    Eigen::Vector2f n{-t.y(), t.x()};
+    auto d2 = (p - p1).eval();
+
+    float u = t.dot(d2);
+
+    // before segment start, closest point is first point
+    if (u <= 0) {
+      float d = d2.norm();
+      if (d < closest.distance) {
+        closest.distance = d;
+        closest.parameter = m_knot_parameters[i];
+      }
+    } else if (u <= 1) {
+      float d = fabsf(n.dot(d2));
+      if (d < closest.distance) {
+        closest.distance = d;
+        closest.parameter = m_knot_parameters[i + 1] * u + m_knot_parameters[i] * (u - 1);
+      }
+    }
+  }
+  // test with distance with last point
+  return closest;
 }

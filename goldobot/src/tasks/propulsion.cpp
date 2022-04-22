@@ -465,6 +465,7 @@ bool PropulsionTask::onMsgExecuteTrajectory(size_t msg_size) {
     m_controller.prepareReposition(reposition_distance, reposition_speed);
     return m_controller.executeTrajectory(points, num_points, speed);
   }
+  return false;
 }
 
 bool PropulsionTask::onMsgExecuteUpdateTrajectory(size_t msg_size) {

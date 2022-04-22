@@ -14,6 +14,13 @@ struct TrajectoryPoint {
 
 class TrajectoryBuffer {
  public:
+  struct ClosestPointResult {
+    float parameter;
+    TrajectoryPoint point;
+    float distance;
+  };
+
+ public:
   TrajectoryBuffer();
 
   void clear();
@@ -25,7 +32,8 @@ class TrajectoryBuffer {
   TrajectoryPoint compute_point(float parameter) const;
   float min_parameter() const;
   float max_parameter() const;
-  float closestParameter(const StaticPose& pose) const;
+
+  ClosestPointResult closestParameter(const StaticPose& pose) const;
 
  private:
   // Trajectory control points

@@ -469,7 +469,7 @@ bool PropulsionController::updateTrajectory(Vector2D* points, int num_points) {
   // current position and orientation of robot movement
   StaticPose pose{m_current_pose.position, m_current_pose.yaw};
   if (m_direction == Direction::Backward) pose.yaw = clampAngle(pose.yaw + c_pi);
-  auto current_parameter = m_trajectory_buffer.closestParameter(pose);
+  auto current_parameter = m_trajectory_buffer.closestParameter(pose).parameter;
 
   m_speed_controller.setAccelerationLimits(m_accel, m_deccel);
   m_speed_controller.setParameterRange(0, m_trajectory_buffer.max_parameter());

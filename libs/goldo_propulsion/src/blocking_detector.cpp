@@ -12,6 +12,9 @@ BlockingDetector::BlockingDetector() {
 
   m_slip_speeds[0].reset(0);
   m_slip_speeds[1].reset(0);
+
+  m_slip_counters[0] = 0;
+  m_slip_counters[1] = 0;
 }
 void BlockingDetector::setVelEstimates(float left, float right) {
   m_vel_estimates[0] = left;
