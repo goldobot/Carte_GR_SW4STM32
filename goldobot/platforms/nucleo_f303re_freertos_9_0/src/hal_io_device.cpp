@@ -168,6 +168,9 @@ void IODevice::execute(IORequest* req, uint32_t timeout) {
   auto tick_count_timeout = xTaskGetTickCount() + timeout;
   while (true) {
     xSemaphoreTake(rx_semaphore, 1);
+    if(req->remaining == 0) {
+    	return;
+    }
 
     if (timeout != -1 && xTaskGetTickCount() > tick_count_timeout) {
       rx_functions->abort_request(nullptr, device_index);

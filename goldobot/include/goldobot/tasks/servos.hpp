@@ -21,6 +21,7 @@ class LiftController {
   void onFpgaReadStatus(uint32_t apb_address, uint32_t value);
   void onRegRead(Register reg, uint32_t value);
   void regWrite(Register reg, uint32_t value);
+  bool homingFinished();
 
   void regsRead();
 
@@ -55,6 +56,7 @@ class LiftController {
   uint32_t m_timestamp{0};
   uint32_t m_next_ts{0};
   bool m_enable{false};
+  bool m_homing_finished{false};
 };
 
 class ServosTask : public Task {
@@ -99,14 +101,14 @@ class ServosTask : public Task {
   MessageQueue m_message_queue;
   MessageQueue m_message_queue_commands;
   unsigned char m_message_queue_buffer[256];
-  unsigned char m_message_queue_commands_buffer[256];
+  unsigned char m_message_queue_commands_buffer[512];
   uint16_t m_sequence_number;
   uint8_t m_scratchpad[256];
 
   ServosConfig* m_servos_config{nullptr};
   LiftsConfig* m_lifts_config{nullptr};
   static constexpr int c_max_num_servos = 32;
-  static constexpr int c_update_period = 30;  // update period in ms
+  static constexpr int c_update_period = 20;  // update period in ms
   static constexpr uint32_t c_fpga_servos_base = 0x80008404;
   static const uint32_t c_lift_base[2];
 

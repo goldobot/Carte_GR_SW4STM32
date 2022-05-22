@@ -19,7 +19,8 @@ enum class ServoType : uint8_t {
   StandardServo,
   DynamixelAX12,
   DynamixelMX28,
-  GoldoLift
+  GoldoLift,
+  NucleoPwm
 };
 
 enum class ArmState : uint8_t { Unconfigured = 0, Idle = 1, Moving = 2, Blocked = 3 };

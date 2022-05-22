@@ -27,6 +27,10 @@ class MessageExchange {
   ~MessageExchange();
 
   bool pushMessage(CommMessageType message_type, const unsigned char* buffer, size_t size);
+  template <typename T>
+  bool pushMessage(CommMessageType message_type, const T& msg) {
+    pushMessage(message_type, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
+  }
   void subscribe(const Subscription& sub);
 
  private:

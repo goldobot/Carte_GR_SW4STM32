@@ -54,7 +54,7 @@ class DynamixelsCommTask : public Task {
   bool m_response_ok;
 
   MessageQueue m_message_queue;
-  unsigned char m_message_queue_buffer[256];
+  unsigned char m_message_queue_buffer[512];
 
   void processMessage();
   void onRequest();

@@ -60,7 +60,7 @@ void ServosTask::taskFunction() {
 
     for (int i = 0; i < m_servos_config->num_servos; i++) {
       // skip uninitialized servos
-      if (!isInitialized(i)) {
+      if (!isInitialized(i) && (i + cnt) % 2) {
         updateServo(i, static_cast<uint16_t>(m_servos_positions[i]), m_servos_speeds[i],
                     m_servos_torques[i]);
         continue;
@@ -86,13 +86,15 @@ void ServosTask::taskFunction() {
         }
       } else {
         // if servo is disabled, position and target position track measured positions
+
         m_servos_target_positions[i] = m_servos_measured_positions[i];
         m_servos_positions[i] = m_servos_measured_positions[i];
       }
 
       m_servo_moving |= was_moving ? (1 << i) : 0;
-      updateServo(i, static_cast<uint16_t>(m_servos_positions[i]), m_servos_speeds[i],
-                  m_servos_torques[i]);
+      if ((i + cnt) % 4 == 0)
+        updateServo(i, static_cast<uint16_t>(m_servos_positions[i]), m_servos_speeds[i],
+                    m_servos_torques[i]);
     }
 
     if (old_moving != m_servo_moving || cnt == 0) {
@@ -330,7 +332,7 @@ void ServosTask::processMessageCommand() {
     }
     case CommMessageType::ServoSetMaxTorques: {
       auto msg_size = readCommand(sizeof(m_scratchpad));
-      auto num_commands = msg_size / 2;
+      auto num_commands = (msg_size - 2) / 2;
       for (unsigned i = 0; i < num_commands; i++) {
         uint8_t id_ = m_scratchpad[2 + i * 2];
         uint8_t torque = m_scratchpad[3 + i * 2];
@@ -384,6 +386,8 @@ void ServosTask::moveMultiple(int num_servos) {
     uint16_t target = *reinterpret_cast<uint16_t *>(ptr + 1);
     const auto &config = m_servos_config->servos[id];
 
+    bool enabled = isEnabled(id);
+
     if (m_servos_positions[id] < 0) {
       m_servos_speeds[id] = config.max_speed;
       m_servos_positions[id] = target;
@@ -406,6 +410,12 @@ void ServosTask::onFpgaReadRegStatus() {
     m_lifts[i].onFpgaReadStatus(apb_address, apb_value);
     auto id = m_lift_servo_id[i];
     m_servos_measured_positions[id] = m_lifts[i].m_position;
+    if (m_lifts[i].homingFinished()) {
+      m_servos_target_positions[id] = m_servos_measured_positions[id];
+      m_servos_positions[id] = m_servos_measured_positions[id];
+      setInitialized(id, true);
+      setEnabled(id, true);
+    }
   }
 }
 
@@ -436,11 +446,14 @@ void LiftController::update(bool enable, uint16_t pos, float speed, uint8_t torq
   }
   if (m_state == State::Homing) {
     uint32_t homing_pwm[2] = {0x80, 0xffffff80};
-    regWrite(LiftController::Register::MotorPwm, homing_pwm[m_id]);
+    // regWrite(LiftController::Register::MotorPwm, homing_pwm[m_id]);
   }
   if (m_state == State::Homed) {
     cmdSetEnable(enable);
-    cmdGotoTarget(pos);
+    if (enable) {
+      cmdJumpTarget(pos);
+      // cmdGotoTarget(pos);
+    }
   }
 }
 
@@ -450,6 +463,13 @@ void LiftController::doHoming() {
   m_state = State::HomingWaitPwm;
   cmdDoHoming();
   m_state = State::Homing;
+  m_homing_finished = false;
+}
+
+bool LiftController::homingFinished() {
+  auto ret = m_homing_finished;
+  m_homing_finished = false;
+  return ret;
 }
 
 void LiftController::onFpgaReadStatus(uint32_t apb_address, uint32_t value) {
@@ -470,9 +490,10 @@ void LiftController::onFpgaReadStatus(uint32_t apb_address, uint32_t value) {
   if (apb_address == m_apb_base + 8) {
     if (m_state == State::HomedWaitPosition && m_timestamp >= m_next_ts) {
       m_state = State::Homed;
+      m_homing_finished = true;
     }
     if (m_state == State::Homed) {
-      m_position = value;
+      m_position = value < 0xffff ? value : 0;
     }
   }
 }

@@ -33,6 +33,7 @@ int MainTask::remainingMatchTime() {
 void MainTask::taskFunction() {
   Robot::instance().mainExchangeIn().subscribe({5, 5, &m_message_queue});
   Robot::instance().mainExchangeIn().subscribe({10, 12, &m_message_queue});
+  Robot::instance().mainExchangeIn().subscribe({20, 29, &m_message_queue});
   Robot::instance().exchangeInternal().subscribe({34, 34, &m_message_queue});
   Robot::instance().mainExchangeIn().subscribe({200, 205, &m_message_queue});
   set_priority(5);
@@ -127,6 +128,20 @@ void MainTask::process_message() {
     case CommMessageType::FpgaGpioState:
       m_message_queue.pop_message((unsigned char*)&m_fpga_gpio_state, sizeof(m_fpga_gpio_state));
       break;
+    case CommMessageType::DbgGpioSet: {
+      struct Msg {
+        uint16_t sequence_number;
+        uint8_t id;
+        uint8_t value;
+      };
+      Msg msg;
+      m_message_queue.pop_message((unsigned char*)&msg, sizeof(msg));
+      hal::gpio_set(msg.id, msg.value);
+      Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::DbgSetStatus,
+                                                          msg.sequence_number);
+    }
+
+    break;
     default:
       m_message_queue.pop_message(nullptr, 0);
       break;

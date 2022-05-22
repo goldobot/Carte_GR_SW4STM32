@@ -21,6 +21,7 @@ enum class CommMessageType : uint16_t {
   DbgGpioGetStatus,
   DbgGpioSet,
   DbgPwmSet,
+  DbgSetStatus,
 
   DbgGoldo = 29,
 

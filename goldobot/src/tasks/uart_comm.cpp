@@ -217,8 +217,8 @@ void UARTCommTask::sendStatistics() {
   m_out_queue.push_message(CommMessageType::TaskStats, (unsigned char*)&tasks_stats,
                            sizeof(TaskStats) * num_tasks);
 
-  //auto t = hal::dbg_get_trace_buffer();
-  //m_out_queue.push_message(CommMessageType::DbgTrace, (unsigned char*)std::get<0>(t),
+  // auto t = hal::dbg_get_trace_buffer();
+  // m_out_queue.push_message(CommMessageType::DbgTrace, (unsigned char*)std::get<0>(t),
   //                         std::get<1>(t));
 
   // HeapStats_t heap_stats;
