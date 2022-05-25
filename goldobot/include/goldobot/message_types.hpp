@@ -16,6 +16,7 @@ enum class CommMessageType : uint16_t {
   MatchTimer = 10,
   MatchTimerStart,
   MatchEnd,
+  MatchTimerStop,
 
   DbgGpioGet = 20,
   DbgGpioGetStatus,

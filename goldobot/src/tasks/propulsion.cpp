@@ -280,6 +280,11 @@ void PropulsionTask::processUrgentMessage() {
   uint16_t sequence_number{0};
 
   switch (message_type) {
+    case CommMessageType::MatchEnd: {
+      // disable motors at end of match
+      setMotorsEnable(false);
+      m_urgent_message_queue.pop_message(nullptr, 0);
+    } break;
     case CommMessageType::SensorsState: {
       uint32_t sensors;
       m_urgent_message_queue.pop_message((unsigned char*)&sensors, 4);
@@ -571,7 +576,7 @@ uint16_t PropulsionTask::readCommand(MessageQueue& queue, void* buff, size_t& si
 
 void PropulsionTask::sendCommandEvent(uint16_t sequence_number, CommandEvent event) {
   uint8_t buff[8];  // timestamp, sequence_number, status, error
-  *(uint16_t*)(buff) = m_current_timestamp;
+  *(uint32_t*)(buff) = m_current_timestamp;
   *(uint16_t*)(buff + 4) = sequence_number;
   buff[6] = static_cast<uint8_t>(event);
   buff[7] = static_cast<uint8_t>(m_controller.error());
@@ -896,6 +901,7 @@ void PropulsionTask::taskFunction() {
   // Robot::instance().exchangeInternal().subscribe({33, 33, &m_urgent_message_queue});
 
   // immediate commands
+  // end of match
   Robot::instance().exchangeInternal().subscribe({12, 12, &m_urgent_message_queue});
 
   // configs

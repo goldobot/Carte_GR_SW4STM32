@@ -213,14 +213,14 @@ void ServosTask::updateServo(int id, uint16_t pos, uint16_t speed, uint8_t torqu
   const auto &config = m_servos_config->servos[id];
   bool enabled = isEnabled(id);
 
-  if(config.cw_limit > config.ccw_limit) {
-	  return;
+  if (config.cw_limit > config.ccw_limit) {
+    return;
   }
-  if(pos < config.cw_limit) {
-	  pos = config.cw_limit;
+  if (pos < config.cw_limit) {
+    pos = config.cw_limit;
   }
-  if(pos > config.ccw_limit) {
-  	  pos = config.ccw_limit;
+  if (pos > config.ccw_limit) {
+    pos = config.ccw_limit;
   }
 
   // fpga servo
@@ -461,14 +461,13 @@ void LiftController::update(bool enable, uint16_t pos, float speed, uint8_t torq
   if (m_state == State::Homed) {
     cmdSetEnable(enable);
     if (enable) {
-    	// lift_speed in ticks per 10ms
-    	uint16_t bltrig = 80;
-		uint16_t lift_speed = static_cast<uint16_t>(speed * 1.1 / 100) + 1;
-		if(lift_speed > 40)
-			lift_speed = 40;
+      // lift_speed in ticks per 10ms
+      uint16_t bltrig = 80;
+      uint16_t lift_speed = static_cast<uint16_t>(speed * 1.1 / 100) + 1;
+      if (lift_speed > 40) lift_speed = 40;
 
-		cmdGotoTarget(pos);
-		cmdSetBltrigSpeed(bltrig, lift_speed);
+      cmdGotoTarget(pos);
+      cmdSetBltrigSpeed(bltrig, lift_speed);
     }
   }
 }

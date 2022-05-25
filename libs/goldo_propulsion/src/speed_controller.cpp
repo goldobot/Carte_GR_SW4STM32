@@ -138,7 +138,7 @@ void SpeedController::recompute() {
   m_c0[0] = m_parameter;
   m_c0[1] = m_parameter + d_a;
   m_c0[2] = m_parameter + d_a + d_c;
-  m_c0[3] = std::min(m_parameter + d_a + d_c + d_d, m_max_parameter);
+  m_c0[3] = m_max_parameter;
 
   m_c1[0] = m_speed;
   m_c1[1] = target_speed;

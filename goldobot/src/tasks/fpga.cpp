@@ -65,7 +65,7 @@ void FpgaTask::taskFunction() {
       m_cnt = 0;
     }
 
-#if 1 /* FIXME : DEBUG : GOLDO */
+#if 0 /* FIXME : DEBUG : GOLDO */
     if ((m_cnt % 10 == 0) && (g_dbg_asserv_cnt != 0)) {
       unsigned int apb_data = 0;
       uint32_t apb_addr = 0x8000850c;  // asserv debug reg

@@ -32,7 +32,7 @@ int MainTask::remainingMatchTime() {
 
 void MainTask::taskFunction() {
   Robot::instance().mainExchangeIn().subscribe({5, 5, &m_message_queue});
-  Robot::instance().mainExchangeIn().subscribe({10, 12, &m_message_queue});
+  Robot::instance().mainExchangeIn().subscribe({10, 13, &m_message_queue});
   Robot::instance().mainExchangeIn().subscribe({20, 29, &m_message_queue});
   Robot::instance().exchangeInternal().subscribe({34, 34, &m_message_queue});
   Robot::instance().mainExchangeIn().subscribe({200, 205, &m_message_queue});
@@ -123,6 +123,11 @@ void MainTask::process_message() {
     case CommMessageType::MatchTimerStart: {
       m_start_of_match_time = hal::get_tick_count();
       m_match_timer_running = true;
+      m_message_queue.pop_message(nullptr, 0);
+    } break;
+    case CommMessageType::MatchTimerStop: {
+      m_start_of_match_time = 0;
+      m_match_timer_running = false;
       m_message_queue.pop_message(nullptr, 0);
     } break;
     case CommMessageType::FpgaGpioState:
