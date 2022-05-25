@@ -213,6 +213,16 @@ void ServosTask::updateServo(int id, uint16_t pos, uint16_t speed, uint8_t torqu
   const auto &config = m_servos_config->servos[id];
   bool enabled = isEnabled(id);
 
+  if(config.cw_limit > config.ccw_limit) {
+	  return;
+  }
+  if(pos < config.cw_limit) {
+	  pos = config.cw_limit;
+  }
+  if(pos > config.ccw_limit) {
+  	  pos = config.ccw_limit;
+  }
+
   // fpga servo
   if (config.type == ServoType::StandardServo) {
     uint32_t servo_pwm = enabled ? static_cast<uint32_t>(pos) << 2 : 0;
@@ -451,8 +461,14 @@ void LiftController::update(bool enable, uint16_t pos, float speed, uint8_t torq
   if (m_state == State::Homed) {
     cmdSetEnable(enable);
     if (enable) {
-      cmdJumpTarget(pos);
-      // cmdGotoTarget(pos);
+    	// lift_speed in ticks per 10ms
+    	uint16_t bltrig = 80;
+		uint16_t lift_speed = static_cast<uint16_t>(speed * 1.1 / 100) + 1;
+		if(lift_speed > 40)
+			lift_speed = 40;
+
+		cmdGotoTarget(pos);
+		cmdSetBltrigSpeed(bltrig, lift_speed);
     }
   }
 }
@@ -552,13 +568,13 @@ void LiftController::cmdGotoTarget(int32_t target) {
 }
 
 void LiftController::cmdSetRangeClamp(uint16_t range, uint16_t clamp) {
-  uint32_t r = (uint32_t)(range & 0xfff) << 4;
+  uint32_t r = (uint32_t)(range & 0xfff) << 16;
   uint32_t c = (uint32_t)(clamp & 0xffff);
   regWrite(Register::Cmd, 0x80000000 | r | c);
 }
 
 void LiftController::cmdSetBltrigSpeed(uint16_t bltrig, uint16_t speed) {
-  uint32_t t = (uint32_t)(bltrig & 0xfff) << 4;
+  uint32_t t = (uint32_t)(bltrig & 0xfff) << 16;
   uint32_t s = (uint32_t)(speed & 0xffff);
   regWrite(Register::Cmd, 0x90000000 | t | s);
 }
