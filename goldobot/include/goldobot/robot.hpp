@@ -57,8 +57,8 @@ class Robot {
 
   const RobotGeometryConfig& robotGeometry() const;
 
-  // ArmConfig* armConfig(int arm_id);
   ServosConfig* servosConfig();
+  LiftsConfig* liftsConfig();
   const SensorsConfig& sensorsConfig() const noexcept;
 
   PropulsionController::State propulsionState();

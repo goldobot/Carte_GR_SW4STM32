@@ -138,17 +138,17 @@ void UARTCommTask::taskFunction() {
 
     uint32_t timestamp = hal::get_tick_count();
 
+
+    // send heartbeat every 100ms
+        if (timestamp >= m_next_heartbeat_timestamp) {
+          sendHeartbeat(timestamp);
+          update_timestamp(m_next_heartbeat_timestamp, timestamp, 100);
+        }
+
     // send task statistics every second
     if (timestamp >= m_next_statistics_timestamp) {
       sendStatistics();
       update_timestamp(m_next_statistics_timestamp, timestamp, 1000);
-      // m_next_task_decrs =
-    }
-
-    // send heartbeat every 100ms
-    if (timestamp >= m_next_heartbeat_timestamp) {
-      sendHeartbeat(timestamp);
-      update_timestamp(m_next_heartbeat_timestamp, timestamp, 100);
     }
 
     uint32_t cyccnt_end = DWT->CYCCNT;
@@ -202,6 +202,7 @@ void UARTCommTask::sendStatistics() {
                                 (unsigned char*)&m_statistics, sizeof(m_statistics));
   memset(&m_statistics, 0, sizeof(m_statistics));
 
+  return;
   TaskStatus_t tasks_status[16];
 
   unsigned long total_runtime;

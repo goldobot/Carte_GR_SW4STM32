@@ -23,6 +23,8 @@ SimpleOdometry& Robot::odometry() { return m_propulsion_task.odometry(); }
 
 ServosConfig* Robot::servosConfig() { return m_servos_config; }
 
+LiftsConfig* Robot::liftsConfig() { return m_lifts_config; }
+
 const SensorsConfig& Robot::sensorsConfig() const noexcept { return m_sensors_config; }
 
 const RobotGeometryConfig& Robot::robotGeometry() const { return *m_robot_geometry_config; }

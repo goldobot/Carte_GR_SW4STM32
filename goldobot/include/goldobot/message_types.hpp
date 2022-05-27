@@ -39,7 +39,7 @@ enum class CommMessageType : uint16_t {
   ServoState,
   ServosMoving,
   ServoDisableAll,
-  ServoSetLiftEnable,
+  ServoLiftsCmdRaw,
   ServoGetState,
   ServoLiftDoHoming,
   ServoSetMaxTorques,
@@ -111,6 +111,8 @@ enum class CommMessageType : uint16_t {
   PropulsionConfigGet = 215,
   PropulsionConfigGetStatus,
   PropulsionConfigSet,
+
+  LiftHomingDone = 230,
 
   WatchdogReset = 250,
   WatchdogStatus,

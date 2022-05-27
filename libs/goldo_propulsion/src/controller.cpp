@@ -475,6 +475,7 @@ bool PropulsionController::updateTrajectory(Vector2D* points, int num_points) {
   m_speed_controller.setParameterRange(0, m_trajectory_buffer.max_parameter());
   m_speed_controller.setFinalSpeed(m_reposition_distance != 0 ? m_reposition_speed : 0);
   m_speed_controller.reset(current_parameter, current_speed, current_acceleration);
+  return true;
 }
 
 bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, float speed) {
