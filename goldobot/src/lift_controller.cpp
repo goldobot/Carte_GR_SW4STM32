@@ -51,8 +51,8 @@ void LiftController::update(bool enable, uint16_t pos, float speed, uint8_t torq
 }
 
 void LiftController::doHoming() {
-  uint32_t homing_pwm[2] = {0x80, 0xffffff80};
-  regWrite(LiftController::Register::MotorPwm, homing_pwm[m_id]);
+  //uint32_t homing_pwm[2] = {0x80, 0xffffff80};
+ // regWrite(LiftController::Register::MotorPwm, homing_pwm[m_id]);
   m_state = State::HomingWaitPwm;
   cmdDoHoming();
   m_state = State::Homing;
