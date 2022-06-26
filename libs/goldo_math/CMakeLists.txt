@@ -17,6 +17,7 @@ add_library(goldo_math STATIC
 
 target_include_directories(goldo_math PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../Middlewares/Third_Party/Eigen/include>
   $<INSTALL_INTERFACE:include>
   )
 if (GOLDO_BUILD_TESTS)

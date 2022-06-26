@@ -22,6 +22,7 @@ add_library(goldobot STATIC
   ${CMAKE_CURRENT_SOURCE_DIR}/src/comm_serializer.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/comm_deserializer.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/crc.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/lift_controller.cpp
   )
 
 target_include_directories(goldobot PUBLIC
