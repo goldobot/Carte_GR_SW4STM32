@@ -422,7 +422,7 @@ void PropulsionController::onRepositionEnter() {
   m_trajectory_buffer.push_segment(traj, 2);
 
   m_speed_controller.setAccelerationLimits(m_accel, m_deccel);
-  m_speed_controller.setParameterRange(0, m_trajectory_buffer.max_parameter());
+  m_speed_controller.setParameterRange(0, m_trajectory_buffer.max_parameter(), true);
   m_speed_controller.setRequestedSpeed(m_reposition_speed);
   m_speed_controller.setFinalSpeed(0);
   m_speed_controller.reset(0, m_target_pose.speed, m_target_pose.acceleration);
@@ -472,7 +472,7 @@ bool PropulsionController::updateTrajectory(Vector2D* points, int num_points) {
   auto current_parameter = m_trajectory_buffer.closestParameter(pose).parameter;
 
   m_speed_controller.setAccelerationLimits(m_accel, m_deccel);
-  m_speed_controller.setParameterRange(0, m_trajectory_buffer.max_parameter());
+  m_speed_controller.setParameterRange(0, m_trajectory_buffer.max_parameter(), false);
   m_speed_controller.setFinalSpeed(m_reposition_distance != 0 ? m_reposition_speed : 0);
   m_speed_controller.reset(current_parameter, current_speed, current_acceleration);
   return true;
@@ -486,7 +486,7 @@ bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, f
   m_trajectory_buffer.push_segment(points, num_points);
 
   m_speed_controller.setAccelerationLimits(m_accel, m_deccel);
-  m_speed_controller.setParameterRange(0, m_trajectory_buffer.max_parameter());
+  m_speed_controller.setParameterRange(0, m_trajectory_buffer.max_parameter(), true);
   m_speed_controller.setRequestedSpeed(speed);
   m_speed_controller.setFinalSpeed(m_reposition_distance != 0 ? m_reposition_speed : 0);
   m_speed_controller.reset(0, 0, 0);
@@ -538,7 +538,7 @@ bool PropulsionController::executeRotation(float delta_yaw, float yaw_rate) {
   // The speed controller output an increasing parameter.
   m_rotation_direction = delta_yaw >= 0 ? 1.0f : -1.0f;
   m_speed_controller.setAccelerationLimits(m_angular_accel, m_angular_deccel);
-  m_speed_controller.setParameterRange(0, fabs(delta_yaw));
+  m_speed_controller.setParameterRange(0, fabs(delta_yaw), true);
   m_speed_controller.setRequestedSpeed(yaw_rate);
   m_speed_controller.setFinalSpeed(0);
   m_speed_controller.reset(0, 0, 0);

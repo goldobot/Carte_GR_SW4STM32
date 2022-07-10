@@ -1,19 +1,29 @@
 #include "goldobot/propulsion/speed_controller.hpp"
 #include "goldobot/core/math_utils.hpp"
 
+#include <cmath>
 #include <algorithm>
 #include <limits>
 
 namespace goldobot {
 
-SpeedController::SpeedController(){};
+SpeedController::SpeedController()
+{
+};
 
 void SpeedController::setPeriod(float update_period) { m_period = update_period; }
 
-void SpeedController::setParameterRange(float min_parameter, float max_parameter) {
+void SpeedController::setParameterRange(float min_parameter, float max_parameter, bool reset_parameter) {
   m_min_parameter = min_parameter;
   m_max_parameter = max_parameter;
-  m_parameter = clamp(m_parameter, m_min_parameter, m_max_parameter);
+  if (reset_parameter)
+  {
+    m_parameter = m_min_parameter;
+  }
+  else
+  {
+    m_parameter = clamp(m_parameter, m_min_parameter, m_max_parameter);
+  }
   recompute();
 }
 
@@ -34,7 +44,7 @@ void SpeedController::update() {
     m_time += m_period;
 
     auto t = m_time;
-    auto index = m_index;
+    unsigned int index = m_index;
 
     while (index + 1 < m_num_points && t > m_t[index + 1]) {
       index++;
@@ -77,6 +87,23 @@ float SpeedController::acceleration() const noexcept { return m_acceleration; }
 
 bool SpeedController::finished() const noexcept { return m_parameter == m_max_parameter; }
 
+bool SpeedController::not_feasible(float dist, float speed, float acc, float dec)
+{
+  /* foolproof.. */
+  dist = fabsf(dist);
+  speed = fabsf(speed);
+  float a1 = fabsf(acc);
+  float a2 = fabsf(dec);
+
+  float t_a = speed / a1;
+  float t_d = speed / a2;
+
+  float d_a = t_a * (speed + 0.5f * a1 * t_a);
+  float d_d = t_d * (speed + 0.5f * a2 * t_d);
+
+  return (d_a>dist) || (d_d>dist);
+}
+
 void SpeedController::recompute() {
   m_time = 0;
   m_index = 0;
@@ -100,6 +127,18 @@ void SpeedController::recompute() {
   float delta_v_1 = target_speed - m_speed;
   float delta_v_2 = m_final_speed - target_speed;
   float distance = m_max_parameter - m_parameter;
+
+  if (not_feasible(distance,m_speed,m_acceleration_limit,m_decceleration_limit))
+  {
+    /* FIXME : TODO : refactor! */
+    m_num_points = 1;
+    m_t[0] = 0;
+    m_c0[0] = m_parameter;
+    m_c1[0] = m_requested_speed;
+    m_c2[0] = 0;
+    m_c3[0] = 0;
+    return;
+  }
 
   float a1 = delta_v_1 >= 0 ? m_acceleration_limit : -m_decceleration_limit;
   float a2 = delta_v_2 >= 0 ? m_decceleration_limit : -m_decceleration_limit;

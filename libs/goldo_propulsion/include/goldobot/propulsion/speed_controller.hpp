@@ -22,7 +22,7 @@ class SpeedController {
   //! Set the current trajectory parameter and the valid parameter range for the demanded move.
   //! Called when starting a rotation or trajectory, or when dynamically updating the trajectory in
   //! trajectory following mode
-  void setParameterRange(float min_parameter, float max_parameter);
+  void setParameterRange(float min_parameter, float max_parameter, bool reset_parameter);
 
   void setRequestedSpeed(float speed);
   void setFinalSpeed(float final_speed);
@@ -36,6 +36,7 @@ class SpeedController {
 
  private:
   void recompute();
+  bool not_feasible(float dist, float speed, float acc, float dec);
   float m_min_parameter{0};
   float m_max_parameter{0};
   float m_parameter{0};

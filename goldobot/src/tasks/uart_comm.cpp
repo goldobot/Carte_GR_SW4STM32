@@ -92,10 +92,12 @@ void UARTCommTask::taskFunction() {
 
     // Parse received data from ftdi uart
     if (m_ftdi_enable) {
+#if 0 /* FIXME : TODO : enable uplink for ftdi */
       uint8_t* ptr;
-      size_t bytes_read = hal::io_map_read(0, &ptr);
-      auto dtlen = m_deserializer.push_data((unsigned char*)ptr, bytes_read);
-      hal::io_unmap_read(0, ptr, dtlen);
+      size_t bytes_read = hal::io_map_read(3, &ptr);
+      auto dtlen = m_deserializer_ftdi.push_data((unsigned char*)ptr, bytes_read);
+      hal::io_unmap_read(3, ptr, dtlen);
+#endif
     }
 
     // Copy waiting messages in serializer if needed, starting with high priority queue
@@ -140,10 +142,10 @@ void UARTCommTask::taskFunction() {
 
 
     // send heartbeat every 100ms
-        if (timestamp >= m_next_heartbeat_timestamp) {
-          sendHeartbeat(timestamp);
-          update_timestamp(m_next_heartbeat_timestamp, timestamp, 100);
-        }
+    if (timestamp >= m_next_heartbeat_timestamp) {
+      sendHeartbeat(timestamp);
+      update_timestamp(m_next_heartbeat_timestamp, timestamp, 100);
+    }
 
     // send task statistics every second
     if (timestamp >= m_next_statistics_timestamp) {
