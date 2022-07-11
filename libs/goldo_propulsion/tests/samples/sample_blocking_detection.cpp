@@ -16,7 +16,7 @@ int main(int argc, char* argv[]) {
 
   //speed_controller.setPeriod(1e-3f);
   speed_controller.reset(0, 0, 0);
-  speed_controller.setParameterRange(0, 2);
+  speed_controller.setParameterRange(0, 2, true);
   speed_controller.setRequestedSpeed(0.5);
 
   std::ofstream out_file("D:/cdr2020/sample_propulsion_controller.csv");
