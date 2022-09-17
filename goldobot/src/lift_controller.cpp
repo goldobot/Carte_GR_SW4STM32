@@ -7,7 +7,7 @@
 using namespace goldobot;
 
 const uint32_t LiftController::c_lift_base[2] = {0x80008500, 0x80008510};
-const uint32_t LiftController::c_motor_apb[2] = {0x80008494, 0x800849c};
+const uint32_t LiftController::c_motor_apb[2] = {0x80008494, 0x8000849c};
 
 void LiftController::init(int id, const LiftConfig& config, uint8_t *scratchpad) {
   m_config = config;

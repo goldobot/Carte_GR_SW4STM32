@@ -39,7 +39,7 @@ void ServosTask::taskFunction() {
   }
 
   if(m_lifts_config != nullptr) {
-	if(m_lifts_config->num_lifts > 2) {
+  if(m_lifts_config->num_lifts > 2) {
       m_lifts_config->num_lifts = 2;
     }
     for (unsigned i = 0; i < m_lifts_config->num_lifts; i++) {
@@ -102,11 +102,11 @@ void ServosTask::taskFunction() {
       }
 
       if(m_servos_positions[i] < config.cw_limit) {
-    	  m_servos_positions[i] = config.cw_limit;
+        m_servos_positions[i] = config.cw_limit;
       }
       if(m_servos_positions[i] > config.ccw_limit) {
-		  m_servos_positions[i] = config.ccw_limit;
-	  }
+        m_servos_positions[i] = config.ccw_limit;
+      }
 
       m_servo_moving |= was_moving ? (1 << i) : 0;
       if ((i + cnt) % 4 == 0)
@@ -356,14 +356,14 @@ void ServosTask::processMessageCommand() {
           memcpy(&cmd, m_scratchpad + 2, sizeof(cmd));
 
           if(cmd.lift1_speed != 0) {
-        	  m_lifts[0].cmdSetBltrigSpeed(cmd.lift1_bltrig, cmd.lift1_speed);
-        	  m_lifts[0].cmdGotoTarget(cmd.lift1_target);
+            m_lifts[0].cmdSetBltrigSpeed(cmd.lift1_bltrig, cmd.lift1_speed);
+            m_lifts[0].cmdGotoTarget(cmd.lift1_target);
           }
 
           if(cmd.lift2_speed != 0) {
-			  m_lifts[1].cmdSetBltrigSpeed(cmd.lift2_bltrig, cmd.lift2_speed);
-			  m_lifts[1].cmdGotoTarget(cmd.lift2_target);
-		  }
+            m_lifts[1].cmdSetBltrigSpeed(cmd.lift2_bltrig, cmd.lift2_speed);
+            m_lifts[1].cmdGotoTarget(cmd.lift2_target);
+          }
           ackCommand(CommMessageType::ServoAck, 2);
         } break;
     case CommMessageType::ServoGetState: {
