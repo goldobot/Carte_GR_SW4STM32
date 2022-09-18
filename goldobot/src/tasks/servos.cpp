@@ -344,28 +344,46 @@ void ServosTask::processMessageCommand() {
       // send ack with sequence number
       ackCommand(CommMessageType::ServoAck, 2);
     } break;
-    case CommMessageType::ServoLiftDoHoming: {
+    case CommMessageType::LiftEnable:
+    {
+      readCommand(3);
+      uint8_t id_ = m_scratchpad[2];
+      m_lifts[id_].cmdSetEnable(true);
+      ackCommand(CommMessageType::ServoAck, 2);
+    } break;
+    case CommMessageType::LiftDisable:
+    {
+      readCommand(3);
+      uint8_t id_ = m_scratchpad[2];
+      m_lifts[id_].cmdSetEnable(false);
+      ackCommand(CommMessageType::ServoAck, 2);
+    } break;
+    case CommMessageType::ServoLiftDoHomingObsolete:
+    case CommMessageType::LiftDoHoming:
+    {
       readCommand(3);
       uint8_t id_ = m_scratchpad[2];
       m_lifts[id_].doHoming();
       ackCommand(CommMessageType::ServoAck, 2);
     } break;
-    case CommMessageType::ServoLiftsCmdRaw: {
-          readCommand(2 + sizeof(MsgLiftsCmdRaw));
-          MsgLiftsCmdRaw cmd;
-          memcpy(&cmd, m_scratchpad + 2, sizeof(cmd));
+    case CommMessageType::ServoLiftsCmdRawObsolete:
+    case CommMessageType::LiftsCmdRaw:
+    {
+      readCommand(2 + sizeof(MsgLiftsCmdRaw));
+      MsgLiftsCmdRaw cmd;
+      memcpy(&cmd, m_scratchpad + 2, sizeof(cmd));
 
-          if(cmd.lift1_speed != 0) {
-            m_lifts[0].cmdSetBltrigSpeed(cmd.lift1_bltrig, cmd.lift1_speed);
-            m_lifts[0].cmdGotoTarget(cmd.lift1_target);
-          }
+      if(cmd.lift1_speed != 0) {
+        m_lifts[0].cmdSetBltrigSpeed(cmd.lift1_bltrig, cmd.lift1_speed);
+        m_lifts[0].cmdGotoTarget(cmd.lift1_target);
+      }
 
-          if(cmd.lift2_speed != 0) {
-            m_lifts[1].cmdSetBltrigSpeed(cmd.lift2_bltrig, cmd.lift2_speed);
-            m_lifts[1].cmdGotoTarget(cmd.lift2_target);
-          }
-          ackCommand(CommMessageType::ServoAck, 2);
-        } break;
+      if(cmd.lift2_speed != 0) {
+        m_lifts[1].cmdSetBltrigSpeed(cmd.lift2_bltrig, cmd.lift2_speed);
+        m_lifts[1].cmdGotoTarget(cmd.lift2_target);
+      }
+      ackCommand(CommMessageType::ServoAck, 2);
+    } break;
     case CommMessageType::ServoGetState: {
       m_message_queue_commands.pop_message(m_scratchpad, 3);
       uint8_t id_ = m_scratchpad[2];

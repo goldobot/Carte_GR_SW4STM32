@@ -224,6 +224,17 @@ int FpgaTask::goldo_fpga_cmd_motor(int motor_id, int new_val) {
   return 0;
 }
 
+unsigned int goldo_adc_apb_addr[] = {
+    0x80008380,
+    0x80008384,
+    0x80008388,
+    0x8000838c,
+    0x80008390,
+    0x80008394,
+    0x80008398,
+    0x8000839c,
+};
+
 void FpgaTask::process_message() {
   auto message_type = (CommMessageType)m_message_queue.message_type();
   // auto message_size = m_message_queue.message_size();
@@ -262,6 +273,22 @@ void FpgaTask::process_message() {
 #endif
       goldo_fpga_master_spi_write_word(apb_addr, apb_data);
     } break;
+
+    case CommMessageType::FpgaReadAdc: {
+      unsigned int apb_data = 0xdeadbeef;
+      unsigned char buff[8];
+      m_message_queue.pop_message(buff, 4);
+      uint32_t adc_chan = *(uint32_t *)(buff);
+      if (adc_chan<8) {
+        uint32_t apb_addr = goldo_adc_apb_addr[adc_chan];
+        goldo_fpga_master_spi_read_word(apb_addr, &apb_data);
+        float adc_val = 3.3*apb_data/4096;
+        std::memcpy(buff + 4, (unsigned char *)&adc_val, 4);
+        Robot::instance().mainExchangeOut().pushMessage(CommMessageType::FpgaReadAdcOut,
+                                                        (unsigned char *)buff, 8);
+      }
+    } break;
+
     default:
       m_message_queue.pop_message(nullptr, 0);
       break;
