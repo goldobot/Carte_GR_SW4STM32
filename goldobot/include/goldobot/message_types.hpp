@@ -116,10 +116,9 @@ enum class CommMessageType : uint16_t {
   PropulsionConfigSet                     =  217,
 
   LiftHomingDone                          =  230,
-  LiftEnable                              =  231,
-  LiftDisable                             =  232,
-  LiftDoHoming                            =  233,
-  LiftsCmdRaw                             =  234,
+  LiftSetEnable                           =  231,
+  LiftDoHoming                            =  232,
+  LiftsCmdRaw                             =  233,
 
   WatchdogReset                           =  250,
   WatchdogStatus                          =  251,

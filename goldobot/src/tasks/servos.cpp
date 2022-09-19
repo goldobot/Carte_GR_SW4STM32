@@ -344,18 +344,13 @@ void ServosTask::processMessageCommand() {
       // send ack with sequence number
       ackCommand(CommMessageType::ServoAck, 2);
     } break;
-    case CommMessageType::LiftEnable:
+    case CommMessageType::LiftSetEnable:
     {
-      readCommand(3);
+      memset(m_scratchpad,0,16);
+      readCommand(4);
       uint8_t id_ = m_scratchpad[2];
-      m_lifts[id_].cmdSetEnable(true);
-      ackCommand(CommMessageType::ServoAck, 2);
-    } break;
-    case CommMessageType::LiftDisable:
-    {
-      readCommand(3);
-      uint8_t id_ = m_scratchpad[2];
-      m_lifts[id_].cmdSetEnable(false);
+      bool do_enable = (m_scratchpad[3]!=0);
+      m_lifts[id_].cmdSetEnable(do_enable);
       ackCommand(CommMessageType::ServoAck, 2);
     } break;
     case CommMessageType::ServoLiftDoHomingObsolete:
