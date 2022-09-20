@@ -20,6 +20,7 @@ const char *ServosTask::name() const { return "servos"; }
 void ServosTask::taskFunction() {
   set_priority(2);
   Robot::instance().mainExchangeIn().subscribe({40, 49, &m_message_queue_commands});
+  Robot::instance().mainExchangeIn().subscribe({230, 239, &m_message_queue_commands}); /* FIXME : TODO : create a separate task for "Lifts" */
   Robot::instance().exchangeInternal().subscribe({31, 31, &m_message_queue});
   Robot::instance().exchangeInternal().subscribe({61, 61, &m_message_queue});
 
