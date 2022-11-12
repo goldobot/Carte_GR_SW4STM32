@@ -36,7 +36,7 @@ UARTCommTask::UARTCommTask()
       m_serializer_ftdi(s_serialize_ftdi_buffer, sizeof(s_serialize_ftdi_buffer)),
       m_deserializer_ftdi(s_deserialize_ftdi_buffer, sizeof(s_deserialize_ftdi_buffer)),
       m_out_queue(s_out_buffer, sizeof(s_out_buffer)),
-      m_out_prio_queue(s_out_buffer, sizeof(s_out_buffer)),
+      m_out_prio_queue(s_out_prio_buffer, sizeof(s_out_prio_buffer)),
       m_out_ftdi_queue(s_out_ftdi_buffer, sizeof(s_out_ftdi_buffer)) {}
 
 const char* UARTCommTask::name() const { return "uart_comm"; }
