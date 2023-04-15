@@ -272,7 +272,7 @@ void ServosTask::publishTelemetry() {
     *reinterpret_cast<uint16_t *>(ptr + 2) = m_servos_measured_positions[i];
     *reinterpret_cast<uint16_t *>(ptr + 4) = m_servos_measured_torques[i];
   }
-  Robot::instance().exchangeOut().pushMessage(CommMessageType::ServoState,
+  Robot::instance().mainExchangeOut().pushMessage(CommMessageType::ServoState,
                                               (unsigned char *)m_scratchpad,
                                               m_servos_config->num_servos * 6 + 6);
 }
