@@ -59,6 +59,12 @@ void PropulsionTask::doStep() {
   m_statistics.min_interval = std::min(interval_cycles, m_statistics.min_interval);
   m_statistics.max_interval = std::max(interval_cycles, m_statistics.max_interval);
 
+  // Process emergency gpio
+  auto emergency_stop = hal::gpio_get(7) ? true : false;
+  if (emergency_stop) {
+    m_controller.emergencyStop();
+  }
+
   // Process messages
   while (m_urgent_message_queue.message_ready()) {
     processUrgentMessage();
