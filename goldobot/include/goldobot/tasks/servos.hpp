@@ -36,6 +36,9 @@ class ServosTask : public Task {
   void updateServoDynamixelMX28(int id, bool enabled, uint16_t pos, float speed, uint8_t torque);
   void updateServoGoldoLift(int id, bool enabled, uint16_t pos, float speed, uint8_t torque);
 
+  void directCmdServoDynamixelAX12(int id, bool enabled, uint16_t pos, float speed, uint8_t torque);
+  void directCmdServoDynamixelMX28(int id, bool enabled, uint16_t pos, float speed, uint8_t torque);
+
   void publishTelemetry();
 
   void moveMultiple(int num_servos);

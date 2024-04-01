@@ -152,21 +152,6 @@ void ServosTask::updateServoDynamixelAX12(int id, bool enabled, uint16_t pos, fl
   *reinterpret_cast<uint16_t *>(buff + 0) = 0x8000;  // msb=1 => send response to internal exchange
   *reinterpret_cast<uint8_t *>(buff + 2) = 1;        // protocol version
   *reinterpret_cast<uint8_t *>(buff + 3) = config.id;
-  *reinterpret_cast<uint8_t *>(buff + 4) = 0x03;  // write
-
-  // torque enable
-  *reinterpret_cast<uint8_t *>(buff + 5) = 24;  // torque enable register
-  *reinterpret_cast<uint16_t *>(buff + 6) = enabled ? 1 : 0;
-  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DynamixelsRequest,
-                                                 (unsigned char *)buff, 7);
-  if (enabled) {
-    *reinterpret_cast<uint8_t *>(buff + 5) = 30;  // position, speed, torque registers
-    *reinterpret_cast<uint16_t *>(buff + 6) = pos;
-    *reinterpret_cast<uint16_t *>(buff + 8) = dyna_speed;
-    *reinterpret_cast<uint16_t *>(buff + 10) = dyna_torque;
-    Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DynamixelsRequest,
-                                                   (unsigned char *)buff, 12);
-  }
 
   // request state
   *reinterpret_cast<uint16_t *>(buff + 0) =
@@ -194,21 +179,6 @@ void ServosTask::updateServoDynamixelMX28(int id, bool enabled, uint16_t pos, fl
   *reinterpret_cast<uint16_t *>(buff + 0) = 0x8000;  // msb=1 => send response to internal exchange
   *reinterpret_cast<uint8_t *>(buff + 2) = 1;        // protocol version
   *reinterpret_cast<uint8_t *>(buff + 3) = config.id;
-  *reinterpret_cast<uint8_t *>(buff + 4) = 0x03;  // write
-
-  // torque enable
-  *reinterpret_cast<uint8_t *>(buff + 5) = 24;  // torque enable register
-  *reinterpret_cast<uint16_t *>(buff + 6) = enabled ? 1 : 0;
-  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DynamixelsRequest,
-                                                 (unsigned char *)buff, 7);
-  if (enabled) {
-    *reinterpret_cast<uint8_t *>(buff + 5) = 30;  // position, speed, torque registers
-    *reinterpret_cast<uint16_t *>(buff + 6) = pos;
-    *reinterpret_cast<uint16_t *>(buff + 8) = dyna_speed;
-    *reinterpret_cast<uint16_t *>(buff + 10) = dyna_torque;
-    Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DynamixelsRequest,
-                                                   (unsigned char *)buff, 12);
-  }
 
   // request state
   *reinterpret_cast<uint16_t *>(buff + 0) =
@@ -405,6 +375,7 @@ void ServosTask::processMessageCommand() {
 
 void ServosTask::checkSynchronization() {}
 
+/* FIXME : TODO : remove servo micro-management code */
 void ServosTask::moveMultiple(int num_servos) {
   float speed = (*reinterpret_cast<uint16_t *>(m_scratchpad + 2) / 1023.f);
   if (speed > 1) {
@@ -455,7 +426,23 @@ void ServosTask::moveMultiple(int num_servos) {
       if (servo_speed > 0xffff) {
         servo_speed = 0xffff;
       }
+#if 0 /* FIXME : TODO : remove servo micro-management code */
       m_servos_speeds[id] = servo_speed;
+#else /* direct command for dynamixels; bypass micro-management code */
+      float direct_cmd_speed = config.max_speed * speed;
+      m_servos_speeds[id] = direct_cmd_speed;
+
+      switch (config.type) {
+      case ServoType::DynamixelAX12:
+        directCmdServoDynamixelAX12(id, isEnabled(id), target, direct_cmd_speed, m_servos_torques[id]);
+        break;
+      case ServoType::DynamixelMX28:
+        directCmdServoDynamixelMX28(id, isEnabled(id), target, direct_cmd_speed, m_servos_torques[id]);
+        break;
+      default:
+        break;
+      }
+#endif
     }
     m_servos_target_positions[id] = target;
     m_servos_target_timestamps[id] = target_timestamp;
@@ -476,6 +463,73 @@ void ServosTask::onFpgaReadRegStatus() {
       setEnabled(id, true);
       Robot::instance().mainExchangeOut().pushMessage(CommMessageType::LiftHomingDone, (uint8_t)i);
     }
+  }
+}
+
+void ServosTask::directCmdServoDynamixelAX12(int id, bool enabled, uint16_t pos, float speed,
+                                             uint8_t torque) {
+  const auto &config = m_servos_config->servos[id];
+  // one pos unit = 0.29 deg
+  // one speed unit is about 0.111 rpm, or 0.666 dps, or 2.3 pos units per second
+  // speed = 0 correspond to max rpm in dynamixel, so add one
+  uint16_t dyna_speed = static_cast<uint16_t>(speed * 1.1f / 2.3f) + 1;
+  if (dyna_speed > 0x3ff) {
+    dyna_speed = 0x3ff;
+  }
+  uint16_t dyna_torque = ((uint32_t)torque * config.max_torque) / 0xff;
+  if (dyna_torque > 0x3ff) {
+    dyna_torque = 0x3ff;
+  }
+  uint8_t buff[12];
+  *reinterpret_cast<uint16_t *>(buff + 0) = 0x8000;  // msb=1 => send response to internal exchange
+  *reinterpret_cast<uint8_t *>(buff + 2) = 1;        // protocol version
+  *reinterpret_cast<uint8_t *>(buff + 3) = config.id;
+  *reinterpret_cast<uint8_t *>(buff + 4) = 0x03;  // write
+
+  // torque enable
+  *reinterpret_cast<uint8_t *>(buff + 5) = 24;  // torque enable register
+  *reinterpret_cast<uint16_t *>(buff + 6) = enabled ? 1 : 0;
+  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DynamixelsRequest,
+                                                 (unsigned char *)buff, 7);
+  if (enabled) {
+    *reinterpret_cast<uint8_t *>(buff + 5) = 30;  // position, speed, torque registers
+    *reinterpret_cast<uint16_t *>(buff + 6) = pos;
+    *reinterpret_cast<uint16_t *>(buff + 8) = dyna_speed;
+    *reinterpret_cast<uint16_t *>(buff + 10) = dyna_torque;
+    Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DynamixelsRequest,
+                                                   (unsigned char *)buff, 12);
+  }
+}
+
+void ServosTask::directCmdServoDynamixelMX28(int id, bool enabled, uint16_t pos, float speed,
+                                             uint8_t torque) {
+  const auto &config = m_servos_config->servos[id];
+  // one pos unit = 0.088  deg
+  // one speed unit is about 0.114 rpm, or 0.684 dps, or 7.773 pos units per second
+  // speed = 0 correspond to max rpm in dynamixel, so add one
+  uint16_t dyna_speed = static_cast<uint16_t>(speed * 1.1f / 7.773f) + 1;
+  if (dyna_speed > 0x3ff) {
+    dyna_speed = 0x3ff;
+  }
+  uint16_t dyna_torque = (torque * 0x3ff) / 0xff;  // dynamixel max torque = 0x3ff or 1023
+  uint8_t buff[12];
+  *reinterpret_cast<uint16_t *>(buff + 0) = 0x8000;  // msb=1 => send response to internal exchange
+  *reinterpret_cast<uint8_t *>(buff + 2) = 1;        // protocol version
+  *reinterpret_cast<uint8_t *>(buff + 3) = config.id;
+  *reinterpret_cast<uint8_t *>(buff + 4) = 0x03;  // write
+
+  // torque enable
+  *reinterpret_cast<uint8_t *>(buff + 5) = 24;  // torque enable register
+  *reinterpret_cast<uint16_t *>(buff + 6) = enabled ? 1 : 0;
+  Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DynamixelsRequest,
+                                                 (unsigned char *)buff, 7);
+  if (enabled) {
+    *reinterpret_cast<uint8_t *>(buff + 5) = 30;  // position, speed, torque registers
+    *reinterpret_cast<uint16_t *>(buff + 6) = pos;
+    *reinterpret_cast<uint16_t *>(buff + 8) = dyna_speed;
+    *reinterpret_cast<uint16_t *>(buff + 10) = dyna_torque;
+    Robot::instance().mainExchangeIn().pushMessage(CommMessageType::DynamixelsRequest,
+                                                   (unsigned char *)buff, 12);
   }
 }
 
