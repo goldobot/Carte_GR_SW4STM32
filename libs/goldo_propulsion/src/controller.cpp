@@ -57,15 +57,18 @@ void PropulsionController::clearError() {
 
 bool PropulsionController::commandFinished() { return m_command_finished; }
 
+/* FIXME : DEBUG */
+float debug_emergency_accel = 2.0f;
+
 void PropulsionController::emergencyStop() {
   switch (m_state) {
     case State::FollowTrajectory:
-      m_speed_controller.setAccelerationLimits(2, 2);
+      m_speed_controller.setAccelerationLimits(debug_emergency_accel, debug_emergency_accel);
       m_speed_controller.setRequestedSpeed(0);
       m_emergency_stop = true;
       return;
     case State::Rotate:
-      m_speed_controller.setAccelerationLimits(2, 2);
+      m_speed_controller.setAccelerationLimits(debug_emergency_accel, debug_emergency_accel);
       m_speed_controller.setRequestedSpeed(0);
       m_emergency_stop = true;
       return;

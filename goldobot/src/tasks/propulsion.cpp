@@ -60,8 +60,10 @@ void PropulsionTask::doStep() {
   m_statistics.max_interval = std::max(interval_cycles, m_statistics.max_interval);
 
   // Process emergency gpio
-  auto emergency_stop = hal::gpio_get(7) ? true : false;
-  if (emergency_stop) {
+  auto gpio_emergency_stop = hal::gpio_get(7) ? true : false;
+  if (gpio_emergency_stop &&
+      ((m_controller.state() == PropulsionController::State::FollowTrajectory) ||
+       (m_controller.state() == PropulsionController::State::Rotate))) {
     m_controller.emergencyStop();
   }
 
@@ -604,6 +606,12 @@ void PropulsionTask::onCommandEnd() {
 
   m_is_executing_command = false;
   if (m_controller.state() == PropulsionController::State::Error) {
+#if 0 /* FIXME : TODO : try to improve the emergency stop sequence */
+    if ((m_controller.error() == PropulsionController::Error::EmergencyStop)) {
+      /* FIXME : TODO : is this OK? */
+      m_controller.clearError();
+    }
+#endif
   }
 }
 

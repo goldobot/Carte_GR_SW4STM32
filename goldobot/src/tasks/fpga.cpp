@@ -39,7 +39,7 @@ void FpgaTask::taskFunction() {
 #endif
 
   while (1) {
-    while (m_message_queue.message_ready()) {
+    if ((m_cnt%5!=0) && m_message_queue.message_ready()) {
       process_message();
     }
 
