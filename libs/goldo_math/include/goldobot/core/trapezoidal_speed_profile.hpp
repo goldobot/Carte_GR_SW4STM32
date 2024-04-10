@@ -1,5 +1,4 @@
 #pragma once
-#include "goldobot/core/trapezoidal_speed_profile.hpp"
 
 namespace goldobot {
 class TrapezoidalSpeedProfile {

@@ -2,7 +2,6 @@
 #include "goldobot/core/geometry.hpp"
 #include "goldobot/core/pid_controller.hpp"
 #include "goldobot/core/trajectory_buffer.hpp"
-#include "goldobot/core/trapezoidal_speed_profile.hpp"
 #include "goldobot/propulsion/controller_config.hpp"
 #include "goldobot/propulsion/low_level_controller.hpp"
 #include "goldobot/propulsion/speed_controller.hpp"

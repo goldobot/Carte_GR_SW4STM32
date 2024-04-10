@@ -28,6 +28,16 @@ void SpeedController::setParameterRange(float min_parameter, float max_parameter
 }
 
 void SpeedController::setRequestedSpeed(float speed) {
+  /* FIXME : TODO : give outside "visibility" of the current "state" of the speed controller;
+     temporary hack : when in decelleration phase we can only decrease requested speed */
+  if (m_num_points > 2)
+  {
+    if ((m_time > (m_t[m_num_points-2]-std::numeric_limits<float>::epsilon())) &&
+        (speed > m_speed))
+    {
+      return;
+    }
+  }
   m_requested_speed = speed;
   recompute();
 }
@@ -85,7 +95,7 @@ float SpeedController::speed() const noexcept { return m_speed; }
 
 float SpeedController::acceleration() const noexcept { return m_acceleration; }
 
-bool SpeedController::finished() const noexcept { return m_parameter == m_max_parameter; }
+bool SpeedController::finished() const noexcept { return (fabsf(m_max_parameter-m_parameter) <= std::numeric_limits<float>::epsilon()); }
 
 bool SpeedController::not_feasible(float dist, float speed, float acc, float dec)
 {
@@ -112,7 +122,7 @@ void SpeedController::recompute() {
     m_num_points = 1;
     m_t[0] = 0;
     m_c0[0] = m_parameter;
-    m_c1[0] = m_requested_speed;
+    m_c1[0] = m_final_speed;
     m_c2[0] = 0;
     m_c3[0] = 0;
     return;
@@ -130,18 +140,20 @@ void SpeedController::recompute() {
 
   if (not_feasible(distance,m_speed,m_acceleration_limit,m_decceleration_limit))
   {
-    /* FIXME : TODO : refactor! */
+    /* FIXME : TODO : better "corner case" management */
+    float delta_v_error = m_final_speed - m_speed;
+    float a_error = (delta_v_error>0) ? m_acceleration_limit : -m_decceleration_limit;
     m_num_points = 1;
     m_t[0] = 0;
     m_c0[0] = m_parameter;
-    m_c1[0] = m_requested_speed;
-    m_c2[0] = 0;
+    m_c1[0] = m_speed;
+    m_c2[0] = a_error*0.5f;
     m_c3[0] = 0;
     return;
   }
 
   float a1 = delta_v_1 >= 0 ? m_acceleration_limit : -m_decceleration_limit;
-  float a2 = delta_v_2 >= 0 ? m_decceleration_limit : -m_decceleration_limit;
+  float a2 = delta_v_2 >= 0 ? m_acceleration_limit : -m_decceleration_limit;
 
   float t_a = delta_v_1 / a1;
   float t_d = delta_v_2 / a2;
