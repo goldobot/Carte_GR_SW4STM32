@@ -27,6 +27,9 @@ class SpeedController {
   void setFinalSpeed(float final_speed);
   void setAccelerationLimits(float accel, float deccel);
 
+  // Used in the emergency stop situation. Forces decelleration till null velocity.
+  void emergencyStop();
+
   float maxParameter() const noexcept;
   float parameter() const noexcept;
   float speed() const noexcept;
@@ -35,7 +38,7 @@ class SpeedController {
 
  private:
   void recompute();
-  bool not_feasible(float dist, float speed, float acc, float dec);
+  bool not_feasible(float dist, float speed, float final_speed, float acc, float dec);
   float m_min_parameter{0};
   float m_max_parameter{0};
   float m_parameter{0};

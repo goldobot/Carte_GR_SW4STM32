@@ -64,12 +64,12 @@ void PropulsionController::emergencyStop() {
   switch (m_state) {
     case State::FollowTrajectory:
       m_speed_controller.setAccelerationLimits(debug_emergency_accel, debug_emergency_accel);
-      m_speed_controller.setRequestedSpeed(0);
+      m_speed_controller.emergencyStop();
       m_emergency_stop = true;
       return;
     case State::Rotate:
       m_speed_controller.setAccelerationLimits(debug_emergency_accel, debug_emergency_accel);
-      m_speed_controller.setRequestedSpeed(0);
+      m_speed_controller.emergencyStop();
       m_emergency_stop = true;
       return;
     default:
@@ -425,9 +425,9 @@ void PropulsionController::onRepositionEnter() {
   m_trajectory_buffer.push_segment(traj, 2);
 
   m_speed_controller.setAccelerationLimits(m_accel, m_deccel);
+  m_speed_controller.setFinalSpeed(0);
   m_speed_controller.setParameterRange(0, m_trajectory_buffer.max_parameter(), true);
   m_speed_controller.setRequestedSpeed(m_reposition_speed);
-  m_speed_controller.setFinalSpeed(0);
   m_speed_controller.reset(0, m_target_pose.speed, m_target_pose.acceleration);
 
   m_reposition_hit = false;
@@ -489,9 +489,9 @@ bool PropulsionController::executeTrajectory(Vector2D* points, int num_points, f
   m_trajectory_buffer.push_segment(points, num_points);
 
   m_speed_controller.setAccelerationLimits(m_accel, m_deccel);
+  m_speed_controller.setFinalSpeed(m_reposition_distance != 0 ? m_reposition_speed : 0);
   m_speed_controller.setParameterRange(0, m_trajectory_buffer.max_parameter(), true);
   m_speed_controller.setRequestedSpeed(speed);
-  m_speed_controller.setFinalSpeed(m_reposition_distance != 0 ? m_reposition_speed : 0);
   m_speed_controller.reset(0, 0, 0);
 
   // Compute direction by taking scalar product of current robot orientation vector with tangent of
@@ -541,9 +541,9 @@ bool PropulsionController::executeRotation(float delta_yaw, float yaw_rate) {
   // The speed controller output an increasing parameter.
   m_rotation_direction = delta_yaw >= 0 ? 1.0f : -1.0f;
   m_speed_controller.setAccelerationLimits(m_angular_accel, m_angular_deccel);
+  m_speed_controller.setFinalSpeed(0);
   m_speed_controller.setParameterRange(0, fabs(delta_yaw), true);
   m_speed_controller.setRequestedSpeed(yaw_rate);
-  m_speed_controller.setFinalSpeed(0);
   m_speed_controller.reset(0, 0, 0);
 
   // Configure low level controller

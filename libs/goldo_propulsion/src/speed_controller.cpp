@@ -97,21 +97,34 @@ float SpeedController::acceleration() const noexcept { return m_acceleration; }
 
 bool SpeedController::finished() const noexcept { return (fabsf(m_max_parameter-m_parameter) <= std::numeric_limits<float>::epsilon()); }
 
-bool SpeedController::not_feasible(float dist, float speed, float acc, float dec)
+bool SpeedController::not_feasible(float dist, float speed, float final_speed, float acc, float dec)
 {
   /* foolproof.. */
-  dist = fabsf(dist);
-  speed = fabsf(speed);
-  float a1 = fabsf(acc);
-  float a2 = fabsf(dec);
+  acc = fabsf(acc);
+  dec = fabsf(dec);
 
-  float t_a = speed / a1;
-  float t_d = speed / a2;
+  float delta_v_1 = -speed;
+  float delta_v_2 = final_speed;
+
+  float a1 = delta_v_1 >= 0 ? acc : -dec;
+  float a2 = delta_v_2 >= 0 ? acc : -dec;
+
+  float t_a = delta_v_1 / a1;
+  float t_d = delta_v_2 / a2;
 
   float d_a = t_a * (speed + 0.5f * a1 * t_a);
-  float d_d = t_d * (speed + 0.5f * a2 * t_d);
+  float d_d = t_d * (0.5f * a2 * t_d);
 
-  return (d_a>dist) || (d_d>dist);
+  float d_c = dist - d_a - d_d;
+
+  if (dist >= 0)
+  {
+    return (d_c > 0);
+  }
+  else
+  {
+    return (d_c < 0);
+  }
 }
 
 void SpeedController::recompute() {
@@ -138,7 +151,7 @@ void SpeedController::recompute() {
   float delta_v_2 = m_final_speed - target_speed;
   float distance = m_max_parameter - m_parameter;
 
-  if (not_feasible(distance,m_speed,m_acceleration_limit,m_decceleration_limit))
+  if (not_feasible(distance,m_speed,m_final_speed,m_acceleration_limit,m_decceleration_limit))
   {
     /* FIXME : TODO : better "corner case" management */
     float delta_v_error = m_final_speed - m_speed;
@@ -166,10 +179,10 @@ void SpeedController::recompute() {
     target_speed *= 0.95;
 
     delta_v_1 = target_speed - m_speed;
-    delta_v_2 = 0 - target_speed;
+    delta_v_2 = m_final_speed - target_speed;
 
-    a1 = delta_v_1 >= 0 ? m_acceleration_limit : -m_acceleration_limit;
-    a2 = delta_v_2 >= 0 ? m_decceleration_limit : -m_decceleration_limit;
+    a1 = delta_v_1 >= 0 ? m_acceleration_limit : -m_decceleration_limit;
+    a2 = delta_v_2 >= 0 ? m_acceleration_limit : -m_decceleration_limit;
 
     t_a = delta_v_1 / a1;
     t_d = delta_v_2 / a2;
@@ -207,6 +220,23 @@ void SpeedController::recompute() {
   m_c3[3] = 0;
 
   m_num_points = 4;
+}
+
+void SpeedController::emergencyStop() {
+  float a_emerg = (m_speed<0) ? m_acceleration_limit : -m_decceleration_limit;
+  float t_d = -m_speed / a_emerg;
+  float d_d = - 0.5f * m_speed * m_speed / a_emerg;
+
+  m_max_parameter = m_parameter+d_d;
+  m_requested_speed = 0;
+  m_time = 0;
+  m_index = 0;
+  m_num_points = 1;
+  m_t[0] = 0;
+  m_c0[0] = m_parameter;
+  m_c1[0] = m_speed;
+  m_c2[0] = a_emerg*0.5f;
+  m_c3[0] = 0;
 }
 
 }  // namespace goldobot
