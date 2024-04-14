@@ -45,6 +45,9 @@ void SpeedController::setRequestedSpeed(float speed) {
 void SpeedController::setFinalSpeed(float final_speed) { m_final_speed = final_speed; }
 
 void SpeedController::setAccelerationLimits(float accel, float deccel) {
+  /* foolproof.. */
+  accel = fabsf(accel);
+  deccel = fabsf(deccel);
   m_acceleration_limit = accel;
   m_decceleration_limit = deccel;
 }
@@ -119,11 +122,11 @@ bool SpeedController::not_feasible(float dist, float speed, float final_speed, f
 
   if (dist >= 0)
   {
-    return (d_c > 0);
+    return (d_c < 0);
   }
   else
   {
-    return (d_c < 0);
+    return (d_c > 0);
   }
 }
 
