@@ -215,8 +215,16 @@ void ServosTask::updateServo(int id, uint16_t pos, uint16_t speed, uint8_t torqu
   if (config.type == ServoType::StandardServo) {
     uint32_t servo_pwm = enabled ? static_cast<uint32_t>(pos) << 2 : 0;
     uint32_t buff[2] = {c_fpga_servos_base + 8 * config.id, servo_pwm};
+#if 1 /* FIXME : DEBUG : quick hack for 2024 : disable micro-management for servos 10 & 11 (turbines) */
+    if ((config.id!=10) && (config.id!=11))
+    {
+      Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaWriteReg,
+                                                     (unsigned char *)buff, 8);
+    }
+#else
     Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaWriteReg,
                                                    (unsigned char *)buff, 8);
+#endif
   }
 
   switch (config.type) {
@@ -420,6 +428,16 @@ void ServosTask::moveMultiple(int num_servos) {
       m_servos_speeds[id] = config.max_speed;
       m_servos_positions[id] = target;
       setInitialized(id, true);
+
+#if 1 /* FIXME : DEBUG : quick hack for 2024 : disable micro-management for servos 10 & 11 (turbines) */
+      if ((config.id==10) || (config.id==11))
+      {
+        uint32_t servo_pwm = static_cast<uint32_t>(target) << 2;
+        uint32_t buff[2] = {c_fpga_servos_base + 8 * config.id, servo_pwm};
+        Robot::instance().mainExchangeIn().pushMessage(CommMessageType::FpgaWriteReg,
+                                                       (unsigned char *)buff, 8);
+      }
+#endif
     } else {
       float diff = target - m_servos_positions[id];
       int servo_speed = static_cast<int>(fabsf(diff * move_duration_inv));
