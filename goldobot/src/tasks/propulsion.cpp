@@ -358,6 +358,11 @@ void PropulsionTask::processUrgentMessage() {
       m_controller.emergencyStop();
       sendCommandEvent(sequence_number, CommandEvent::Ack);
       break;
+    case CommMessageType::PropulsionRegularStop:
+      sequence_number = readCommand(m_urgent_message_queue, nullptr, 0);
+      m_controller.regularStop();
+      sendCommandEvent(sequence_number, CommandEvent::Ack);
+      break;
     case CommMessageType::PropulsionClearError:
       sequence_number = readCommand(m_urgent_message_queue, nullptr, 0);
       m_controller.clearError();

@@ -77,6 +77,23 @@ void PropulsionController::emergencyStop() {
   }
 }
 
+void PropulsionController::regularStop() {
+  switch (m_state) {
+    case State::FollowTrajectory:
+      m_speed_controller.setAccelerationLimits(debug_emergency_accel, debug_emergency_accel);
+      m_speed_controller.emergencyStop();
+      m_regular_stop = true;
+      return;
+    case State::Rotate:
+      m_speed_controller.setAccelerationLimits(debug_emergency_accel, debug_emergency_accel);
+      m_speed_controller.emergencyStop();
+      m_regular_stop = true;
+      return;
+    default:
+      return;
+  }
+}
+
 void PropulsionController::setAccelerationLimits(float accel, float deccel, float angular_accel,
                                                  float angular_deccel) {
   m_accel = accel;
@@ -86,7 +103,7 @@ void PropulsionController::setAccelerationLimits(float accel, float deccel, floa
 }
 
 void PropulsionController::setTargetSpeed(float speed) {
-  if (m_emergency_stop) {
+  if (m_emergency_stop || m_regular_stop) {
     return;
   }
   switch (m_state) {
@@ -123,7 +140,7 @@ void PropulsionController::update() {
           on_command_finished();
         }
       }
-      if (m_emergency_stop && fabsf(m_speed_controller.speed()) < 1e-3f) {
+      if ((m_emergency_stop || m_regular_stop) && fabsf(m_speed_controller.speed()) < 1e-3f) {
         on_command_finished();
       }
     } break;
@@ -134,7 +151,7 @@ void PropulsionController::update() {
       if (m_speed_controller.finished()) {
         on_command_finished();
       }
-      if (m_emergency_stop && fabsf(m_speed_controller.speed()) < 1e-3f) {
+      if ((m_emergency_stop || m_regular_stop) && fabsf(m_speed_controller.speed()) < 1e-3f) {
         on_command_finished();
       }
     } break;
@@ -337,6 +354,7 @@ void PropulsionController::on_stopped_enter() {
   m_low_level_controller.m_motor_velocity_limit = m_config.static_pwm_limit;
   m_command_finished = true;
   m_emergency_stop = false;
+  m_regular_stop = false;
 }
 
 void PropulsionController::setState(State state, Error error) {
@@ -389,8 +407,14 @@ void PropulsionController::sendEvent(EventType type, uint32_t data1, uint32_t da
 
 void PropulsionController::on_command_finished() {
   if (m_emergency_stop) {
-    setState(State::Error, Error::EmergencyStop);
     m_command_finished = true;
+    setState(State::Error, Error::EmergencyStop);
+    m_low_level_controller.reset();
+  } else if (m_regular_stop) {
+    // m_command_finished = true; // m_command_finished set by on_stopped_enter() called by setState(State::Stopped)
+    m_current_pose = m_odometry->pose();
+    m_target_pose = m_current_pose;
+    setState(State::Stopped);
     m_low_level_controller.reset();
   } else {
     setState(State::Stopped);

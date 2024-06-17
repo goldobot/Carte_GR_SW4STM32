@@ -151,9 +151,13 @@ class PropulsionController {
   bool executeFaceDirection(float direction, float yaw_rate);
   bool executeTranslation(float distance, float speed);
 
-  //! \brief Emergency stop. Abort current PointTo of FollowTrajectory command and bring the robot
-  //! to a stop.
+  //! \brief Emergency stop. Abort current Rotation or FollowTrajectory command and bring the robot
+  //! to a stop. Enter in Error state.
   void emergencyStop();
+
+  //! \brief Regular stop. Abort current Rotation or FollowTrajectory command and bring the robot
+  //! to a stop. Enter in Stopped state.
+  void regularStop();
 
   void enterManualControl();
   void exitManualControl();
@@ -187,6 +191,7 @@ class PropulsionController {
   bool m_command_finished{false};
   bool m_state_changed{false};
   bool m_emergency_stop{false};
+  bool m_regular_stop{false};
 
   float m_reposition_speed{0};
   float m_reposition_distance{0};
