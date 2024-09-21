@@ -6,7 +6,7 @@
 #include "goldobot/propulsion/robot_simulator.hpp"
 #include "goldobot/tasks/servos.hpp"
 #include "goldobot/tasks/fpga.hpp"
-#include "goldobot/tasks/main.hpp"
+#include "goldobot/tasks/MainTask.hpp"
 #include "goldobot/tasks/odrive_comm.hpp"
 #include "goldobot/tasks/propulsion.hpp"
 #include "goldobot/tasks/uart_comm.hpp"

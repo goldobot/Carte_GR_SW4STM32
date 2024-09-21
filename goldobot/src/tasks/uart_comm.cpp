@@ -3,7 +3,7 @@
 #include "goldobot/hal.hpp"
 #include "goldobot/propulsion/odometry_config.hpp"
 #include "goldobot/robot.hpp"
-#include "goldobot/tasks/main.hpp"
+#include "goldobot/tasks/MainTask.hpp"
 #include "goldobot/utils/update_timestamp.hpp"
 
 // for measuring computing time, should be in hal

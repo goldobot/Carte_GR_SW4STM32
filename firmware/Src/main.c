@@ -1,7 +1,6 @@
 #include "main.h"
 
 #include "goldobot/goldobot_main.h"
-
 #include "cmsis_os.h"
 
 osThreadId defaultTaskHandle;
@@ -24,7 +23,7 @@ void NMI_Handler(void) {
 }
 
 void HardFault_Handler(void) __attribute__((naked));
-void prvGetRegistersFromStack(uint32_t *pulFaultStackAddress);
+void PrvGetRegistersFromStack(uint32_t *pulFaultStackAddress);
 
 void HardFault_Handler(void) {
   __asm volatile(
@@ -35,7 +34,7 @@ void HardFault_Handler(void) {
       " ldr r1, [r0, #24]                                         \n"
       " ldr r2, handler2_address_const                            \n"
       " bx r2                                                     \n"
-      " handler2_address_const: .word prvGetRegistersFromStack    \n");
+      " handler2_address_const: .word PrvGetRegistersFromStack    \n");
 }
 
 void MemManage_Handler(void) {
@@ -53,7 +52,7 @@ void UsageFault_Handler(void) {
   };
 }
 
-void prvGetRegistersFromStack(uint32_t *pulFaultStackAddress) {
+void PrvGetRegistersFromStack(uint32_t *pulFaultStackAddress) {
   /* These are volatile to try and prevent the compiler/linker optimising them
   away as the variables never actually get used.  If the debugger won't show the
   values of the variables, make them global my moving their declaration outside
@@ -91,10 +90,9 @@ void prvGetRegistersFromStack(uint32_t *pulFaultStackAddress) {
  */
 int main(void) {
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
-
+  HAL_Init(); // this a driver call, pay it no mind
   /* Configure the system clock */
-  SystemClock_Config();
+  InitSystemClockConfig(); // init the clock and tell it come external (switch to hsi if failure)
 
   /* USER CODE BEGIN 2 */
 
@@ -112,23 +110,26 @@ int main(void) {
 }
 
 /**
- * @brief System Clock Configuration
+ * @brief configure Hal clock, call directly driver function
  * @retval None
  */
-void SystemClock_Config(void) {
+void InitSystemClockConfig(void) {
+  // Configures oscillators (like HSE, HSI, and PLL).
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  // Configures the system and bus clocks (CPU, AHB, APB).
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  //Configures peripheral-specific clocks (USART, ADC, TIM, etc.).
   RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
   /** Initializes the CPU, AHB and APB busses clocks
    */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-  RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
-  RCC_OscInitStruct.PLL.PREDIV = RCC_PREDIV_DIV1;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE; // High-Speed External (HSE) oscillator. Require external components
+  RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS; // Configures the system to use an external crystal oscillator that is bypassed (e.g., the clock is fed directly from an external source, not an oscillator).
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON; // The internal 8 MHz oscillator is enabled as a fallback.
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON; // The PLL takes an input clock (e.g., HSI at 8 MHz or HSE at 8 MHz) and multiplies it to generate a higher frequency. This allows the microcontroller to run at much higher speeds than the input clock itself.
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE; // The PLL source is the HSE (external clock).
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9; // The PLL multiplies the input clock by 9. If HSE is 8 MHz, the system clock will be 72 MHz.
+  RCC_OscInitStruct.PLL.PREDIV = RCC_PREDIV_DIV1;  // No division on the PLL input.
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
     Error_Handler();
   }
@@ -144,6 +145,15 @@ void SystemClock_Config(void) {
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK) {
     Error_Handler();
   }
+  /* This line selects which peripherals will have their clocks configured. Each peripheral can have a different clock source:
+
+    USART1/USART2/USART3/UART5: The various UART clocks. For example:
+        Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK2: USART1 is clocked by APB2 (72 MHz).
+        Usart2ClockSelection = RCC_USART2CLKSOURCE_SYSCLK: USART2 uses the system clock (72 MHz).
+    I2C1ClockSelection = RCC_I2C1CLKSOURCE_SYSCLK: I2C1 uses the system clock.
+    ADC12ClockSelection = RCC_ADC12PLLCLK_DIV1: ADC12 uses the PLL clock without any division.
+    TIM1/TIM2/TIM16/TIM34: These timers are using the AHB clock (HCLK, 72 MHz).
+    */
   PeriphClkInit.PeriphClockSelection =
       RCC_PERIPHCLK_USART1 | RCC_PERIPHCLK_USART2 | RCC_PERIPHCLK_USART3 | RCC_PERIPHCLK_UART5 |
       RCC_PERIPHCLK_I2C1 | RCC_PERIPHCLK_TIM1 | RCC_PERIPHCLK_TIM16 | RCC_PERIPHCLK_ADC12 |
@@ -161,9 +171,10 @@ void SystemClock_Config(void) {
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK) {
     Error_Handler();
   }
-  /** Enables the Clock Security System
+  /** Enables the Clock Security System, which detects clock failures (especially the HSE failure) and automatically switches to a backup clock,
+   *  such as the HSI, if a failure occurs.
    */
-  HAL_RCC_EnableCSS();
+  HAL_RCC_EnableCSS(); 
 }
 
 /**

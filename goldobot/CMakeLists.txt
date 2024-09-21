@@ -7,11 +7,11 @@ add_subdirectory(platforms)
 add_library(goldobot STATIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include/goldobot/sequence_engine.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/goldobot/hal.hpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/goldobot/tasks/main.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/goldobot/tasks/MainTask.hpp
 
   ${CMAKE_CURRENT_SOURCE_DIR}/src/tasks/dynamixels_comm.cpp  
   ${CMAKE_CURRENT_SOURCE_DIR}/src/tasks/fpga.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/tasks/main.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/tasks/MainTask.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/tasks/odrive_comm.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/tasks/servos.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/tasks/propulsion.cpp

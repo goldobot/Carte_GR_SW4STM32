@@ -3,7 +3,7 @@
 #include "goldobot/hal.hpp"
 #include "goldobot/propulsion/odometry_config.hpp"
 #include "goldobot/robot.hpp"
-#include "goldobot/tasks/main.hpp"
+#include "goldobot/tasks/MainTask.hpp"
 
 #include <stdarg.h>
 #include <stdio.h>
