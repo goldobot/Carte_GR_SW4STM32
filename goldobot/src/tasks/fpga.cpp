@@ -45,7 +45,7 @@ void FpgaTask::taskFunction() {
 
     if (m_cnt % 5 == 0) {
       // Read sensors
-      unsigned int apb_data = 0;
+      unsigned int apb_data = 0x666;
       uint32_t apb_addr = 0x800084e4;  // gpio register
       if (goldo_fpga_master_spi_read_word(apb_addr, &apb_data) == 0) {
         if (apb_data != m_sensors_state) {
@@ -125,13 +125,13 @@ int FpgaTask::goldo_fpga_master_spi_read_word(unsigned int apb_addr, unsigned in
   /* 1) sending APB_ADDR */
   if (spiTransaction(0x30, FpgaSpiTransactionDir::Write, apb_addr, val, 4) !=
       FpgaSpiTransactionStatus::Ok) {
-    return 0;
+    return -1;
   }
 
   /* 2) reading data */
   if (spiTransaction(0x50, FpgaSpiTransactionDir::Read, 0, val, 4) !=
       FpgaSpiTransactionStatus::Ok) {
-    return 0;
+    return -2;
   }
   *pdata = val;
   return 0;
