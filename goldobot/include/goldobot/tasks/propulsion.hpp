@@ -134,6 +134,8 @@ class PropulsionTask : public Task {
 
   uint16_t m_current_command_sequence_number{0};
   bool m_is_executing_command{false};
+  bool m_last_gpio_emergency_stop{false};
+  uint32_t m_emergency_cnt{0};
 
   void doStep();
   void processMessage();
@@ -182,6 +184,7 @@ class PropulsionTask : public Task {
   uint16_t readCommand(MessageQueue& queue, void* buff, size_t& size);
 
   void sendCommandEvent(uint16_t sequence_number, CommandEvent event);
+  void sendCommandEvent_42(uint16_t sequence_number);
   void onCommandBegin(uint16_t sequence_number);
   void onCommandEnd();
   void onCommandCancel(uint16_t sequence_number);

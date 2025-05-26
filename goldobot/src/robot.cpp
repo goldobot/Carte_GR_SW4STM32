@@ -154,7 +154,7 @@ bool Robot::endLoadConfig(uint16_t crc) {
   if ((tasks_enable & (1 << 4)) != 0) {
     m_fpga_task.init(256);
   }
-  m_comm_task.m_ftdi_enable = true;
+  m_comm_task.m_ftdi_enable = false;
   start();
   m_match_state = MatchState::Idle;
   return true;

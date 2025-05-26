@@ -61,11 +61,24 @@ void PropulsionTask::doStep() {
 
   // Process emergency gpio
   auto gpio_emergency_stop = hal::gpio_get(7) ? true : false;
+#if 0 /* FIXME : DEBUG */
+  /* desactivation temporaire (pour la Coupe 2025) de l'arret d'urgence en rotation,
+   l'evitement de l'adversaire en rotation sera gere dans le code python de goldo_strat */
   if (gpio_emergency_stop &&
       ((m_controller.state() == PropulsionController::State::FollowTrajectory) ||
        (m_controller.state() == PropulsionController::State::Rotate))) {
     m_controller.emergencyStop();
+    sendCommandEvent_42(m_current_command_sequence_number);
   }
+#else
+  if (gpio_emergency_stop && (!m_last_gpio_emergency_stop)) {
+    if ((m_controller.state() == PropulsionController::State::FollowTrajectory)) {
+      m_controller.emergencyStop();
+      sendCommandEvent_42(m_current_command_sequence_number);
+    }
+  }
+  m_last_gpio_emergency_stop = gpio_emergency_stop;
+#endif
 
   // Process messages
   while (m_urgent_message_queue.message_ready()) {
@@ -593,6 +606,16 @@ void PropulsionTask::sendCommandEvent(uint16_t sequence_number, CommandEvent eve
   *(uint16_t*)(buff + 4) = sequence_number;
   buff[6] = static_cast<uint8_t>(event);
   buff[7] = static_cast<uint8_t>(m_controller.error());
+  Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::PropulsionCommandEvent, buff,
+                                                      sizeof(buff));
+}
+
+void PropulsionTask::sendCommandEvent_42(uint16_t sequence_number) {
+  uint8_t buff[8];  // timestamp, sequence_number, status, error
+  *(uint32_t*)(buff) = m_current_timestamp;
+  *(uint16_t*)(buff + 4) = sequence_number;
+  buff[6] = static_cast<uint8_t>(42);
+  buff[7] = static_cast<uint8_t>(42);
   Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::PropulsionCommandEvent, buff,
                                                       sizeof(buff));
 }
