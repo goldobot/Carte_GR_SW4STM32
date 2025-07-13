@@ -202,6 +202,10 @@ class PropulsionTask : public Task {
 
   ODriveClient m_odrive_client;
 
+#if 1 /* FIXME : DEBUG */
+  uint32_t m_dbg_cnt{0};
+#endif
+
   // Odometry full encoders stream through secondary uart
   void updateOdometryStream(uint16_t left, uint16_t right);
   int m_odometry_stream_cnt{0};

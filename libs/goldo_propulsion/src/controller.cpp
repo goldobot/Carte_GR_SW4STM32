@@ -25,6 +25,8 @@ PropulsionController::State PropulsionController::state() const { return m_state
 
 PropulsionController::Error PropulsionController::error() const { return m_error; }
 
+bool PropulsionController::underEmergency() const { return m_emergency_stop; }
+
 bool PropulsionController::stateChanged() {
   auto state_changed = m_state_changed;
   m_state_changed = false;

@@ -171,6 +171,19 @@ void PropulsionTask::doStep() {
   sendTelemetryMessages();
   updateScope();
 
+#if 1 /* FIXME : DEBUG */
+  if (m_dbg_cnt % 100)
+  {
+    if (m_controller.underEmergency())
+    {
+      sendCommandEvent_42(m_current_command_sequence_number, 43);
+      float speed_controller_speed = m_controller.speedController().speed();
+      Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::DbgGoldo, (unsigned char *)&speed_controller_speed, 4);
+    }
+  }
+  m_dbg_cnt++;
+#endif
+
   uint32_t cyccnt_end = DWT->CYCCNT;
   uint32_t cycles_count = cyccnt_end - cyccnt_begin;
   m_statistics.max_cycles = std::max(m_statistics.max_cycles, cycles_count);
