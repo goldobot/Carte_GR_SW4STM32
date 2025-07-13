@@ -172,7 +172,7 @@ void PropulsionTask::doStep() {
   updateScope();
 
 #if 1 /* FIXME : DEBUG */
-  if (m_dbg_cnt % 100)
+  if ((m_dbg_cnt % 100) == 0)
   {
     if (m_controller.underEmergency())
     {
