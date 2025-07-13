@@ -184,7 +184,7 @@ class PropulsionTask : public Task {
   uint16_t readCommand(MessageQueue& queue, void* buff, size_t& size);
 
   void sendCommandEvent(uint16_t sequence_number, CommandEvent event);
-  void sendCommandEvent_42(uint16_t sequence_number);
+  void sendCommandEvent_42(uint16_t sequence_number, uint8_t param);
   void onCommandBegin(uint16_t sequence_number);
   void onCommandEnd();
   void onCommandCancel(uint16_t sequence_number);

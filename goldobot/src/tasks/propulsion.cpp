@@ -68,13 +68,13 @@ void PropulsionTask::doStep() {
       ((m_controller.state() == PropulsionController::State::FollowTrajectory) ||
        (m_controller.state() == PropulsionController::State::Rotate))) {
     m_controller.emergencyStop();
-    sendCommandEvent_42(m_current_command_sequence_number);
+    sendCommandEvent_42(m_current_command_sequence_number, 42);
   }
 #else
   if (gpio_emergency_stop && (!m_last_gpio_emergency_stop)) {
     if ((m_controller.state() == PropulsionController::State::FollowTrajectory)) {
       m_controller.emergencyStop();
-      sendCommandEvent_42(m_current_command_sequence_number);
+      sendCommandEvent_42(m_current_command_sequence_number, 42);
     }
   }
   m_last_gpio_emergency_stop = gpio_emergency_stop;
@@ -610,12 +610,12 @@ void PropulsionTask::sendCommandEvent(uint16_t sequence_number, CommandEvent eve
                                                       sizeof(buff));
 }
 
-void PropulsionTask::sendCommandEvent_42(uint16_t sequence_number) {
+void PropulsionTask::sendCommandEvent_42(uint16_t sequence_number, uint8_t param) {
   uint8_t buff[8];  // timestamp, sequence_number, status, error
   *(uint32_t*)(buff) = m_current_timestamp;
   *(uint16_t*)(buff + 4) = sequence_number;
   buff[6] = static_cast<uint8_t>(42);
-  buff[7] = static_cast<uint8_t>(42);
+  buff[7] = param;
   Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::PropulsionCommandEvent, buff,
                                                       sizeof(buff));
 }
