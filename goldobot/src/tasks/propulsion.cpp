@@ -172,16 +172,19 @@ void PropulsionTask::doStep() {
   updateScope();
 
 #if 1 /* FIXME : DEBUG */
-  if ((m_dbg_cnt % 100) == 0)
+  if (m_controller.underEmergency())
   {
-    if (m_controller.underEmergency())
+    if ((m_dbg_cnt % 100) == 0)
     {
       sendCommandEvent_42(m_current_command_sequence_number, 43);
+    }
+    if (m_dbg_cnt < 300)
+    {
       float speed_controller_speed = m_controller.speedController().speed();
       Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::DbgGoldo, (unsigned char *)&speed_controller_speed, 4);
     }
+    m_dbg_cnt++;
   }
-  m_dbg_cnt++;
 #endif
 
   uint32_t cyccnt_end = DWT->CYCCNT;
