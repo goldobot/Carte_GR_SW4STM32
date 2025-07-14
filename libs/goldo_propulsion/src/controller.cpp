@@ -141,7 +141,8 @@ void PropulsionController::update() {
           on_command_finished();
         }
       }
-      if ((m_emergency_stop || m_regular_stop) && fabsf(m_speed_controller.speed()) < 1e-3f) {
+      /* FIXME : TODO : implement "more cleanly" the exit from "the emergency deceleration pseudo-state" */
+      if ((m_emergency_stop || m_regular_stop) && fabsf(m_speed_controller.speed()) < 1e-2f) {
         on_command_finished();
       }
     } break;
@@ -152,7 +153,8 @@ void PropulsionController::update() {
       if (m_speed_controller.finished()) {
         on_command_finished();
       }
-      if ((m_emergency_stop || m_regular_stop) && fabsf(m_speed_controller.speed()) < 1e-3f) {
+      /* FIXME : TODO : implement "more cleanly" the exit from "the emergency deceleration pseudo-state" */
+      if ((m_emergency_stop || m_regular_stop) && fabsf(m_speed_controller.speed()) < 1e-2f) {
         on_command_finished();
       }
     } break;
