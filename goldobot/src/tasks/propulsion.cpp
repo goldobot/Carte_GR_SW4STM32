@@ -174,7 +174,7 @@ void PropulsionTask::doStep() {
 #if 1 /* FIXME : DEBUG */
   if (m_controller.underEmergency())
   {
-    if ((m_dbg_cnt % 100) == 0)
+    if ((m_dbg_cnt % 1000) == 0)
     {
       sendCommandEvent_42(m_current_command_sequence_number, 43);
     }

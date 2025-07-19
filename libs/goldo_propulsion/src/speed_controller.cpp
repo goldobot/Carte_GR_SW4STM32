@@ -232,6 +232,7 @@ void SpeedController::emergencyStop() {
 
   m_max_parameter = m_parameter+d_d;
   m_requested_speed = 0;
+  m_final_speed = 0;
   m_time = 0;
   m_index = 0;
   m_num_points = 1;
