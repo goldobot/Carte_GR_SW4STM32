@@ -6,6 +6,9 @@ using namespace goldobot;
 
 #include <algorithm>
 
+//#define EMERGENCY_STOP_SPEED_0_UNCERTAINTY (1e-2f)
+#define EMERGENCY_STOP_SPEED_0_UNCERTAINTY (1e-3f)
+
 PropulsionController::PropulsionController(SimpleOdometry* odometry) : m_odometry(odometry) {}
 
 void PropulsionController::setEnable(bool enable) {
@@ -143,7 +146,7 @@ void PropulsionController::update() {
           on_command_finished();
         }
       }
-      if ((m_emergency_stop || m_regular_stop) && (fabsf(m_speed_controller.speed()) < 1e-2f)) {
+      if ((m_emergency_stop || m_regular_stop) && (fabsf(m_speed_controller.speed()) < EMERGENCY_STOP_SPEED_0_UNCERTAINTY)) {
         on_command_finished();
       }
     } break;
@@ -154,7 +157,7 @@ void PropulsionController::update() {
       if (m_speed_controller.finished()) {
         on_command_finished();
       }
-      if ((m_emergency_stop || m_regular_stop) && (fabsf(m_speed_controller.speed()) < 1e-2f)) {
+      if ((m_emergency_stop || m_regular_stop) && (fabsf(m_speed_controller.speed()) < EMERGENCY_STOP_SPEED_0_UNCERTAINTY)) {
         on_command_finished();
       }
     } break;

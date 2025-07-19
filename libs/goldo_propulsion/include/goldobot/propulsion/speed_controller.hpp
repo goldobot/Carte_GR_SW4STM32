@@ -36,7 +36,7 @@ class SpeedController {
   float acceleration() const noexcept;
   bool finished() const noexcept;
 
- private:
+// private:
   void recompute();
   bool not_feasible(float dist, float speed, float final_speed, float acc, float dec);
   float m_min_parameter{0};

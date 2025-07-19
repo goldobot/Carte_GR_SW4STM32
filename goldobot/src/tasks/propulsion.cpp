@@ -182,6 +182,38 @@ void PropulsionTask::doStep() {
     {
       float speed_controller_speed = m_controller.speedController().speed();
       Robot::instance().mainExchangeOutPrio().pushMessage(CommMessageType::DbgGoldo, (unsigned char *)&speed_controller_speed, 4);
+      {
+        float speed_controller_m_min_parameter = m_controller.speedController().m_min_parameter;
+        unsigned char buff[8];
+        uint32_t apb_addr = 0xdb600000;
+        std::memcpy(buff + 0, (unsigned char *)&apb_addr, 4);
+        std::memcpy(buff + 4, (unsigned char *)&speed_controller_m_min_parameter, 4);
+        Robot::instance().mainExchangeOut().pushMessage(CommMessageType::FpgaReadRegStatus, (unsigned char *)buff, 8);
+      }
+      {
+        float speed_controller_m_max_parameter = m_controller.speedController().m_max_parameter;
+        unsigned char buff[8];
+        uint32_t apb_addr = 0xdb600001;
+        std::memcpy(buff + 0, (unsigned char *)&apb_addr, 4);
+        std::memcpy(buff + 4, (unsigned char *)&speed_controller_m_max_parameter, 4);
+        Robot::instance().mainExchangeOut().pushMessage(CommMessageType::FpgaReadRegStatus, (unsigned char *)buff, 8);
+      }
+      {
+        float speed_controller_m_parameter = m_controller.speedController().m_parameter;
+        unsigned char buff[8];
+        uint32_t apb_addr = 0xdb600002;
+        std::memcpy(buff + 0, (unsigned char *)&apb_addr, 4);
+        std::memcpy(buff + 4, (unsigned char *)&speed_controller_m_parameter, 4);
+        Robot::instance().mainExchangeOut().pushMessage(CommMessageType::FpgaReadRegStatus, (unsigned char *)buff, 8);
+      }
+      {
+        float speed_controller_m_speed = m_controller.speedController().m_speed;
+        unsigned char buff[8];
+        uint32_t apb_addr = 0xdb600002;
+        std::memcpy(buff + 0, (unsigned char *)&apb_addr, 4);
+        std::memcpy(buff + 4, (unsigned char *)&speed_controller_m_speed, 4);
+        Robot::instance().mainExchangeOut().pushMessage(CommMessageType::FpgaReadRegStatus, (unsigned char *)buff, 8);
+      }
     }
     m_dbg_cnt++;
   }
