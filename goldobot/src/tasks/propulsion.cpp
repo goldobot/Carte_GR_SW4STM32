@@ -209,7 +209,7 @@ void PropulsionTask::doStep() {
       {
         float speed_controller_m_speed = m_controller.speedController().m_speed;
         unsigned char buff[8];
-        uint32_t apb_addr = 0xdb600002;
+        uint32_t apb_addr = 0xdb600003;
         std::memcpy(buff + 0, (unsigned char *)&apb_addr, 4);
         std::memcpy(buff + 4, (unsigned char *)&speed_controller_m_speed, 4);
         Robot::instance().mainExchangeOut().pushMessage(CommMessageType::FpgaReadRegStatus, (unsigned char *)buff, 8);
