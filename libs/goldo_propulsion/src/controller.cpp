@@ -6,6 +6,9 @@ using namespace goldobot;
 
 #include <algorithm>
 
+//#define EMERGENCY_STOP_SPEED_0_UNCERTAINTY (1e-2f)
+#define EMERGENCY_STOP_SPEED_0_UNCERTAINTY (1e-3f)
+
 PropulsionController::PropulsionController(SimpleOdometry* odometry) : m_odometry(odometry) {}
 
 void PropulsionController::setEnable(bool enable) {
@@ -24,6 +27,8 @@ void PropulsionController::setEnable(bool enable) {
 PropulsionController::State PropulsionController::state() const { return m_state; }
 
 PropulsionController::Error PropulsionController::error() const { return m_error; }
+
+bool PropulsionController::underEmergency() const { return m_emergency_stop; }
 
 bool PropulsionController::stateChanged() {
   auto state_changed = m_state_changed;
@@ -141,8 +146,7 @@ void PropulsionController::update() {
           on_command_finished();
         }
       }
-      /* FIXME : TODO : implement "more cleanly" the exit from "the emergency deceleration pseudo-state" */
-      if ((m_emergency_stop || m_regular_stop) && fabsf(m_speed_controller.speed()) < 1e-2f) {
+      if ((m_emergency_stop || m_regular_stop) && (fabsf(m_speed_controller.speed()) < EMERGENCY_STOP_SPEED_0_UNCERTAINTY)) {
         on_command_finished();
       }
     } break;
@@ -153,8 +157,7 @@ void PropulsionController::update() {
       if (m_speed_controller.finished()) {
         on_command_finished();
       }
-      /* FIXME : TODO : implement "more cleanly" the exit from "the emergency deceleration pseudo-state" */
-      if ((m_emergency_stop || m_regular_stop) && fabsf(m_speed_controller.speed()) < 1e-2f) {
+      if ((m_emergency_stop || m_regular_stop) && (fabsf(m_speed_controller.speed()) < EMERGENCY_STOP_SPEED_0_UNCERTAINTY)) {
         on_command_finished();
       }
     } break;

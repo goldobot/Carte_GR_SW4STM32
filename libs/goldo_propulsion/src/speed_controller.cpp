@@ -7,6 +7,9 @@
 
 namespace goldobot {
 
+//#define MY_EPSILON std::numeric_limits<float>::epsilon() // BAD!!..
+#define MY_EPSILON (1e-5f)
+
 SpeedController::SpeedController()
 {
 };
@@ -89,6 +92,8 @@ void SpeedController::reset(float current_parameter, float current_speed,
   m_speed = current_speed;
   m_acceleration = current_acceleration;
   m_parameter = clamp(m_parameter, m_min_parameter, m_max_parameter);
+  m_emergency = false;
+  m_emergency_stop_time_limit = 0;
   recompute();
 }
 
@@ -98,7 +103,12 @@ float SpeedController::speed() const noexcept { return m_speed; }
 
 float SpeedController::acceleration() const noexcept { return m_acceleration; }
 
-bool SpeedController::finished() const noexcept { return (fabsf(m_max_parameter-m_parameter) <= std::numeric_limits<float>::epsilon()); }
+bool SpeedController::finished() const noexcept {
+  if (m_emergency)
+    return (m_time > m_emergency_stop_time_limit);
+  else
+    return (fabsf(m_max_parameter-m_parameter) <= MY_EPSILON);
+}
 
 bool SpeedController::not_feasible(float dist, float speed, float final_speed, float acc, float dec)
 {
@@ -133,6 +143,10 @@ bool SpeedController::not_feasible(float dist, float speed, float final_speed, f
 void SpeedController::recompute() {
   m_time = 0;
   m_index = 0;
+#if 1 /* FIXME : TODO : is this necessary?.. */
+  m_emergency = false;
+  m_emergency_stop_time_limit = 0;
+#endif
 
   if (m_max_parameter - m_parameter < std::numeric_limits<float>::epsilon()) {
     m_num_points = 1;
@@ -232,6 +246,7 @@ void SpeedController::emergencyStop() {
 
   m_max_parameter = m_parameter+d_d;
   m_requested_speed = 0;
+  m_final_speed = 0;
   m_time = 0;
   m_index = 0;
   m_num_points = 1;
@@ -240,6 +255,9 @@ void SpeedController::emergencyStop() {
   m_c1[0] = m_speed;
   m_c2[0] = a_emerg*0.5f;
   m_c3[0] = 0;
+
+  m_emergency = true;
+  m_emergency_stop_time_limit = t_d;
 }
 
 }  // namespace goldobot

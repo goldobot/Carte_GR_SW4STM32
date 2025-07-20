@@ -109,6 +109,9 @@ class PropulsionController {
   //! \brief Return true if a command was completed during last update
   bool commandFinished();
 
+  //! \brief Get the current "emergency stop" state (i.e. the 'm_emergency_stop' internal variable)
+  bool underEmergency() const;
+
   // \brief Return target robot pose
   const RobotPose& targetPose() const;
 
@@ -176,6 +179,10 @@ class PropulsionController {
   messages::PropulsionTelemetryEx getTelemetryEx() const;
 
   propulsion::BlockingDetector m_blocking_detector;
+
+#if 1 /* FIXME : DEBUG */
+  const SpeedController& speedController() const { return m_speed_controller; };
+#endif
 
  private:
   SimpleOdometry* m_odometry;

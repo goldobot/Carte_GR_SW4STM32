@@ -36,7 +36,7 @@ class SpeedController {
   float acceleration() const noexcept;
   bool finished() const noexcept;
 
- private:
+private:
   void recompute();
   bool not_feasible(float dist, float speed, float final_speed, float acc, float dec);
   float m_min_parameter{0};
@@ -62,5 +62,9 @@ class SpeedController {
   float m_c3[8];
   float m_t[8];
   unsigned m_num_points{0};
+
+  // emergency stop management
+  bool m_emergency{false};
+  float m_emergency_stop_time_limit{0};
 };
 }  // namespace goldobot
